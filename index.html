@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TechyFuel OS — Agency Operating System</title>
+  <link rel="icon" type="image/png" href="assets/techyfuel-mark.png" />
+  <link rel="stylesheet" href="project/styles.css" />
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    #root { height: 100%; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Runtime dependencies (vendored locally) -->
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/lucide.min.js"></script>
+<script src="vendor/babel.min.js"></script>
+
+<!-- Design-system bundle: components only (screen globals are re-exported below) -->
+<script src="project/_ds_bundle.js"></script>
+
+<!-- Screen components as text/babel — these overwrite the bundle's broken closures
+     with correctly-scoped versions that resolve design-system deps at call time -->
+<script type="text/babel" src="project/ui_kits/techyfuel-os/helpers.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/charts.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/AppShell.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/Dashboard.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/Projects.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/ContentCalendar.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/CRM.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/TasksBoard.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/MetaAds.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/AIPanel.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/ClientPortal.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/Pipeline.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/Finance.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/Reports.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/Files.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/Team.jsx" data-presets="react"></script>
+<script type="text/babel" src="project/ui_kits/techyfuel-os/Settings.jsx" data-presets="react"></script>
+
+<!-- App router — must be text/babel so it runs AFTER babel processes the screen scripts above -->
+<script type="text/babel">
+(function () {
+  'use strict';
+
+  /* ── Route table ──────────────────────────────────────────── */
+  var ROUTES = {
+    dashboard: { crumb: 'Workspace',  title: 'Executive dashboard',  comp: 'Dashboard' },
+    tasks:     { crumb: 'Workspace',  title: 'Tasks',                comp: 'TasksBoard' },
+    projects:  { crumb: 'Workspace',  title: 'Projects',             comp: 'Projects' },
+    content:   { crumb: 'Marketing',  title: 'Content calendar',     comp: 'ContentCalendar' },
+    crm:       { crumb: 'Clients',    title: 'Client CRM',           comp: 'CRM' },
+    ads:       { crumb: 'Marketing',  title: 'Meta Ads Center',      comp: 'MetaAds' },
+    portal:    { crumb: 'Clients',    title: 'Client portal',        comp: 'ClientPortal' },
+    pipeline:  { crumb: 'Clients',    title: 'Sales pipeline',       comp: 'Pipeline' },
+    finance:   { crumb: 'Business',   title: 'Finance',              comp: 'Finance' },
+    reports:   { crumb: 'Business',   title: 'Reporting center',     comp: 'Reports' },
+    files:     { crumb: 'Business',   title: 'Files',                comp: 'Files' },
+    team:      { crumb: 'Business',   title: 'Team',                 comp: 'Team' },
+    settings:  { crumb: 'Workspace',  title: 'Settings',             comp: 'Settings' },
+  };
+
+  var PLACEHOLDER = {
+    calendar: ['calendar-days', 'Calendar'],
+  };
+
+  var e = React.createElement;
+
+  /* ── Placeholder for unbuilt modules ─────────────────────── */
+  function Placeholder(props) {
+    var pair  = PLACEHOLDER[props.id] || ['layout-dashboard', 'Module'];
+    var iname = pair[0];
+    var label = pair[1];
+    return e('div', {
+      style: {
+        height: '100%', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40,
+      }},
+      e('span', {
+        style: {
+          width: 64, height: 64, borderRadius: 'var(--radius-2xl)',
+          background: 'var(--blue-50)', display: 'inline-flex',
+          alignItems: 'center', justifyContent: 'center',
+        }},
+        e(window.Icon, { name: iname, size: 30, style: { color: 'var(--blue-600)' } })
+      ),
+      e('div', { style: { textAlign: 'center' } },
+        e('h2', {
+          style: {
+            fontSize: 'var(--text-2xl)', fontWeight: 'var(--fw-extrabold)',
+            letterSpacing: '-0.02em', margin: 0,
+          }}, label),
+        e('p', {
+          style: {
+            fontSize: 'var(--text-base)', color: 'var(--text-muted)',
+            marginTop: 6, maxWidth: 360,
+          }},
+          'This module is part of TechyFuel OS. Explore the other screens from the sidebar.'
+        )
+      ),
+      e('span', {
+        style: {
+          fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)',
+          color: 'var(--blue-700)', background: 'var(--blue-50)',
+          borderRadius: 'var(--radius-full)', padding: '5px 12px',
+        }}, 'Kit preview')
+    );
+  }
+
+  /* ── Root app ────────────────────────────────────────────── */
+  function App() {
+    var state   = React.useState('dashboard');
+    var active  = state[0];
+    var setActive = state[1];
+    var aiState = React.useState(false);
+    var aiOpen  = aiState[0];
+    var setAiOpen = aiState[1];
+
+    var route = ROUTES[active];
+    var meta  = route || {
+      crumb: 'TechyFuel OS',
+      title: (PLACEHOLDER[active] || ['', 'Module'])[1],
+    };
+
+    var screenEl = route
+      ? e(window[route.comp])
+      : e(Placeholder, { id: active });
+
+    return e(React.Fragment, null,
+      e(window.AppShell, {
+        active:     active,
+        onNavigate: setActive,
+        title:      meta.title,
+        crumb:      meta.crumb,
+        onOpenAI:   function () { setAiOpen(true); },
+      }, screenEl),
+      e(window.AIPanel, {
+        open:    aiOpen,
+        onClose: function () { setAiOpen(false); },
+      })
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+})();
+</script>
+</body>
+</html>
