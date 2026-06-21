@@ -1,0 +1,23 @@
+<!-- @dsCard group="Brand" viewport="700x210" name="Glassmorphism & gradient" subtitle="Brand gradient + frosted glass chrome" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:0;font-family:var(--font-sans);}
+  .stage{position:relative;min-height:100vh;background:var(--grad-brand);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .blob{position:absolute;border-radius:50%;filter:blur(40px);opacity:.5;}
+  .b1{width:220px;height:220px;background:#38bdf8;top:-60px;left:-40px;}
+  .b2{width:200px;height:200px;background:#1d4fd1;bottom:-70px;right:-30px;}
+  .glass{position:relative;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-xl);padding:20px 26px;display:flex;align-items:center;gap:16px;}
+  .ic{width:42px;height:42px;border-radius:var(--radius-lg);background:var(--grad-flame);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-brand);}
+  .ic img{height:26px;filter:brightness(0) invert(1);}
+  .t{font-size:var(--text-lg);font-weight:800;color:var(--text-strong);letter-spacing:-.02em;}
+  .s{font-size:var(--text-xs);color:var(--text-muted);}
+</style></head><body>
+  <div class="stage">
+    <div class="blob b1"></div><div class="blob b2"></div>
+    <div class="glass">
+      <div class="ic"><img src="../assets/techyfuel-mark.png" alt=""></div>
+      <div><div class="t">Frosted glass surface</div><div class="s">backdrop-filter: blur(16px) · used for top bar, AI panel, popovers</div></div>
+    </div>
+  </div>
+</body></html>

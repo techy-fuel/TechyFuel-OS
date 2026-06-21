@@ -1,0 +1,16 @@
+<!-- @dsCard group="Brand" viewport="700x190" name="Flame mark" subtitle="App icon / collapsed-nav mark + clear space" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:24px;background:var(--surface-card);font-family:var(--font-sans);display:flex;gap:28px;align-items:center;flex-wrap:wrap;}
+  .tile{display:flex;flex-direction:column;gap:10px;align-items:center;}
+  .name{font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-subtle);}
+  .onwhite{width:96px;height:96px;border-radius:var(--radius-2xl);border:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);}
+  .onbrand{width:96px;height:96px;border-radius:var(--radius-2xl);background:var(--grad-brand);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-brand);}
+  .clear{width:96px;height:96px;border-radius:var(--radius-2xl);border:1px dashed var(--blue-300);background:var(--blue-50);display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box;}
+  img{height:100%;object-fit:contain;}
+</style></head><body>
+  <div class="tile"><div class="onwhite"><img src="../assets/techyfuel-mark.png" alt="mark" style="height:60px"></div><span class="name">On white</span></div>
+  <div class="tile"><div class="onbrand"><img src="../assets/techyfuel-mark.png" alt="mark" style="height:60px;filter:brightness(0) invert(1)"></div><span class="name">Knockout on brand</span></div>
+  <div class="tile"><div class="clear"><img src="../assets/techyfuel-mark.png" alt="mark"></div><span class="name">Clear space</span></div>
+</body></html>

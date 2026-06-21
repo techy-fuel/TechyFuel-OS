@@ -1,0 +1,132 @@
+/* ============================================================
+   TechyFuel OS — Color Tokens
+   Blue & white, cool-slate neutrals. Primary #2563EB.
+   ============================================================ */
+
+:root {
+  /* ---- Brand blue scale (primary) ---- */
+  --blue-50:  #eff5ff;
+  --blue-100: #dbe7fe;
+  --blue-200: #bfd4fe;
+  --blue-300: #93b6fd;
+  --blue-400: #608efa;
+  --blue-500: #3b6bf6;
+  --blue-600: #2563eb;  /* PRIMARY */
+  --blue-700: #1d4fd1;
+  --blue-800: #1e43a9;
+  --blue-900: #1e3c85;
+  --blue-950: #172551;
+
+  /* ---- Sky accent (logo gradient tail) ---- */
+  --sky-400: #38bdf8;
+  --sky-500: #2f9bf6;
+  --sky-600: #1e88e5;
+
+  /* ---- Neutral slate scale ---- */
+  --slate-0:   #ffffff;
+  --slate-25:  #fbfcfe;
+  --slate-50:  #f7f9fc;
+  --slate-100: #eef2f8;
+  --slate-150: #e6ecf4;
+  --slate-200: #dde4ee;
+  --slate-300: #c3cdda;
+  --slate-400: #97a3b6;
+  --slate-500: #69748a;
+  --slate-600: #4d5667;
+  --slate-700: #3a4252;
+  --slate-800: #262c38;
+  --slate-900: #161b25;
+  --slate-950: #0c0f16;
+
+  /* ---- Semantic hues ---- */
+  --green-50:  #ecfdf3;
+  --green-100: #d1fadf;
+  --green-500: #16b364;
+  --green-600: #099250;
+  --green-700: #087443;
+
+  --amber-50:  #fffaeb;
+  --amber-100: #fef0c7;
+  --amber-500: #f79009;
+  --amber-600: #dc6803;
+  --amber-700: #b54708;
+
+  --red-50:  #fef3f2;
+  --red-100: #fee4e2;
+  --red-500: #f04438;
+  --red-600: #d92d20;
+  --red-700: #b42318;
+
+  --violet-50:  #f5f3ff;
+  --violet-100: #ece9fe;
+  --violet-500: #7a5af8;
+  --violet-600: #6938ef;
+
+  --teal-50:  #f0fdfa;
+  --teal-500: #15b8a6;
+  --teal-600: #0e9384;
+
+  /* ---- Brand gradients ---- */
+  --grad-flame: linear-gradient(155deg, #2563eb 0%, #3b6bf6 45%, #2f9bf6 100%); /* @kind color */
+  --grad-brand: linear-gradient(135deg, #1d4fd1 0%, #2563eb 50%, #38bdf8 100%); /* @kind color */
+  --grad-surface: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%); /* @kind color */
+  --grad-hero: radial-gradient(120% 120% at 100% 0%, #dbe7fe 0%, #f7f9fc 45%, #ffffff 100%); /* @kind color */
+
+  /* ============================================================
+     SEMANTIC ALIASES — use these in components
+     ============================================================ */
+
+  /* Surfaces */
+  --surface-page:    var(--slate-50);
+  --surface-card:    var(--slate-0);
+  --surface-sunken:  var(--slate-100);
+  --surface-raised:  var(--slate-0);
+  --surface-inverse: var(--slate-900);
+  --surface-hover:   var(--slate-100);
+  --surface-active:  var(--slate-150);
+  --surface-brand:        var(--blue-600);
+  --surface-brand-hover:  var(--blue-700);
+  --surface-brand-subtle: var(--blue-50);
+
+  /* Glass (glassmorphism) */
+  --glass-bg:     rgba(255, 255, 255, 0.72);
+  --glass-bg-strong: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-tint:   rgba(37, 99, 235, 0.06);
+
+  /* Text */
+  --text-strong:   var(--slate-900);
+  --text-body:     var(--slate-700);
+  --text-muted:    var(--slate-500);
+  --text-subtle:   var(--slate-400);
+  --text-on-brand: #ffffff;
+  --text-brand:    var(--blue-600);
+  --text-link:     var(--blue-600);
+
+  /* Borders */
+  --border-subtle:  var(--slate-150);
+  --border-default: var(--slate-200);
+  --border-strong:  var(--slate-300);
+  --border-brand:   var(--blue-600);
+  --border-focus:   var(--blue-500);
+
+  /* Status: foreground / background / border triplets */
+  --status-success-fg: var(--green-700);
+  --status-success-bg: var(--green-50);
+  --status-success-solid: var(--green-600);
+  --status-warning-fg: var(--amber-700);
+  --status-warning-bg: var(--amber-50);
+  --status-warning-solid: var(--amber-500);
+  --status-danger-fg:  var(--red-700);
+  --status-danger-bg:  var(--red-50);
+  --status-danger-solid: var(--red-600);
+  --status-info-fg:    var(--blue-700);
+  --status-info-bg:    var(--blue-50);
+  --status-info-solid: var(--blue-600);
+  --status-neutral-fg: var(--slate-600);
+  --status-neutral-bg: var(--slate-100);
+
+  /* Focus ring */
+  --ring-brand: 0 0 0 3px rgba(37, 99, 235, 0.30);
+  --ring-danger: 0 0 0 3px rgba(217, 45, 32, 0.25);
+}

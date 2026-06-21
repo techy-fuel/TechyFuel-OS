@@ -1,0 +1,27 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Primary — Blue" subtitle="Brand scale, #2563EB at 600" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:20px;background:var(--surface-card);font-family:var(--font-sans);}
+  .scale{display:grid;grid-template-columns:repeat(11,1fr);gap:6px;}
+  .sw{display:flex;flex-direction:column;gap:6px;}
+  .chip{height:56px;border-radius:var(--radius-md);box-shadow:var(--ring-hairline);}
+  .n{font-size:var(--text-2xs);font-weight:var(--fw-bold);color:var(--text-body);font-variant-numeric:tabular-nums;}
+  .h{font-size:9px;color:var(--text-subtle);font-family:var(--font-mono);text-transform:uppercase;}
+  .star{position:absolute;top:6px;right:8px;font-size:9px;font-weight:var(--fw-bold);color:#fff;letter-spacing:.06em;}
+  .sw{position:relative;}
+</style></head><body>
+<div class="scale">
+  <div class="sw"><div class="chip" style="background:var(--blue-50)"></div><span class="n">50</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-100)"></div><span class="n">100</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-200)"></div><span class="n">200</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-300)"></div><span class="n">300</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-400)"></div><span class="n">400</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-500)"></div><span class="n">500</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-600)"><span class="star">★</span></div><span class="n">600</span><span class="h">2563EB</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-700)"></div><span class="n">700</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-800)"></div><span class="n">800</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-900)"></div><span class="n">900</span></div>
+  <div class="sw"><div class="chip" style="background:var(--blue-950)"></div><span class="n">950</span></div>
+</div>
+</body></html>

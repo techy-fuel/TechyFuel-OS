@@ -1,0 +1,36 @@
+<!-- @dsCard group="Components" viewport="700x140" name="Tabs" subtitle="Underline view switcher" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<style> body { margin: 0; padding: 24px; background: var(--surface-card); } </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel" data-presets="react">
+  const { Tabs } = window.TechyFuelOSDesignSystem_be0222;
+  const I = (n) => <i data-lucide={n}></i>;
+  function Demo() {
+    return (
+      <Tabs
+        defaultValue="kanban"
+        tabs={[
+          { id: 'list', label: 'List', icon: I('list') },
+          { id: 'kanban', label: 'Board', icon: I('columns-3'), count: 24 },
+          { id: 'calendar', label: 'Calendar', icon: I('calendar') },
+          { id: 'files', label: 'Files', count: 8 },
+        ]}
+      />
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+  requestAnimationFrame(() => lucide.createIcons());
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+/* ============================================================
+   TechyFuel OS — Base resets & helpers
+   Lightweight, opt-in. Sets sensible defaults for specimen
+   cards and UI kits without being heavy-handed.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--body-size);
+  line-height: var(--leading-normal);
+  color: var(--text-body);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv05" 1, "ss01" 1;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  color: var(--text-strong);
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+p { margin: 0; }
+
+a { color: var(--text-link); text-decoration: none; }
+
+/* Tabular figures for all numeric data displays */
+.tf-tnum { font-variant-numeric: tabular-nums; }
+
+/* Visually-hidden */
+.tf-sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+::selection { background: var(--blue-100); color: var(--blue-900); }
+
+/* Custom scrollbars for app shells */
+.tf-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.tf-scroll::-webkit-scrollbar-thumb {
+  background: var(--slate-200); border-radius: 999px;
+  border: 3px solid transparent; background-clip: padding-box;
+}
+.tf-scroll::-webkit-scrollbar-thumb:hover { background: var(--slate-300); background-clip: padding-box; border: 3px solid transparent; }

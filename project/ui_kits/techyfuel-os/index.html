@@ -1,0 +1,95 @@
+<!-- @dsCard group="TechyFuel OS" viewport="1440x900" name="Executive Dashboard" subtitle="Full app shell — dashboard, CRM, tasks, ads, portal & AI" -->
+<!-- @startingPoint section="TechyFuel OS" subtitle="Full agency OS app shell with 5 screens + AI panel" viewport="1440x900" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TechyFuel OS</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  html, body { height: 100%; margin: 0; }
+  #root { height: 100%; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel" src="helpers.jsx" data-presets="react"></script>
+<script type="text/babel" src="charts.jsx" data-presets="react"></script>
+<script type="text/babel" src="AppShell.jsx" data-presets="react"></script>
+<script type="text/babel" src="Dashboard.jsx" data-presets="react"></script>
+<script type="text/babel" src="Projects.jsx" data-presets="react"></script>
+<script type="text/babel" src="ContentCalendar.jsx" data-presets="react"></script>
+<script type="text/babel" src="CRM.jsx" data-presets="react"></script>
+<script type="text/babel" src="TasksBoard.jsx" data-presets="react"></script>
+<script type="text/babel" src="MetaAds.jsx" data-presets="react"></script>
+<script type="text/babel" src="AIPanel.jsx" data-presets="react"></script>
+<script type="text/babel" src="ClientPortal.jsx" data-presets="react"></script>
+<script type="text/babel" src="Pipeline.jsx" data-presets="react"></script>
+<script type="text/babel" src="Finance.jsx" data-presets="react"></script>
+<script type="text/babel" src="Reports.jsx" data-presets="react"></script>
+<script type="text/babel" src="Files.jsx" data-presets="react"></script>
+<script type="text/babel" src="Team.jsx" data-presets="react"></script>
+<script type="text/babel" src="Settings.jsx" data-presets="react"></script>
+<script type="text/babel" data-presets="react">
+const ROUTES = {
+  dashboard: { crumb: 'Workspace', title: 'Executive dashboard', render: () => <Dashboard /> },
+  tasks:     { crumb: 'Workspace', title: 'Tasks', render: () => <TasksBoard /> },
+  projects:  { crumb: 'Workspace', title: 'Projects', render: () => <Projects /> },
+  content:   { crumb: 'Marketing', title: 'Content calendar', render: () => <ContentCalendar /> },
+  crm:       { crumb: 'Clients', title: 'Client CRM', render: () => <CRM /> },
+  ads:       { crumb: 'Marketing', title: 'Meta Ads Center', render: () => <MetaAds /> },
+  portal:    { crumb: 'Clients', title: 'Client portal', render: () => <ClientPortal /> },
+  pipeline:  { crumb: 'Clients', title: 'Sales pipeline', render: () => <Pipeline /> },
+  finance:   { crumb: 'Business', title: 'Finance', render: () => <Finance /> },
+  reports:   { crumb: 'Business', title: 'Reporting center', render: () => <Reports /> },
+  files:     { crumb: 'Business', title: 'Files', render: () => <Files /> },
+  team:      { crumb: 'Business', title: 'Team', render: () => <Team /> },
+  settings:  { crumb: 'Workspace', title: 'Settings', render: () => <Settings /> },
+};
+const PLACEHOLDER = {
+  calendar: ['calendar-days', 'Calendar'],
+};
+
+function Placeholder({ id }) {
+  const [icon, label] = PLACEHOLDER[id] || ['layout-dashboard', 'Module'];
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40 }}>
+      <span style={{ width: 64, height: 64, borderRadius: 'var(--radius-2xl)', background: 'var(--blue-50)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} size={30} style={{ color: 'var(--blue-600)' }} />
+      </span>
+      <div style={{ textAlign: 'center' }}>
+        <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>{label}</h2>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', marginTop: 6, maxWidth: 360 }}>
+          This module is part of TechyFuel OS. Explore Dashboard, Tasks, CRM, Meta Ads and the Client Portal in this kit.
+        </p>
+      </div>
+      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--blue-700)', background: 'var(--blue-50)', borderRadius: 'var(--radius-full)', padding: '5px 12px' }}>Kit preview</span>
+    </div>
+  );
+}
+
+function App() {
+  const [active, setActive] = React.useState('dashboard');
+  const [aiOpen, setAiOpen] = React.useState(false);
+  const route = ROUTES[active];
+  const meta = route || { crumb: 'TechyFuel OS', title: (PLACEHOLDER[active] || ['', 'Module'])[1] };
+  return (
+    <>
+      <AppShell active={active} onNavigate={setActive} title={meta.title} crumb={meta.crumb} onOpenAI={() => setAiOpen(true)}>
+        {route ? route.render() : <Placeholder id={active} />}
+      </AppShell>
+      <AIPanel open={aiOpen} onClose={() => setAiOpen(false)} />
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

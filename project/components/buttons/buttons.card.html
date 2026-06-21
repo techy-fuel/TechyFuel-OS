@@ -1,0 +1,56 @@
+<!-- @dsCard group="Components" viewport="700x310" name="Buttons" subtitle="Variants, sizes, icons & states" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { margin: 0; padding: 24px; background: var(--surface-page); }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .row:last-child { margin-bottom: 0; }
+  .lbl { width: 72px; flex: none; font-size: var(--text-2xs); font-weight: var(--fw-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-subtle); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel" data-presets="react">
+  const { Button, IconButton } = window.TechyFuelOSDesignSystem_be0222;
+  const I = (n) => <i data-lucide={n}></i>;
+  function Demo() {
+    return (
+      <div>
+        <div className="row">
+          <span className="lbl">Variants</span>
+          <Button variant="primary" iconLeft={I('plus')}>Add client</Button>
+          <Button variant="secondary">Cancel</Button>
+          <Button variant="subtle">Filter</Button>
+          <Button variant="ghost" iconLeft={I('download')}>Export</Button>
+          <Button variant="danger" iconLeft={I('trash-2')}>Delete</Button>
+        </div>
+        <div className="row">
+          <span className="lbl">Sizes</span>
+          <Button size="sm" variant="primary">Small</Button>
+          <Button size="md" variant="primary">Medium</Button>
+          <Button size="lg" variant="primary">Large</Button>
+          <Button variant="primary" disabled>Disabled</Button>
+        </div>
+        <div className="row">
+          <span className="lbl">Icon</span>
+          <IconButton variant="secondary" label="Search">{I('search')}</IconButton>
+          <IconButton variant="ghost" label="More">{I('more-horizontal')}</IconButton>
+          <IconButton variant="primary" label="Add">{I('plus')}</IconButton>
+          <Button variant="secondary" iconRight={I('arrow-right')}>Continue</Button>
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+  requestAnimationFrame(() => lucide.createIcons());
+</script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Data display" subtitle="Badges, avatars, KPI tiles, progress" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { margin: 0; padding: 24px; background: var(--surface-page); }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel" data-presets="react">
+  const { Badge, Avatar, AvatarGroup, StatCard, ProgressBar } = window.TechyFuelOSDesignSystem_be0222;
+  const I = (n) => <i data-lucide={n}></i>;
+  function Demo() {
+    return (
+      <div>
+        <div className="row">
+          <Badge tone="brand" dot>Lead</Badge>
+          <Badge tone="violet" dot>Proposal sent</Badge>
+          <Badge tone="warning" dot>Negotiation</Badge>
+          <Badge tone="success" dot>Active client</Badge>
+          <Badge tone="neutral" dot>Completed</Badge>
+          <Badge tone="danger" dot>Lost</Badge>
+          <Badge tone="success" solid>Paid</Badge>
+        </div>
+        <div className="row">
+          <Avatar name="Sara Khan" status="online" />
+          <Avatar name="Omar Ali" status="busy" />
+          <Avatar name="Lena Cruz" size="lg" />
+          <AvatarGroup people={['Sara Khan','Omar Ali','Lena Cruz','Tom Reed','Mia Wu','Jay Park']} max={4} />
+          <div style={{flex:1,minWidth:160}}><ProgressBar value={72} showLabel label="Team utilization" /></div>
+        </div>
+        <div className="stats">
+          <StatCard label="Monthly revenue" value="$48.2K" delta="12.5%" icon={I('dollar-sign')} tone="success" />
+          <StatCard label="Active projects" value="27" delta="4.0%" icon={I('folder-kanban')} tone="brand" />
+          <StatCard label="Outstanding" value="$9.4K" delta="-3.1%" icon={I('receipt')} tone="warning" />
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+  requestAnimationFrame(() => lucide.createIcons());
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+/* ============================================================
+   TechyFuel OS — Spacing, Radii, Sizing
+   4px base grid.
+   ============================================================ */
+
+:root {
+  --space-0: 0;
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-10: 20px;
+  --space-12: 24px;
+  --space-14: 28px;
+  --space-16: 32px;
+  --space-20: 40px;
+  --space-24: 48px;
+  --space-28: 56px;
+  --space-32: 64px;
+  --space-40: 80px;
+  --space-48: 96px;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-full: 999px;
+
+  /* Layout sizing */
+  --sidebar-width: 248px;
+  --sidebar-collapsed: 64px;
+  --topbar-height: 60px;
+  --content-max: 1280px;
+
+  /* Control heights */
+  --control-sm: 30px;
+  --control-md: 36px;
+  --control-lg: 42px;
+}
