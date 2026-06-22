@@ -25,36 +25,34 @@
 <script src="vendor/react-dom.production.min.js"></script>
 <script src="vendor/lucide.min.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="vendor/babel.min.js"></script>
 
-<!-- Design-system bundle: components only (screen globals are re-exported below) -->
+<!-- Design-system bundle -->
 <script src="project/_ds_bundle.js"></script>
 
-<!-- Supabase API helpers — exposes window.db and window.API -->
+<!-- Supabase API helpers -->
 <script src="project/ui_kits/techyfuel-os/supabase-api.js"></script>
 
-<!-- Screen components as text/babel — these overwrite the bundle's broken closures
-     with correctly-scoped versions that resolve design-system deps at call time -->
-<script type="text/babel" src="project/ui_kits/techyfuel-os/helpers.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/charts.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/AppShell.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/Dashboard.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/Projects.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/ContentCalendar.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/CRM.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/TasksBoard.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/MetaAds.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/AIPanel.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/ClientPortal.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/Pipeline.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/Finance.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/Reports.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/Files.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/Team.jsx" data-presets="react"></script>
-<script type="text/babel" src="project/ui_kits/techyfuel-os/Settings.jsx" data-presets="react"></script>
+<!-- Pre-compiled screen components (no Babel runtime needed) -->
+<script src="project/compiled/helpers.js"></script>
+<script src="project/compiled/charts.js"></script>
+<script src="project/compiled/AppShell.js"></script>
+<script src="project/compiled/Dashboard.js"></script>
+<script src="project/compiled/Projects.js"></script>
+<script src="project/compiled/ContentCalendar.js"></script>
+<script src="project/compiled/CRM.js"></script>
+<script src="project/compiled/TasksBoard.js"></script>
+<script src="project/compiled/MetaAds.js"></script>
+<script src="project/compiled/AIPanel.js"></script>
+<script src="project/compiled/ClientPortal.js"></script>
+<script src="project/compiled/Pipeline.js"></script>
+<script src="project/compiled/Finance.js"></script>
+<script src="project/compiled/Reports.js"></script>
+<script src="project/compiled/Files.js"></script>
+<script src="project/compiled/Team.js"></script>
+<script src="project/compiled/Settings.js"></script>
 
-<!-- App router — must be text/babel so it runs AFTER babel processes the screen scripts above -->
-<script type="text/babel">
+<!-- App router -->
+<script>
 (function () {
   'use strict';
 
