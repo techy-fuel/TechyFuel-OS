@@ -1,4 +1,3 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // Projects screen — project cards grid.
 (() => {
   const {
@@ -87,211 +86,184 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
     p
   }) {
     const [st, sl] = PS[p.status];
-    return /*#__PURE__*/_jsxs(Card, {
+    return /*#__PURE__*/React.createElement(Card, {
       interactive: true,
       padding: "md",
       style: {
         display: 'flex',
         flexDirection: 'column',
         gap: 14
-      },
-      children: [/*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 8
-        },
-        children: [/*#__PURE__*/_jsxs("div", {
-          children: [/*#__PURE__*/_jsx("div", {
-            style: {
-              fontSize: 'var(--text-md)',
-              fontWeight: 'var(--fw-bold)',
-              color: 'var(--text-strong)',
-              letterSpacing: '-0.01em'
-            },
-            children: p.name
-          }), /*#__PURE__*/_jsx("div", {
-            style: {
-              fontSize: 'var(--text-xs)',
-              color: 'var(--text-muted)',
-              marginTop: 2
-            },
-            children: p.client
-          })]
-        }), /*#__PURE__*/_jsx(Icon, {
-          name: "more-horizontal",
-          size: 18,
-          style: {
-            color: 'var(--text-subtle)',
-            cursor: 'pointer',
-            flex: 'none'
-          }
-        })]
-      }), /*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'flex',
-          gap: 6
-        },
-        children: [/*#__PURE__*/_jsx(Badge, {
-          tone: PT[p.type],
-          size: "sm",
-          children: p.type
-        }), /*#__PURE__*/_jsx(Badge, {
-          tone: st,
-          dot: true,
-          children: sl
-        })]
-      }), /*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6
-        },
-        children: [/*#__PURE__*/_jsxs("div", {
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: 'var(--text-xs)'
-          },
-          children: [/*#__PURE__*/_jsx("span", {
-            style: {
-              color: 'var(--text-muted)',
-              fontWeight: 'var(--fw-semibold)'
-            },
-            children: "Progress"
-          }), /*#__PURE__*/_jsxs("span", {
-            style: {
-              color: 'var(--text-strong)',
-              fontWeight: 'var(--fw-bold)'
-            },
-            children: [p.pct, "%"]
-          })]
-        }), /*#__PURE__*/_jsx(ProgressBar, {
-          value: p.pct,
-          tone: p.status === 'done' ? 'success' : 'brand',
-          size: "sm"
-        })]
-      }), /*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingTop: 12,
-          borderTop: '1px solid var(--border-subtle)'
-        },
-        children: [/*#__PURE__*/_jsxs("div", {
-          children: [/*#__PURE__*/_jsxs("div", {
-            style: {
-              fontSize: 'var(--text-2xs)',
-              color: 'var(--text-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: 'var(--tracking-wide)',
-              fontWeight: 'var(--fw-bold)'
-            },
-            children: ["Budget · ", p.spent, "% used"]
-          }), /*#__PURE__*/_jsx("div", {
-            style: {
-              fontSize: 'var(--text-sm)',
-              fontWeight: 'var(--fw-bold)',
-              color: 'var(--text-strong)',
-              fontVariantNumeric: 'tabular-nums'
-            },
-            children: p.budget
-          })]
-        }), /*#__PURE__*/_jsxs("div", {
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            gap: 6
-          },
-          children: [/*#__PURE__*/_jsx(AvatarGroup, {
-            people: p.team,
-            size: "xs",
-            max: 3
-          }), /*#__PURE__*/_jsxs("span", {
-            style: {
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: 'var(--text-xs)',
-              color: 'var(--text-muted)'
-            },
-            children: [/*#__PURE__*/_jsx(Icon, {
-              name: "calendar",
-              size: 13
-            }), " ", p.due]
-          })]
-        })]
-      })]
-    });
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-md)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        letterSpacing: '-0.01em'
+      }
+    }, p.name), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        marginTop: 2
+      }
+    }, p.client)), /*#__PURE__*/React.createElement(Icon, {
+      name: "more-horizontal",
+      size: 18,
+      style: {
+        color: 'var(--text-subtle)',
+        cursor: 'pointer',
+        flex: 'none'
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Badge, {
+      tone: PT[p.type],
+      size: "sm"
+    }, p.type), /*#__PURE__*/React.createElement(Badge, {
+      tone: st,
+      dot: true
+    }, sl)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        fontSize: 'var(--text-xs)'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: 'var(--text-muted)',
+        fontWeight: 'var(--fw-semibold)'
+      }
+    }, "Progress"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: 'var(--text-strong)',
+        fontWeight: 'var(--fw-bold)'
+      }
+    }, p.pct, "%")), /*#__PURE__*/React.createElement(ProgressBar, {
+      value: p.pct,
+      tone: p.status === 'done' ? 'success' : 'brand',
+      size: "sm"
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: 12,
+        borderTop: '1px solid var(--border-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-2xs)',
+        color: 'var(--text-subtle)',
+        textTransform: 'uppercase',
+        letterSpacing: 'var(--tracking-wide)',
+        fontWeight: 'var(--fw-bold)'
+      }
+    }, "Budget · ", p.spent, "% used"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, p.budget)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(AvatarGroup, {
+      people: p.team,
+      size: "xs",
+      max: 3
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "calendar",
+      size: 13
+    }), " ", p.due))));
   }
   function Projects() {
-    return /*#__PURE__*/_jsxs("div", {
+    return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
         maxWidth: 1280,
         margin: '0 auto'
-      },
-      children: [/*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 18,
-          flexWrap: 'wrap',
-          gap: 12
-        },
-        children: [/*#__PURE__*/_jsxs("div", {
-          children: [/*#__PURE__*/_jsx("h1", {
-            style: {
-              fontSize: 'var(--text-3xl)',
-              fontWeight: 'var(--fw-extrabold)',
-              letterSpacing: '-0.02em'
-            },
-            children: "Projects"
-          }), /*#__PURE__*/_jsx("p", {
-            style: {
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-muted)',
-              marginTop: 2
-            },
-            children: "27 active · $96.8K in committed budget"
-          })]
-        }), /*#__PURE__*/_jsxs("button", {
-          style: {
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 7,
-            height: 36,
-            padding: '0 14px',
-            background: 'var(--blue-600)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-brand)',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 'var(--fw-semibold)',
-            cursor: 'pointer'
-          },
-          children: [/*#__PURE__*/_jsx(Icon, {
-            name: "plus",
-            size: 16
-          }), " New project"]
-        })]
-      }), /*#__PURE__*/_jsx("div", {
-        style: {
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 16
-        },
-        children: PROJECTS.map((p, i) => /*#__PURE__*/_jsx(ProjectCard, {
-          p: p
-        }, i))
-      })]
-    });
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        marginBottom: 18,
+        flexWrap: 'wrap',
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
+      style: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--fw-extrabold)',
+        letterSpacing: '-0.02em'
+      }
+    }, "Projects"), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        marginTop: 2
+      }
+    }, "27 active · $96.8K in committed budget")), /*#__PURE__*/React.createElement("button", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 36,
+        padding: '0 14px',
+        background: 'var(--blue-600)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        boxShadow: 'var(--shadow-brand)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 16
+    }), " New project")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 16
+      }
+    }, PROJECTS.map((p, i) => /*#__PURE__*/React.createElement(ProjectCard, {
+      key: i,
+      p: p
+    }))));
   }
   Object.assign(window, {
     Projects

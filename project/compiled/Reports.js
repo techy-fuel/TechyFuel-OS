@@ -1,4 +1,3 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // Reports center screen.
 (() => {
   const {
@@ -44,176 +43,158 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
     runs: 'Manual'
   }];
   function Reports() {
-    return /*#__PURE__*/_jsxs("div", {
+    return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
         maxWidth: 1280,
         margin: '0 auto'
-      },
-      children: [/*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 18,
-          flexWrap: 'wrap',
-          gap: 12
-        },
-        children: [/*#__PURE__*/_jsxs("div", {
-          children: [/*#__PURE__*/_jsx("h1", {
-            style: {
-              fontSize: 'var(--text-3xl)',
-              fontWeight: 'var(--fw-extrabold)',
-              letterSpacing: '-0.02em'
-            },
-            children: "Reporting center"
-          }), /*#__PURE__*/_jsx("p", {
-            style: {
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-muted)',
-              marginTop: 2
-            },
-            children: "6 report templates · export to PDF or Excel"
-          })]
-        }), /*#__PURE__*/_jsxs("button", {
-          style: {
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 7,
-            height: 36,
-            padding: '0 14px',
-            background: 'var(--blue-600)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-brand)',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 'var(--fw-semibold)',
-            cursor: 'pointer'
-          },
-          children: [/*#__PURE__*/_jsx(Icon, {
-            name: "plus",
-            size: 16
-          }), " Build report"]
-        })]
-      }), /*#__PURE__*/_jsx("div", {
-        style: {
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 16
-        },
-        children: REPORTS.map((r, i) => /*#__PURE__*/_jsxs(Card, {
-          interactive: true,
-          padding: "md",
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12
-          },
-          children: [/*#__PURE__*/_jsxs("div", {
-            style: {
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between'
-            },
-            children: [/*#__PURE__*/_jsx("span", {
-              style: {
-                width: 42,
-                height: 42,
-                borderRadius: 'var(--radius-lg)',
-                background: r.tone[0],
-                color: r.tone[1],
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              },
-              children: /*#__PURE__*/_jsx(Icon, {
-                name: r.icon,
-                size: 21
-              })
-            }), /*#__PURE__*/_jsx(Badge, {
-              tone: r.runs === 'Manual' ? 'neutral' : 'success',
-              size: "sm",
-              children: r.runs
-            })]
-          }), /*#__PURE__*/_jsxs("div", {
-            children: [/*#__PURE__*/_jsx("div", {
-              style: {
-                fontSize: 'var(--text-md)',
-                fontWeight: 'var(--fw-bold)',
-                color: 'var(--text-strong)'
-              },
-              children: r.name
-            }), /*#__PURE__*/_jsx("div", {
-              style: {
-                fontSize: 'var(--text-xs)',
-                color: 'var(--text-muted)',
-                marginTop: 4,
-                lineHeight: 1.45
-              },
-              children: r.desc
-            })]
-          }), /*#__PURE__*/_jsxs("div", {
-            style: {
-              display: 'flex',
-              gap: 8,
-              paddingTop: 12,
-              borderTop: '1px solid var(--border-subtle)'
-            },
-            children: [/*#__PURE__*/_jsxs("button", {
-              style: {
-                flex: 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                height: 32,
-                background: 'var(--slate-0)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-md)',
-                fontFamily: 'var(--font-sans)',
-                fontSize: 'var(--text-xs)',
-                fontWeight: 'var(--fw-semibold)',
-                color: 'var(--text-body)',
-                cursor: 'pointer'
-              },
-              children: [/*#__PURE__*/_jsx(Icon, {
-                name: "file-text",
-                size: 14,
-                style: {
-                  color: 'var(--red-500)'
-                }
-              }), " PDF"]
-            }), /*#__PURE__*/_jsxs("button", {
-              style: {
-                flex: 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                height: 32,
-                background: 'var(--slate-0)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-md)',
-                fontFamily: 'var(--font-sans)',
-                fontSize: 'var(--text-xs)',
-                fontWeight: 'var(--fw-semibold)',
-                color: 'var(--text-body)',
-                cursor: 'pointer'
-              },
-              children: [/*#__PURE__*/_jsx(Icon, {
-                name: "sheet",
-                size: 14,
-                style: {
-                  color: 'var(--green-600)'
-                }
-              }), " Excel"]
-            })]
-          })]
-        }, i))
-      })]
-    });
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        marginBottom: 18,
+        flexWrap: 'wrap',
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
+      style: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--fw-extrabold)',
+        letterSpacing: '-0.02em'
+      }
+    }, "Reporting center"), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        marginTop: 2
+      }
+    }, "6 report templates · export to PDF or Excel")), /*#__PURE__*/React.createElement("button", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 36,
+        padding: '0 14px',
+        background: 'var(--blue-600)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        boxShadow: 'var(--shadow-brand)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 16
+    }), " Build report")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 16
+      }
+    }, REPORTS.map((r, i) => /*#__PURE__*/React.createElement(Card, {
+      key: i,
+      interactive: true,
+      padding: "md",
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 42,
+        height: 42,
+        borderRadius: 'var(--radius-lg)',
+        background: r.tone[0],
+        color: r.tone[1],
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: r.icon,
+      size: 21
+    })), /*#__PURE__*/React.createElement(Badge, {
+      tone: r.runs === 'Manual' ? 'neutral' : 'success',
+      size: "sm"
+    }, r.runs)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-md)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)'
+      }
+    }, r.name), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        marginTop: 4,
+        lineHeight: 1.45
+      }
+    }, r.desc)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 8,
+        paddingTop: 12,
+        borderTop: '1px solid var(--border-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      style: {
+        flex: 1,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        height: 32,
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "file-text",
+      size: 14,
+      style: {
+        color: 'var(--red-500)'
+      }
+    }), " PDF"), /*#__PURE__*/React.createElement("button", {
+      style: {
+        flex: 1,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        height: 32,
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "sheet",
+      size: 14,
+      style: {
+        color: 'var(--green-600)'
+      }
+    }), " Excel"))))));
   }
   Object.assign(window, {
     Reports

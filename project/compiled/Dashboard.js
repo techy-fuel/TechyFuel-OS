@@ -1,4 +1,3 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // Executive Dashboard screen.
 (() => {
   const {
@@ -15,26 +14,24 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
     title,
     action
   }) {
-    return /*#__PURE__*/_jsxs("div", {
+    return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: 14
-      },
-      children: [/*#__PURE__*/_jsx("h3", {
-        style: {
-          fontSize: 'var(--text-lg)',
-          fontWeight: 'var(--fw-bold)'
-        },
-        children: title
-      }), action]
-    });
+      }
+    }, /*#__PURE__*/React.createElement("h3", {
+      style: {
+        fontSize: 'var(--text-lg)',
+        fontWeight: 'var(--fw-bold)'
+      }
+    }, title), action);
   }
   function LinkBtn({
     children
   }) {
-    return /*#__PURE__*/_jsx("button", {
+    return /*#__PURE__*/React.createElement("button", {
       style: {
         background: 'none',
         border: 'none',
@@ -44,9 +41,8 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
         fontWeight: 'var(--fw-semibold)',
         cursor: 'pointer',
         padding: 0
-      },
-      children: children
-    });
+      }
+    }, children);
   }
   const TF_ACTIVITY = [{
     who: 'Sara Khan',
@@ -120,398 +116,344 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
       warning: ['var(--amber-50)', 'var(--amber-600)']
     };
     const [bg, fg] = tones[a.tone] || tones.brand;
-    return /*#__PURE__*/_jsxs("div", {
+    return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         gap: 11,
         padding: '10px 0',
         borderBottom: '1px solid var(--border-subtle)'
-      },
-      children: [/*#__PURE__*/_jsx("span", {
-        style: {
-          width: 30,
-          height: 30,
-          flex: 'none',
-          borderRadius: 'var(--radius-md)',
-          background: bg,
-          color: fg,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        },
-        children: /*#__PURE__*/_jsx(Icon, {
-          name: a.icon,
-          size: 15
-        })
-      }), /*#__PURE__*/_jsxs("div", {
-        style: {
-          flex: 1,
-          fontSize: 'var(--text-sm)',
-          color: 'var(--text-body)',
-          lineHeight: 1.45
-        },
-        children: [/*#__PURE__*/_jsx("strong", {
-          style: {
-            color: 'var(--text-strong)',
-            fontWeight: 'var(--fw-semibold)'
-          },
-          children: a.who
-        }), " ", a.action, " ", /*#__PURE__*/_jsx("strong", {
-          style: {
-            color: 'var(--text-strong)',
-            fontWeight: 'var(--fw-semibold)'
-          },
-          children: a.target
-        })]
-      }), /*#__PURE__*/_jsx("span", {
-        style: {
-          fontSize: 'var(--text-xs)',
-          color: 'var(--text-subtle)',
-          whiteSpace: 'nowrap'
-        },
-        children: a.time
-      })]
-    });
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 30,
+        height: 30,
+        flex: 'none',
+        borderRadius: 'var(--radius-md)',
+        background: bg,
+        color: fg,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: a.icon,
+      size: 15
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-body)',
+        lineHeight: 1.45
+      }
+    }, /*#__PURE__*/React.createElement("strong", {
+      style: {
+        color: 'var(--text-strong)',
+        fontWeight: 'var(--fw-semibold)'
+      }
+    }, a.who), " ", a.action, " ", /*#__PURE__*/React.createElement("strong", {
+      style: {
+        color: 'var(--text-strong)',
+        fontWeight: 'var(--fw-semibold)'
+      }
+    }, a.target)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-subtle)',
+        whiteSpace: 'nowrap'
+      }
+    }, a.time));
   }
   function Dashboard() {
-    return /*#__PURE__*/_jsxs("div", {
+    return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
         maxWidth: 1280,
         margin: '0 auto'
-      },
-      children: [/*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 20,
-          flexWrap: 'wrap',
-          gap: 12
-        },
-        children: [/*#__PURE__*/_jsxs("div", {
-          children: [/*#__PURE__*/_jsx("div", {
-            style: {
-              fontSize: 'var(--text-2xs)',
-              fontWeight: 'var(--fw-bold)',
-              letterSpacing: 'var(--tracking-caps)',
-              textTransform: 'uppercase',
-              color: 'var(--text-muted)',
-              marginBottom: 4
-            },
-            children: "Good morning, Sara"
-          }), /*#__PURE__*/_jsx("h1", {
-            style: {
-              fontSize: 'var(--text-3xl)',
-              fontWeight: 'var(--fw-extrabold)',
-              letterSpacing: '-0.02em'
-            },
-            children: "Executive dashboard"
-          })]
-        }), /*#__PURE__*/_jsxs("div", {
-          style: {
-            display: 'flex',
-            gap: 8
-          },
-          children: [/*#__PURE__*/_jsxs("div", {
-            style: {
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              height: 36,
-              padding: '0 12px',
-              background: 'var(--slate-0)',
-              border: '1px solid var(--border-default)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 'var(--fw-semibold)',
-              color: 'var(--text-body)'
-            },
-            children: [/*#__PURE__*/_jsx(Icon, {
-              name: "calendar",
-              size: 16,
-              style: {
-                color: 'var(--text-muted)'
-              }
-            }), " This month ", /*#__PURE__*/_jsx(Icon, {
-              name: "chevron-down",
-              size: 15,
-              style: {
-                color: 'var(--text-subtle)'
-              }
-            })]
-          }), /*#__PURE__*/_jsxs("button", {
-            style: {
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              height: 36,
-              padding: '0 14px',
-              background: 'var(--blue-600)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              boxShadow: 'var(--shadow-brand)',
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 'var(--fw-semibold)',
-              cursor: 'pointer'
-            },
-            children: [/*#__PURE__*/_jsx(Icon, {
-              name: "plus",
-              size: 16
-            }), " New project"]
-          })]
-        })]
-      }), /*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-          marginBottom: 16
-        },
-        children: [/*#__PURE__*/_jsx(StatCard, {
-          label: "Monthly revenue",
-          value: "$48,250",
-          delta: "12.5%",
-          icon: /*#__PURE__*/_jsx(Icon, {
-            name: "dollar-sign"
-          }),
-          tone: "success"
-        }), /*#__PURE__*/_jsx(StatCard, {
-          label: "Active projects",
-          value: "27",
-          delta: "4.0%",
-          icon: /*#__PURE__*/_jsx(Icon, {
-            name: "folder-kanban"
-          }),
-          tone: "brand"
-        }), /*#__PURE__*/_jsx(StatCard, {
-          label: "Outstanding",
-          value: "$9,420",
-          delta: "-3.1%",
-          deltaDirection: "down",
-          icon: /*#__PURE__*/_jsx(Icon, {
-            name: "receipt"
-          }),
-          tone: "warning"
-        }), /*#__PURE__*/_jsx(StatCard, {
-          label: "Active clients",
-          value: "38",
-          delta: "6.2%",
-          icon: /*#__PURE__*/_jsx(Icon, {
-            name: "users"
-          }),
-          tone: "violet"
-        })]
-      }), /*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
-          gap: 16,
-          marginBottom: 16
-        },
-        children: [/*#__PURE__*/_jsxs(Card, {
-          padding: "lg",
-          children: [/*#__PURE__*/_jsx(SectionHead, {
-            title: "Revenue growth",
-            action: /*#__PURE__*/_jsx(Badge, {
-              tone: "success",
-              dot: true,
-              children: "+24% YTD"
-            })
-          }), /*#__PURE__*/_jsxs("div", {
-            style: {
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 10,
-              marginBottom: 10
-            },
-            children: [/*#__PURE__*/_jsx("span", {
-              style: {
-                fontSize: 'var(--text-3xl)',
-                fontWeight: 'var(--fw-extrabold)',
-                letterSpacing: '-0.02em',
-                fontVariantNumeric: 'tabular-nums'
-              },
-              children: "$432.6K"
-            }), /*#__PURE__*/_jsx("span", {
-              style: {
-                fontSize: 'var(--text-sm)',
-                color: 'var(--text-muted)'
-              },
-              children: "last 12 months"
-            })]
-          }), /*#__PURE__*/_jsx(AreaLine, {
-            data: TF_REVENUE,
-            id: "rev"
-          }), /*#__PURE__*/_jsxs("div", {
-            style: {
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: 8,
-              fontSize: 'var(--text-2xs)',
-              color: 'var(--text-subtle)'
-            },
-            children: [/*#__PURE__*/_jsx("span", {
-              children: "Jul"
-            }), /*#__PURE__*/_jsx("span", {
-              children: "Sep"
-            }), /*#__PURE__*/_jsx("span", {
-              children: "Nov"
-            }), /*#__PURE__*/_jsx("span", {
-              children: "Jan"
-            }), /*#__PURE__*/_jsx("span", {
-              children: "Mar"
-            }), /*#__PURE__*/_jsx("span", {
-              children: "May"
-            })]
-          })]
-        }), /*#__PURE__*/_jsxs(Card, {
-          padding: "lg",
-          children: [/*#__PURE__*/_jsx(SectionHead, {
-            title: "Project status"
-          }), /*#__PURE__*/_jsxs("div", {
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14
-            },
-            children: [/*#__PURE__*/_jsx(Donut, {
-              segments: [{
-                value: 11,
-                color: 'var(--blue-600)'
-              }, {
-                value: 7,
-                color: 'var(--sky-500)'
-              }, {
-                value: 5,
-                color: 'var(--violet-500)'
-              }, {
-                value: 4,
-                color: 'var(--green-500)'
-              }]
-            }), /*#__PURE__*/_jsx("div", {
-              style: {
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-                flex: 1
-              },
-              children: [['In progress', 11, 'var(--blue-600)'], ['Review', 7, 'var(--sky-500)'], ['Client approval', 5, 'var(--violet-500)'], ['Completed', 4, 'var(--green-500)']].map(([l, n, c]) => /*#__PURE__*/_jsxs("div", {
-                style: {
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  fontSize: 'var(--text-sm)'
-                },
-                children: [/*#__PURE__*/_jsx("span", {
-                  style: {
-                    width: 9,
-                    height: 9,
-                    borderRadius: 3,
-                    background: c,
-                    flex: 'none'
-                  }
-                }), /*#__PURE__*/_jsx("span", {
-                  style: {
-                    flex: 1,
-                    color: 'var(--text-body)'
-                  },
-                  children: l
-                }), /*#__PURE__*/_jsx("span", {
-                  style: {
-                    fontWeight: 'var(--fw-bold)',
-                    color: 'var(--text-strong)',
-                    fontVariantNumeric: 'tabular-nums'
-                  },
-                  children: n
-                })]
-              }, l))
-            })]
-          })]
-        })]
-      }), /*#__PURE__*/_jsxs("div", {
-        style: {
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 16
-        },
-        children: [/*#__PURE__*/_jsxs(Card, {
-          padding: "lg",
-          children: [/*#__PURE__*/_jsx(SectionHead, {
-            title: "Recent activity",
-            action: /*#__PURE__*/_jsx(LinkBtn, {
-              children: "View all"
-            })
-          }), /*#__PURE__*/_jsx("div", {
-            children: TF_ACTIVITY.map((a, i) => /*#__PURE__*/_jsx(ActivityRow, {
-              a: a
-            }, i))
-          })]
-        }), /*#__PURE__*/_jsxs(Card, {
-          padding: "lg",
-          children: [/*#__PURE__*/_jsx(SectionHead, {
-            title: "Upcoming deadlines",
-            action: /*#__PURE__*/_jsx(LinkBtn, {
-              children: "Open calendar"
-            })
-          }), /*#__PURE__*/_jsx("div", {
-            style: {
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 14
-            },
-            children: TF_DEADLINES.map((d, i) => /*#__PURE__*/_jsxs("div", {
-              style: {
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 7
-              },
-              children: [/*#__PURE__*/_jsxs("div", {
-                style: {
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10
-                },
-                children: [/*#__PURE__*/_jsxs("div", {
-                  style: {
-                    flex: 1,
-                    minWidth: 0
-                  },
-                  children: [/*#__PURE__*/_jsx("div", {
-                    style: {
-                      fontSize: 'var(--text-sm)',
-                      fontWeight: 'var(--fw-semibold)',
-                      color: 'var(--text-strong)'
-                    },
-                    children: d.project
-                  }), /*#__PURE__*/_jsx("div", {
-                    style: {
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--text-muted)'
-                    },
-                    children: d.client
-                  })]
-                }), /*#__PURE__*/_jsx(AvatarGroup, {
-                  people: d.team,
-                  size: "xs",
-                  max: 3
-                }), /*#__PURE__*/_jsx(Badge, {
-                  tone: d.urgent ? 'danger' : 'neutral',
-                  dot: d.urgent,
-                  children: d.due
-                })]
-              }), /*#__PURE__*/_jsx(ProgressBar, {
-                value: d.pct,
-                tone: d.urgent ? 'warning' : 'brand',
-                size: "sm"
-              })]
-            }, i))
-          })]
-        })]
-      })]
-    });
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        marginBottom: 20,
+        flexWrap: 'wrap',
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-2xs)',
+        fontWeight: 'var(--fw-bold)',
+        letterSpacing: 'var(--tracking-caps)',
+        textTransform: 'uppercase',
+        color: 'var(--text-muted)',
+        marginBottom: 4
+      }
+    }, "Good morning, Sara"), /*#__PURE__*/React.createElement("h1", {
+      style: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--fw-extrabold)',
+        letterSpacing: '-0.02em'
+      }
+    }, "Executive dashboard")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        height: 36,
+        padding: '0 12px',
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "calendar",
+      size: 16,
+      style: {
+        color: 'var(--text-muted)'
+      }
+    }), " This month ", /*#__PURE__*/React.createElement(Icon, {
+      name: "chevron-down",
+      size: 15,
+      style: {
+        color: 'var(--text-subtle)'
+      }
+    })), /*#__PURE__*/React.createElement("button", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 36,
+        padding: '0 14px',
+        background: 'var(--blue-600)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        boxShadow: 'var(--shadow-brand)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 16
+    }), " New project"))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 16,
+        marginBottom: 16
+      }
+    }, /*#__PURE__*/React.createElement(StatCard, {
+      label: "Monthly revenue",
+      value: "$48,250",
+      delta: "12.5%",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "dollar-sign"
+      }),
+      tone: "success"
+    }), /*#__PURE__*/React.createElement(StatCard, {
+      label: "Active projects",
+      value: "27",
+      delta: "4.0%",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "folder-kanban"
+      }),
+      tone: "brand"
+    }), /*#__PURE__*/React.createElement(StatCard, {
+      label: "Outstanding",
+      value: "$9,420",
+      delta: "-3.1%",
+      deltaDirection: "down",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "receipt"
+      }),
+      tone: "warning"
+    }), /*#__PURE__*/React.createElement(StatCard, {
+      label: "Active clients",
+      value: "38",
+      delta: "6.2%",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "users"
+      }),
+      tone: "violet"
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: '2fr 1fr',
+        gap: 16,
+        marginBottom: 16
+      }
+    }, /*#__PURE__*/React.createElement(Card, {
+      padding: "lg"
+    }, /*#__PURE__*/React.createElement(SectionHead, {
+      title: "Revenue growth",
+      action: /*#__PURE__*/React.createElement(Badge, {
+        tone: "success",
+        dot: true
+      }, "+24% YTD")
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 10,
+        marginBottom: 10
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--fw-extrabold)',
+        letterSpacing: '-0.02em',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, "$432.6K"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)'
+      }
+    }, "last 12 months")), /*#__PURE__*/React.createElement(AreaLine, {
+      data: TF_REVENUE,
+      id: "rev"
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginTop: 8,
+        fontSize: 'var(--text-2xs)',
+        color: 'var(--text-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement("span", null, "Jul"), /*#__PURE__*/React.createElement("span", null, "Sep"), /*#__PURE__*/React.createElement("span", null, "Nov"), /*#__PURE__*/React.createElement("span", null, "Jan"), /*#__PURE__*/React.createElement("span", null, "Mar"), /*#__PURE__*/React.createElement("span", null, "May"))), /*#__PURE__*/React.createElement(Card, {
+      padding: "lg"
+    }, /*#__PURE__*/React.createElement(SectionHead, {
+      title: "Project status"
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14
+      }
+    }, /*#__PURE__*/React.createElement(Donut, {
+      segments: [{
+        value: 11,
+        color: 'var(--blue-600)'
+      }, {
+        value: 7,
+        color: 'var(--sky-500)'
+      }, {
+        value: 5,
+        color: 'var(--violet-500)'
+      }, {
+        value: 4,
+        color: 'var(--green-500)'
+      }]
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        flex: 1
+      }
+    }, [['In progress', 11, 'var(--blue-600)'], ['Review', 7, 'var(--sky-500)'], ['Client approval', 5, 'var(--violet-500)'], ['Completed', 4, 'var(--green-500)']].map(([l, n, c]) => /*#__PURE__*/React.createElement("div", {
+      key: l,
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        fontSize: 'var(--text-sm)'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 9,
+        height: 9,
+        borderRadius: 3,
+        background: c,
+        flex: 'none'
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        color: 'var(--text-body)'
+      }
+    }, l), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, n))))))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 16
+      }
+    }, /*#__PURE__*/React.createElement(Card, {
+      padding: "lg"
+    }, /*#__PURE__*/React.createElement(SectionHead, {
+      title: "Recent activity",
+      action: /*#__PURE__*/React.createElement(LinkBtn, null, "View all")
+    }), /*#__PURE__*/React.createElement("div", null, TF_ACTIVITY.map((a, i) => /*#__PURE__*/React.createElement(ActivityRow, {
+      key: i,
+      a: a
+    })))), /*#__PURE__*/React.createElement(Card, {
+      padding: "lg"
+    }, /*#__PURE__*/React.createElement(SectionHead, {
+      title: "Upcoming deadlines",
+      action: /*#__PURE__*/React.createElement(LinkBtn, null, "Open calendar")
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14
+      }
+    }, TF_DEADLINES.map((d, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 7
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-strong)'
+      }
+    }, d.project), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)'
+      }
+    }, d.client)), /*#__PURE__*/React.createElement(AvatarGroup, {
+      people: d.team,
+      size: "xs",
+      max: 3
+    }), /*#__PURE__*/React.createElement(Badge, {
+      tone: d.urgent ? 'danger' : 'neutral',
+      dot: d.urgent
+    }, d.due)), /*#__PURE__*/React.createElement(ProgressBar, {
+      value: d.pct,
+      tone: d.urgent ? 'warning' : 'brand',
+      size: "sm"
+    })))))));
   }
   Object.assign(window, {
     Dashboard,

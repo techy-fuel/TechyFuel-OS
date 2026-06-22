@@ -1,4 +1,3 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // Client CRM screen — table + selectable profile panel.
 (() => {
   const {
@@ -144,7 +143,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
     children,
     w
   }) {
-    return /*#__PURE__*/_jsx("th", {
+    return /*#__PURE__*/React.createElement("th", {
       style: {
         textAlign: 'left',
         padding: '0 14px 10px',
@@ -154,9 +153,8 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
         textTransform: 'uppercase',
         color: 'var(--text-subtle)',
         width: w
-      },
-      children: children
-    });
+      }
+    }, children);
   }
   function ClientRow({
     c,
@@ -165,7 +163,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
   }) {
     const [hover, setHover] = React.useState(false);
     const s = TF_STATUS[c.status];
-    return /*#__PURE__*/_jsxs("tr", {
+    return /*#__PURE__*/React.createElement("tr", {
       onClick: onClick,
       onMouseEnter: () => setHover(true),
       onMouseLeave: () => setHover(false),
@@ -173,460 +171,396 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
         cursor: 'pointer',
         background: selected ? 'var(--blue-50)' : hover ? 'var(--slate-50)' : 'transparent',
         transition: 'background var(--dur-fast) var(--ease-out)'
-      },
-      children: [/*#__PURE__*/_jsx("td", {
-        style: {
-          padding: '11px 14px',
-          borderTop: '1px solid var(--border-subtle)'
-        },
-        children: /*#__PURE__*/_jsxs("div", {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10
-          },
-          children: [/*#__PURE__*/_jsx(Avatar, {
-            name: c.company,
-            size: "sm"
-          }), /*#__PURE__*/_jsxs("div", {
-            children: [/*#__PURE__*/_jsx("div", {
-              style: {
-                fontSize: 'var(--text-sm)',
-                fontWeight: 'var(--fw-semibold)',
-                color: 'var(--text-strong)'
-              },
-              children: c.company
-            }), /*#__PURE__*/_jsx("div", {
-              style: {
-                fontSize: 'var(--text-xs)',
-                color: 'var(--text-muted)'
-              },
-              children: c.site
-            })]
-          })]
-        })
-      }), /*#__PURE__*/_jsx("td", {
-        style: {
-          padding: '11px 14px',
-          borderTop: '1px solid var(--border-subtle)',
-          fontSize: 'var(--text-sm)',
-          color: 'var(--text-body)'
-        },
-        children: c.contact
-      }), /*#__PURE__*/_jsx("td", {
-        style: {
-          padding: '11px 14px',
-          borderTop: '1px solid var(--border-subtle)'
-        },
-        children: /*#__PURE__*/_jsx(Badge, {
-          tone: s.tone,
-          dot: true,
-          children: s.label
-        })
-      }), /*#__PURE__*/_jsx("td", {
-        style: {
-          padding: '11px 14px',
-          borderTop: '1px solid var(--border-subtle)',
-          fontSize: 'var(--text-sm)',
-          color: 'var(--text-body)'
-        },
-        children: c.industry
-      }), /*#__PURE__*/_jsx("td", {
-        style: {
-          padding: '11px 14px',
-          borderTop: '1px solid var(--border-subtle)',
-          fontSize: 'var(--text-sm)',
-          color: 'var(--text-body)'
-        },
-        children: c.country
-      }), /*#__PURE__*/_jsx("td", {
-        style: {
-          padding: '11px 14px',
-          borderTop: '1px solid var(--border-subtle)',
-          fontSize: 'var(--text-sm)',
-          fontWeight: 'var(--fw-bold)',
-          color: 'var(--text-strong)',
-          textAlign: 'right',
-          fontVariantNumeric: 'tabular-nums'
-        },
-        children: c.value
-      })]
-    });
+      }
+    }, /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: '11px 14px',
+        borderTop: '1px solid var(--border-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: c.company,
+      size: "sm"
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-strong)'
+      }
+    }, c.company), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)'
+      }
+    }, c.site)))), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: '11px 14px',
+        borderTop: '1px solid var(--border-subtle)',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-body)'
+      }
+    }, c.contact), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: '11px 14px',
+        borderTop: '1px solid var(--border-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement(Badge, {
+      tone: s.tone,
+      dot: true
+    }, s.label)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: '11px 14px',
+        borderTop: '1px solid var(--border-subtle)',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-body)'
+      }
+    }, c.industry), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: '11px 14px',
+        borderTop: '1px solid var(--border-subtle)',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-body)'
+      }
+    }, c.country), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: '11px 14px',
+        borderTop: '1px solid var(--border-subtle)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        textAlign: 'right',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, c.value));
   }
   function ProfileField({
     icon,
     label,
     value
   }) {
-    return /*#__PURE__*/_jsxs("div", {
+    return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
         gap: 10,
         padding: '9px 0',
         borderBottom: '1px solid var(--border-subtle)'
-      },
-      children: [/*#__PURE__*/_jsx(Icon, {
-        name: icon,
-        size: 16,
-        style: {
-          color: 'var(--text-subtle)',
-          flex: 'none'
-        }
-      }), /*#__PURE__*/_jsx("span", {
-        style: {
-          fontSize: 'var(--text-xs)',
-          color: 'var(--text-muted)',
-          width: 76,
-          flex: 'none'
-        },
-        children: label
-      }), /*#__PURE__*/_jsx("span", {
-        style: {
-          fontSize: 'var(--text-sm)',
-          color: 'var(--text-strong)',
-          fontWeight: 'var(--fw-medium)',
-          textAlign: 'right',
-          flex: 1
-        },
-        children: value
-      })]
-    });
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: icon,
+      size: 16,
+      style: {
+        color: 'var(--text-subtle)',
+        flex: 'none'
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        width: 76,
+        flex: 'none'
+      }
+    }, label), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-strong)',
+        fontWeight: 'var(--fw-medium)',
+        textAlign: 'right',
+        flex: 1
+      }
+    }, value));
   }
   function CRM() {
     const [selId, setSelId] = React.useState(1);
     const sel = TF_CLIENTS_DATA.find(c => c.id === selId);
     const s = TF_STATUS[sel.status];
-    return /*#__PURE__*/_jsxs("div", {
+    return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24
-      },
-      children: [/*#__PURE__*/_jsxs("div", {
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        marginBottom: 18,
+        flexWrap: 'wrap',
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
+      style: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--fw-extrabold)',
+        letterSpacing: '-0.02em'
+      }
+    }, "Client CRM"), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        marginTop: 2
+      }
+    }, "38 clients · $112.7K in active retainers")), /*#__PURE__*/React.createElement("button", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 36,
+        padding: '0 14px',
+        background: 'var(--blue-600)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        boxShadow: 'var(--shadow-brand)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "user-plus",
+      size: 16
+    }), " Add client")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0,1fr) 320px',
+        gap: 16,
+        alignItems: 'start'
+      }
+    }, /*#__PURE__*/React.createElement(Card, {
+      padding: "none"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: 14,
+        borderBottom: '1px solid var(--border-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 230
+      }
+    }, /*#__PURE__*/React.createElement(Input, {
+      size: "sm",
+      placeholder: "Search clients…",
+      iconLeft: /*#__PURE__*/React.createElement(Icon, {
+        name: "search",
+        size: 16
+      })
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 30,
+        padding: '0 11px',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "filter",
+      size: 15,
+      style: {
+        color: 'var(--text-muted)'
+      }
+    }), " Status"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)'
+      }
+    }, "7 of 38")), /*#__PURE__*/React.createElement("table", {
+      style: {
+        width: '100%',
+        borderCollapse: 'collapse'
+      }
+    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(Th, null, "Company"), /*#__PURE__*/React.createElement(Th, null, "Contact"), /*#__PURE__*/React.createElement(Th, null, "Status"), /*#__PURE__*/React.createElement(Th, null, "Industry"), /*#__PURE__*/React.createElement(Th, null, "Country"), /*#__PURE__*/React.createElement(Th, {
+      w: "90"
+    }, "Value"))), /*#__PURE__*/React.createElement("tbody", null, TF_CLIENTS_DATA.map(c => /*#__PURE__*/React.createElement(ClientRow, {
+      key: c.id,
+      c: c,
+      selected: c.id === selId,
+      onClick: () => setSelId(c.id)
+    }))))), /*#__PURE__*/React.createElement(Card, {
+      padding: "none",
+      style: {
+        overflow: 'hidden',
+        position: 'sticky',
+        top: 84
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: 'var(--grad-hero)',
+        padding: '20px 18px',
+        borderBottom: '1px solid var(--border-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: sel.company,
+      size: "lg"
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-lg)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        letterSpacing: '-0.01em'
+      }
+    }, sel.company), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 4
+      }
+    }, /*#__PURE__*/React.createElement(Badge, {
+      tone: s.tone,
+      dot: true
+    }, s.label)))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 8,
+        marginTop: 14
+      }
+    }, [['mail', 'Email'], ['message-circle', 'WhatsApp'], ['calendar-plus', 'Meeting']].map(([ic, l]) => /*#__PURE__*/React.createElement("button", {
+      key: l,
+      style: {
+        flex: 1,
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        padding: '8px 0',
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-2xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: ic,
+      size: 17,
+      style: {
+        color: 'var(--blue-600)'
+      }
+    }), " ", l)))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '6px 18px 14px'
+      }
+    }, /*#__PURE__*/React.createElement(ProfileField, {
+      icon: "user",
+      label: "Contact",
+      value: sel.contact
+    }), /*#__PURE__*/React.createElement(ProfileField, {
+      icon: "at-sign",
+      label: "Email",
+      value: sel.email
+    }), /*#__PURE__*/React.createElement(ProfileField, {
+      icon: "globe",
+      label: "Website",
+      value: sel.site
+    }), /*#__PURE__*/React.createElement(ProfileField, {
+      icon: "target",
+      label: "Source",
+      value: sel.source
+    }), /*#__PURE__*/React.createElement(ProfileField, {
+      icon: "banknote",
+      label: "Value",
+      value: sel.value + '/mo'
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '0 18px 18px'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-2xs)',
+        fontWeight: 'var(--fw-bold)',
+        letterSpacing: 'var(--tracking-caps)',
+        textTransform: 'uppercase',
+        color: 'var(--text-subtle)',
+        marginBottom: 10
+      }
+    }, "Communication timeline"), /*#__PURE__*/React.createElement("div", null, TF_TIMELINE.map((t, i) => {
+      const tones = {
+        brand: 'var(--blue-600)',
+        violet: 'var(--violet-500)',
+        success: 'var(--green-500)',
+        warning: 'var(--amber-500)'
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        key: i,
         style: {
           display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: 18,
-          flexWrap: 'wrap',
-          gap: 12
-        },
-        children: [/*#__PURE__*/_jsxs("div", {
-          children: [/*#__PURE__*/_jsx("h1", {
-            style: {
-              fontSize: 'var(--text-3xl)',
-              fontWeight: 'var(--fw-extrabold)',
-              letterSpacing: '-0.02em'
-            },
-            children: "Client CRM"
-          }), /*#__PURE__*/_jsx("p", {
-            style: {
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-muted)',
-              marginTop: 2
-            },
-            children: "38 clients · $112.7K in active retainers"
-          })]
-        }), /*#__PURE__*/_jsxs("button", {
-          style: {
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 7,
-            height: 36,
-            padding: '0 14px',
-            background: 'var(--blue-600)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-brand)',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 'var(--fw-semibold)',
-            cursor: 'pointer'
-          },
-          children: [/*#__PURE__*/_jsx(Icon, {
-            name: "user-plus",
-            size: 16
-          }), " Add client"]
-        })]
-      }), /*#__PURE__*/_jsxs("div", {
+          gap: 10,
+          paddingBottom: i < TF_TIMELINE.length - 1 ? 12 : 0
+        }
+      }, /*#__PURE__*/React.createElement("div", {
         style: {
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0,1fr) 320px',
-          gap: 16,
-          alignItems: 'start'
-        },
-        children: [/*#__PURE__*/_jsxs(Card, {
-          padding: "none",
-          children: [/*#__PURE__*/_jsxs("div", {
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: 14,
-              borderBottom: '1px solid var(--border-subtle)'
-            },
-            children: [/*#__PURE__*/_jsx("div", {
-              style: {
-                width: 230
-              },
-              children: /*#__PURE__*/_jsx(Input, {
-                size: "sm",
-                placeholder: "Search clients…",
-                iconLeft: /*#__PURE__*/_jsx(Icon, {
-                  name: "search",
-                  size: 16
-                })
-              })
-            }), /*#__PURE__*/_jsxs("div", {
-              style: {
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 7,
-                height: 30,
-                padding: '0 11px',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 'var(--fw-semibold)',
-                color: 'var(--text-body)',
-                cursor: 'pointer'
-              },
-              children: [/*#__PURE__*/_jsx(Icon, {
-                name: "filter",
-                size: 15,
-                style: {
-                  color: 'var(--text-muted)'
-                }
-              }), " Status"]
-            }), /*#__PURE__*/_jsx("div", {
-              style: {
-                flex: 1
-              }
-            }), /*#__PURE__*/_jsx("span", {
-              style: {
-                fontSize: 'var(--text-xs)',
-                color: 'var(--text-muted)'
-              },
-              children: "7 of 38"
-            })]
-          }), /*#__PURE__*/_jsxs("table", {
-            style: {
-              width: '100%',
-              borderCollapse: 'collapse'
-            },
-            children: [/*#__PURE__*/_jsx("thead", {
-              children: /*#__PURE__*/_jsxs("tr", {
-                children: [/*#__PURE__*/_jsx(Th, {
-                  children: "Company"
-                }), /*#__PURE__*/_jsx(Th, {
-                  children: "Contact"
-                }), /*#__PURE__*/_jsx(Th, {
-                  children: "Status"
-                }), /*#__PURE__*/_jsx(Th, {
-                  children: "Industry"
-                }), /*#__PURE__*/_jsx(Th, {
-                  children: "Country"
-                }), /*#__PURE__*/_jsx(Th, {
-                  w: "90",
-                  children: "Value"
-                })]
-              })
-            }), /*#__PURE__*/_jsx("tbody", {
-              children: TF_CLIENTS_DATA.map(c => /*#__PURE__*/_jsx(ClientRow, {
-                c: c,
-                selected: c.id === selId,
-                onClick: () => setSelId(c.id)
-              }, c.id))
-            })]
-          })]
-        }), /*#__PURE__*/_jsxs(Card, {
-          padding: "none",
-          style: {
-            overflow: 'hidden',
-            position: 'sticky',
-            top: 84
-          },
-          children: [/*#__PURE__*/_jsxs("div", {
-            style: {
-              background: 'var(--grad-hero)',
-              padding: '20px 18px',
-              borderBottom: '1px solid var(--border-subtle)'
-            },
-            children: [/*#__PURE__*/_jsxs("div", {
-              style: {
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12
-              },
-              children: [/*#__PURE__*/_jsx(Avatar, {
-                name: sel.company,
-                size: "lg"
-              }), /*#__PURE__*/_jsxs("div", {
-                style: {
-                  flex: 1,
-                  minWidth: 0
-                },
-                children: [/*#__PURE__*/_jsx("div", {
-                  style: {
-                    fontSize: 'var(--text-lg)',
-                    fontWeight: 'var(--fw-bold)',
-                    color: 'var(--text-strong)',
-                    letterSpacing: '-0.01em'
-                  },
-                  children: sel.company
-                }), /*#__PURE__*/_jsx("div", {
-                  style: {
-                    marginTop: 4
-                  },
-                  children: /*#__PURE__*/_jsx(Badge, {
-                    tone: s.tone,
-                    dot: true,
-                    children: s.label
-                  })
-                })]
-              })]
-            }), /*#__PURE__*/_jsx("div", {
-              style: {
-                display: 'flex',
-                gap: 8,
-                marginTop: 14
-              },
-              children: [['mail', 'Email'], ['message-circle', 'WhatsApp'], ['calendar-plus', 'Meeting']].map(([ic, l]) => /*#__PURE__*/_jsxs("button", {
-                style: {
-                  flex: 1,
-                  display: 'inline-flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '8px 0',
-                  background: 'var(--slate-0)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: 'var(--text-2xs)',
-                  fontWeight: 'var(--fw-semibold)',
-                  color: 'var(--text-body)'
-                },
-                children: [/*#__PURE__*/_jsx(Icon, {
-                  name: ic,
-                  size: 17,
-                  style: {
-                    color: 'var(--blue-600)'
-                  }
-                }), " ", l]
-              }, l))
-            })]
-          }), /*#__PURE__*/_jsxs("div", {
-            style: {
-              padding: '6px 18px 14px'
-            },
-            children: [/*#__PURE__*/_jsx(ProfileField, {
-              icon: "user",
-              label: "Contact",
-              value: sel.contact
-            }), /*#__PURE__*/_jsx(ProfileField, {
-              icon: "at-sign",
-              label: "Email",
-              value: sel.email
-            }), /*#__PURE__*/_jsx(ProfileField, {
-              icon: "globe",
-              label: "Website",
-              value: sel.site
-            }), /*#__PURE__*/_jsx(ProfileField, {
-              icon: "target",
-              label: "Source",
-              value: sel.source
-            }), /*#__PURE__*/_jsx(ProfileField, {
-              icon: "banknote",
-              label: "Value",
-              value: sel.value + '/mo'
-            })]
-          }), /*#__PURE__*/_jsxs("div", {
-            style: {
-              padding: '0 18px 18px'
-            },
-            children: [/*#__PURE__*/_jsx("div", {
-              style: {
-                fontSize: 'var(--text-2xs)',
-                fontWeight: 'var(--fw-bold)',
-                letterSpacing: 'var(--tracking-caps)',
-                textTransform: 'uppercase',
-                color: 'var(--text-subtle)',
-                marginBottom: 10
-              },
-              children: "Communication timeline"
-            }), /*#__PURE__*/_jsx("div", {
-              children: TF_TIMELINE.map((t, i) => {
-                const tones = {
-                  brand: 'var(--blue-600)',
-                  violet: 'var(--violet-500)',
-                  success: 'var(--green-500)',
-                  warning: 'var(--amber-500)'
-                };
-                return /*#__PURE__*/_jsxs("div", {
-                  style: {
-                    display: 'flex',
-                    gap: 10,
-                    paddingBottom: i < TF_TIMELINE.length - 1 ? 12 : 0
-                  },
-                  children: [/*#__PURE__*/_jsxs("div", {
-                    style: {
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center'
-                    },
-                    children: [/*#__PURE__*/_jsx("span", {
-                      style: {
-                        width: 26,
-                        height: 26,
-                        borderRadius: '50%',
-                        background: 'var(--slate-50)',
-                        border: '1px solid var(--border-default)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: tones[t.tone]
-                      },
-                      children: /*#__PURE__*/_jsx(Icon, {
-                        name: t.icon,
-                        size: 13
-                      })
-                    }), i < TF_TIMELINE.length - 1 && /*#__PURE__*/_jsx("span", {
-                      style: {
-                        width: 1.5,
-                        flex: 1,
-                        background: 'var(--border-default)',
-                        marginTop: 3
-                      }
-                    })]
-                  }), /*#__PURE__*/_jsxs("div", {
-                    style: {
-                      paddingBottom: 2
-                    },
-                    children: [/*#__PURE__*/_jsx("div", {
-                      style: {
-                        fontSize: 'var(--text-sm)',
-                        color: 'var(--text-body)',
-                        lineHeight: 1.4
-                      },
-                      children: t.text
-                    }), /*#__PURE__*/_jsx("div", {
-                      style: {
-                        fontSize: 'var(--text-xs)',
-                        color: 'var(--text-subtle)',
-                        marginTop: 1
-                      },
-                      children: t.time
-                    })]
-                  })]
-                }, i);
-              })
-            })]
-          })]
-        })]
-      })]
-    });
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          width: 26,
+          height: 26,
+          borderRadius: '50%',
+          background: 'var(--slate-50)',
+          border: '1px solid var(--border-default)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: tones[t.tone]
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: t.icon,
+        size: 13
+      })), i < TF_TIMELINE.length - 1 && /*#__PURE__*/React.createElement("span", {
+        style: {
+          width: 1.5,
+          flex: 1,
+          background: 'var(--border-default)',
+          marginTop: 3
+        }
+      })), /*#__PURE__*/React.createElement("div", {
+        style: {
+          paddingBottom: 2
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-sm)',
+          color: 'var(--text-body)',
+          lineHeight: 1.4
+        }
+      }, t.text), /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-subtle)',
+          marginTop: 1
+        }
+      }, t.time)));
+    }))))));
   }
   Object.assign(window, {
     CRM
