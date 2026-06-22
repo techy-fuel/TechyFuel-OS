@@ -1,5 +1,11 @@
 // Supabase client — available globally as window.db
 (() => {
+  try {
+  if (!window.supabase || !window.__SUPABASE_URL) {
+    console.warn('[TechyFuel OS] Supabase not configured — running in demo mode');
+    window.db = null; window.API = {};
+    return;
+  }
   const { createClient } = window.supabase;
   const client = createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY);
   window.db = client;
@@ -107,4 +113,8 @@
   };
 
   console.log('[TechyFuel OS] Supabase connected:', window.__SUPABASE_URL);
+  } catch(err) {
+    console.error('[TechyFuel OS] Supabase init error:', err);
+    window.db = null; window.API = {};
+  }
 })();
