@@ -14,14 +14,24 @@
 <body>
 <div id="root"></div>
 
+<!-- Supabase config (anon key is safe to expose — protected by RLS) -->
+<script>
+  window.__SUPABASE_URL  = 'https://nvgzzhqfibhtbauinmwu.supabase.co';
+  window.__SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52Z3p6aHFmaWJodGJhdWlubXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMjMyODYsImV4cCI6MjA5NzY5OTI4Nn0.eBz7eQ7JT8hewdMIqV_I-lfZH84rskIHAsyJusAa5hA';
+</script>
+
 <!-- Runtime dependencies (vendored locally) -->
 <script src="vendor/react.production.min.js"></script>
 <script src="vendor/react-dom.production.min.js"></script>
 <script src="vendor/lucide.min.js"></script>
+<script src="vendor/supabase.js"></script>
 <script src="vendor/babel.min.js"></script>
 
 <!-- Design-system bundle: components only (screen globals are re-exported below) -->
 <script src="project/_ds_bundle.js"></script>
+
+<!-- Supabase API helpers — exposes window.db and window.API -->
+<script src="project/ui_kits/techyfuel-os/supabase-api.js"></script>
 
 <!-- Screen components as text/babel — these overwrite the bundle's broken closures
      with correctly-scoped versions that resolve design-system deps at call time -->
