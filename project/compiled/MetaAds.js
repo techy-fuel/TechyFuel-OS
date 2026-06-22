@@ -8,52 +8,6 @@
   } = window.TechyFuelOSDesignSystem_be0222;
   const TF_SPEND = [3.2, 3.6, 4.1, 3.9, 4.8, 5.2, 4.9, 5.6, 6.1, 5.8, 6.4, 7.0];
   const TF_ROAS = [2.8, 3.1, 3.4, 3.2, 3.9, 4.2, 4.6, 4.4, 5.1, 4.9, 5.4, 6.2];
-  const TF_CAMPAIGNS = [{
-    name: 'Nova — Summer launch',
-    client: 'Nova Skincare',
-    status: 'active',
-    spend: '$4,820',
-    roas: '6.2×',
-    cpl: '$3.18',
-    leads: 412,
-    pace: 78
-  }, {
-    name: 'Peak — Membership drive',
-    client: 'Peak Fitness',
-    status: 'active',
-    spend: '$2,140',
-    roas: '4.8×',
-    cpl: '$4.02',
-    leads: 268,
-    pace: 64
-  }, {
-    name: 'Orbit — Demo signups',
-    client: 'Orbit Inc.',
-    status: 'active',
-    spend: '$6,310',
-    roas: '5.4×',
-    cpl: '$8.40',
-    leads: 188,
-    pace: 91
-  }, {
-    name: 'Lumen — Grand opening',
-    client: 'Lumen Cafe',
-    status: 'review',
-    spend: '$980',
-    roas: '3.1×',
-    cpl: '$2.74',
-    leads: 142,
-    pace: 42
-  }, {
-    name: 'Mediva — Awareness',
-    client: 'Mediva Health',
-    status: 'paused',
-    spend: '$1,560',
-    roas: '2.4×',
-    cpl: '$6.90',
-    leads: 96,
-    pace: 30
-  }];
   const CAMP_STATUS = {
     active: {
       tone: 'success',
@@ -66,8 +20,72 @@
     paused: {
       tone: 'neutral',
       label: 'Paused'
+    },
+    ended: {
+      tone: 'neutral',
+      label: 'Ended'
+    },
+    draft: {
+      tone: 'neutral',
+      label: 'Draft'
     }
   };
+  const FALLBACK_CAMPAIGNS = [{
+    id: 'f1',
+    name: 'Nova — Lead Gen Q2',
+    clients: {
+      name: 'Nova Tech'
+    },
+    status: 'active',
+    spent: 2840,
+    impressions: 184200,
+    clicks: 3210,
+    conversions: 142,
+    budget_daily: 150
+  }, {
+    id: 'f2',
+    name: 'Apex — Property Listings',
+    clients: {
+      name: 'Apex Realty'
+    },
+    status: 'active',
+    spent: 4100,
+    impressions: 98500,
+    clicks: 1870,
+    conversions: 89,
+    budget_daily: 200
+  }, {
+    id: 'f3',
+    name: 'Bloom — Brand Awareness',
+    clients: {
+      name: 'Bloom Foods'
+    },
+    status: 'paused',
+    spent: 400,
+    impressions: 22000,
+    clicks: 310,
+    conversions: 8,
+    budget_daily: 50
+  }];
+  function fmtSpend(n) {
+    if (!n && n !== 0) return '$0';
+    if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
+    return '$' + Math.round(n);
+  }
+  function calcCPL(spent, conversions) {
+    if (!conversions || conversions === 0) return '—';
+    return '$' + (spent / conversions).toFixed(2);
+  }
+  function calcROAS(conversions, spent) {
+    if (!spent || spent === 0) return '—';
+    const rev = conversions * 35;
+    return (rev / spent).toFixed(1) + '×';
+  }
+  function budgetPace(spent, budgetDaily) {
+    if (!budgetDaily || budgetDaily === 0) return 50;
+    const monthlyBudget = budgetDaily * 30;
+    return Math.min(100, Math.round(spent / monthlyBudget * 100));
+  }
   function AdStat({
     label,
     value,
@@ -126,6 +144,17 @@
     }, sub));
   }
   function MetaAds() {
+    const [campaigns, setCampaigns] = React.useState(FALLBACK_CAMPAIGNS);
+    React.useEffect(() => {
+      if (!window.API) return;
+      window.API.getAdCampaigns().then(r => {
+        if (r.data && r.data.length > 0) setCampaigns(r.data);
+      }).catch(() => {});
+    }, []);
+    const totalSpend = campaigns.reduce((s, c) => s + (c.spent || 0), 0);
+    const totalLeads = campaigns.reduce((s, c) => s + (c.conversions || 0), 0);
+    const avgCPL = totalLeads > 0 ? (totalSpend / totalLeads).toFixed(2) : '—';
+    const activeCnt = campaigns.filter(c => c.status === 'active').length;
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
@@ -176,7 +205,7 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, "5 ad accounts · 12 active campaigns"))), /*#__PURE__*/React.createElement("div", {
+    }, campaigns.length, " campaigns · ", activeCnt, " active"))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         gap: 8
@@ -201,7 +230,7 @@
       style: {
         color: 'var(--text-muted)'
       }
-    }), " Last 30 days"), /*#__PURE__*/React.createElement("button", {
+    }), " All time"), /*#__PURE__*/React.createElement("button", {
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -229,28 +258,28 @@
         marginBottom: 16
       }
     }, /*#__PURE__*/React.createElement(AdStat, {
-      label: "Ad spend",
-      value: "$15.8K",
+      label: "Total ad spend",
+      value: fmtSpend(totalSpend),
       delta: "18%",
-      sub: "Budget $22K · 72% used"
+      sub: "All active campaigns"
     }), /*#__PURE__*/React.createElement(AdStat, {
-      label: "ROAS",
-      value: "5.4×",
-      delta: "0.8×",
-      sub: "Target 4.0× · exceeding",
-      color: "var(--green-600)"
+      label: "Total impressions",
+      value: campaigns.reduce((s, c) => s + (c.impressions || 0), 0).toLocaleString(),
+      delta: "12%",
+      sub: "Across all platforms",
+      color: "var(--violet-600)"
     }), /*#__PURE__*/React.createElement(AdStat, {
       label: "Cost per lead",
-      value: "$4.31",
+      value: avgCPL === '—' ? '—' : '$' + avgCPL,
       delta: "9%",
       dir: "down",
-      sub: "Down from $4.74",
+      sub: "Avg across campaigns",
       color: "var(--blue-600)"
     }), /*#__PURE__*/React.createElement(AdStat, {
-      label: "Leads generated",
-      value: "1,106",
+      label: "Conversions",
+      value: String(totalLeads),
       delta: "22%",
-      sub: "416 marked qualified"
+      sub: "Total leads generated"
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
@@ -272,7 +301,7 @@
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-bold)'
       }
-    }, "Ad spend"), /*#__PURE__*/React.createElement(Badge, {
+    }, "Ad spend trend"), /*#__PURE__*/React.createElement(Badge, {
       tone: "brand"
     }, "$ thousands")), /*#__PURE__*/React.createElement(Bars, {
       data: TF_SPEND,
@@ -293,7 +322,7 @@
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-bold)'
       }
-    }, "ROAS trend"), /*#__PURE__*/React.createElement(Badge, {
+    }, "Performance trend"), /*#__PURE__*/React.createElement(Badge, {
       tone: "success",
       dot: true
     }, "Improving")), /*#__PURE__*/React.createElement(AreaLine, {
@@ -320,7 +349,7 @@
         width: '100%',
         borderCollapse: 'collapse'
       }
-    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, ['Campaign', 'Status', 'Spend', 'ROAS', 'CPL', 'Leads', 'Budget pace'].map((h, i) => /*#__PURE__*/React.createElement("th", {
+    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, ['Campaign', 'Status', 'Spend', 'Impressions', 'Clicks', 'Conversions', 'Budget pace'].map((h, i) => /*#__PURE__*/React.createElement("th", {
       key: h,
       style: {
         textAlign: i > 1 && i < 6 ? 'right' : 'left',
@@ -331,10 +360,12 @@
         textTransform: 'uppercase',
         color: 'var(--text-subtle)'
       }
-    }, h)))), /*#__PURE__*/React.createElement("tbody", null, TF_CAMPAIGNS.map((c, i) => {
-      const s = CAMP_STATUS[c.status];
+    }, h)))), /*#__PURE__*/React.createElement("tbody", null, campaigns.map((c, i) => {
+      const s = CAMP_STATUS[c.status] || CAMP_STATUS.paused;
+      const pace = budgetPace(c.spent, c.budget_daily);
+      const clientName = c.clients ? c.clients.name : '—';
       return /*#__PURE__*/React.createElement("tr", {
-        key: i,
+        key: c.id || i,
         style: {
           borderTop: '1px solid var(--border-subtle)'
         }
@@ -349,7 +380,7 @@
           gap: 10
         }
       }, /*#__PURE__*/React.createElement(Avatar, {
-        name: c.client,
+        name: clientName,
         size: "sm"
       }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         style: {
@@ -362,7 +393,7 @@
           fontSize: 'var(--text-xs)',
           color: 'var(--text-muted)'
         }
-      }, c.client)))), /*#__PURE__*/React.createElement("td", {
+      }, clientName)))), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '12px 18px'
         }
@@ -378,7 +409,23 @@
           color: 'var(--text-strong)',
           fontVariantNumeric: 'tabular-nums'
         }
-      }, c.spend), /*#__PURE__*/React.createElement("td", {
+      }, fmtSpend(c.spent)), /*#__PURE__*/React.createElement("td", {
+        style: {
+          padding: '12px 18px',
+          textAlign: 'right',
+          fontSize: 'var(--text-sm)',
+          color: 'var(--text-body)',
+          fontVariantNumeric: 'tabular-nums'
+        }
+      }, (c.impressions || 0).toLocaleString()), /*#__PURE__*/React.createElement("td", {
+        style: {
+          padding: '12px 18px',
+          textAlign: 'right',
+          fontSize: 'var(--text-sm)',
+          color: 'var(--text-body)',
+          fontVariantNumeric: 'tabular-nums'
+        }
+      }, (c.clicks || 0).toLocaleString()), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '12px 18px',
           textAlign: 'right',
@@ -387,30 +434,14 @@
           color: 'var(--green-600)',
           fontVariantNumeric: 'tabular-nums'
         }
-      }, c.roas), /*#__PURE__*/React.createElement("td", {
-        style: {
-          padding: '12px 18px',
-          textAlign: 'right',
-          fontSize: 'var(--text-sm)',
-          color: 'var(--text-body)',
-          fontVariantNumeric: 'tabular-nums'
-        }
-      }, c.cpl), /*#__PURE__*/React.createElement("td", {
-        style: {
-          padding: '12px 18px',
-          textAlign: 'right',
-          fontSize: 'var(--text-sm)',
-          color: 'var(--text-body)',
-          fontVariantNumeric: 'tabular-nums'
-        }
-      }, c.leads), /*#__PURE__*/React.createElement("td", {
+      }, c.conversions || 0), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '12px 18px',
           width: 130
         }
       }, /*#__PURE__*/React.createElement(ProgressBar, {
-        value: c.pace,
-        tone: c.pace > 85 ? 'warning' : 'brand',
+        value: pace,
+        tone: pace > 85 ? 'warning' : 'brand',
         size: "sm"
       })));
     })))));

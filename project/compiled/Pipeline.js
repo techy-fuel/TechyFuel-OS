@@ -5,83 +5,76 @@
     Badge,
     Avatar
   } = window.TechyFuelOSDesignSystem_be0222;
-  const STAGES = [{
-    id: 'new',
+  const STAGE_CONFIG = [{
+    id: 'lead',
     label: 'New lead',
-    dot: 'var(--slate-400)',
-    deals: [{
-      co: 'Bright Studio',
-      val: '$8K',
-      who: 'Tom Reed',
-      tag: 'Inbound'
-    }, {
-      co: 'Kite Apparel',
-      val: '$5K',
-      who: 'Tom Reed',
-      tag: 'Instagram'
-    }]
+    dot: 'var(--slate-400)'
   }, {
-    id: 'contacted',
-    label: 'Contacted',
-    dot: 'var(--blue-500)',
-    deals: [{
-      co: 'Mediva Health',
-      val: '$18K',
-      who: 'Sara Khan',
-      tag: 'LinkedIn'
-    }]
-  }, {
-    id: 'discovery',
-    label: 'Discovery call',
-    dot: 'var(--sky-500)',
-    deals: [{
-      co: 'Atlas Realty',
-      val: '$15K',
-      who: 'Tom Reed',
-      tag: 'Referral'
-    }, {
-      co: 'Lumen Cafe',
-      val: '$6.5K',
-      who: 'Lena Cruz',
-      tag: 'Cold'
-    }]
+    id: 'qualified',
+    label: 'Qualified',
+    dot: 'var(--blue-500)'
   }, {
     id: 'proposal',
     label: 'Proposal sent',
-    dot: 'var(--violet-500)',
-    deals: [{
-      co: 'Orbit Inc.',
-      val: '$28.9K',
-      who: 'Sara Khan',
-      tag: 'Inbound',
-      hot: true
-    }]
+    dot: 'var(--violet-500)'
   }, {
     id: 'negotiation',
     label: 'Negotiation',
-    dot: 'var(--amber-500)',
-    deals: [{
-      co: 'Verde Foods',
-      val: '$22.3K',
-      who: 'Tom Reed',
-      tag: 'Referral',
-      hot: true
-    }]
+    dot: 'var(--amber-500)'
   }, {
     id: 'won',
     label: 'Won',
-    dot: 'var(--green-500)',
-    deals: [{
-      co: 'Nova Skincare',
-      val: '$12.4K',
-      who: 'Sara Khan',
-      tag: 'Referral'
-    }]
+    dot: 'var(--green-500)'
+  }, {
+    id: 'lost',
+    label: 'Lost',
+    dot: 'var(--red-400)'
   }];
+  const FALLBACK_DEALS = [{
+    id: 'f1',
+    title: 'Swift — Full Marketing Retainer',
+    clients: {
+      name: 'Swift Logistics'
+    },
+    value: 4800,
+    stage: 'proposal',
+    team_members: {
+      name: 'Sara Khan'
+    }
+  }, {
+    id: 'f2',
+    title: 'Spark — Ads Management Upsell',
+    clients: {
+      name: 'Spark Academy'
+    },
+    value: 1200,
+    stage: 'qualified',
+    team_members: {
+      name: 'Sara Khan'
+    }
+  }, {
+    id: 'f3',
+    title: 'Apex — Q3 Campaign Expansion',
+    clients: {
+      name: 'Apex Realty'
+    },
+    value: 3500,
+    stage: 'negotiation',
+    team_members: {
+      name: 'Sara Khan'
+    }
+  }];
+  function fmtVal(n) {
+    if (!n) return '$0';
+    if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
+    return '$' + n;
+  }
   function Deal({
     d
   }) {
     const [h, sh] = React.useState(false);
+    const clientName = d.clients ? d.clients.name : '—';
+    const assignedName = d.team_members ? d.team_members.name : null;
     return /*#__PURE__*/React.createElement("div", {
       onMouseEnter: () => sh(true),
       onMouseLeave: () => sh(false),
@@ -99,7 +92,7 @@
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 8
+        marginBottom: 6
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
@@ -107,13 +100,20 @@
         fontWeight: 'var(--fw-bold)',
         color: 'var(--text-strong)'
       }
-    }, d.co), d.hot && /*#__PURE__*/React.createElement(Icon, {
+    }, clientName), d.probability >= 80 && /*#__PURE__*/React.createElement(Icon, {
       name: "flame",
       size: 14,
       style: {
         color: 'var(--red-500)'
       }
     })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        marginBottom: 8,
+        lineHeight: 1.3
+      }
+    }, d.title), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-extrabold)',
@@ -122,21 +122,57 @@
         fontVariantNumeric: 'tabular-nums',
         marginBottom: 9
       }
-    }, d.val), /*#__PURE__*/React.createElement("div", {
+    }, fmtVal(d.value)), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
       }
-    }, /*#__PURE__*/React.createElement(Badge, {
+    }, d.probability != null && /*#__PURE__*/React.createElement(Badge, {
       tone: "neutral",
       size: "sm"
-    }, d.tag), /*#__PURE__*/React.createElement(Avatar, {
-      name: d.who,
+    }, d.probability, "% prob."), assignedName && /*#__PURE__*/React.createElement(Avatar, {
+      name: assignedName,
       size: "xs"
     })));
   }
   function Pipeline() {
+    const [stageMap, setStageMap] = React.useState(() => {
+      const m = {};
+      STAGE_CONFIG.forEach(s => {
+        m[s.id] = [];
+      });
+      FALLBACK_DEALS.forEach(d => {
+        if (!m[d.stage]) m[d.stage] = [];
+        m[d.stage].push(d);
+      });
+      return m;
+    });
+    const [totals, setTotals] = React.useState({
+      count: FALLBACK_DEALS.length,
+      value: FALLBACK_DEALS.reduce((s, d) => s + d.value, 0)
+    });
+    React.useEffect(() => {
+      if (!window.API) return;
+      window.API.getPipeline().then(r => {
+        if (!r.data) return;
+        const m = {};
+        STAGE_CONFIG.forEach(s => {
+          m[s.id] = [];
+        });
+        r.data.forEach(d => {
+          const key = d.stage || 'lead';
+          if (!m[key]) m[key] = [];
+          m[key].push(d);
+        });
+        setStageMap(m);
+        const openDeals = r.data.filter(d => d.stage !== 'won' && d.stage !== 'lost');
+        setTotals({
+          count: openDeals.length,
+          value: openDeals.reduce((s, d) => s + (d.value || 0), 0)
+        });
+      }).catch(() => {});
+    }, []);
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
@@ -166,7 +202,7 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, "8 open deals · $119.6K weighted value")), /*#__PURE__*/React.createElement("button", {
+    }, totals.count, " open deals · ", fmtVal(totals.value), " weighted value")), /*#__PURE__*/React.createElement("button", {
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -196,8 +232,9 @@
         paddingBottom: 8,
         alignItems: 'flex-start'
       }
-    }, STAGES.map(s => {
-      const total = s.deals.reduce((a, d) => a + parseFloat(d.val.replace(/[$K]/g, '')), 0);
+    }, STAGE_CONFIG.map(s => {
+      const deals = stageMap[s.id] || [];
+      const stageTotal = deals.reduce((a, d) => a + (d.value || 0), 0);
       return /*#__PURE__*/React.createElement("div", {
         key: s.id,
         style: {
@@ -235,7 +272,7 @@
           marginLeft: 'auto',
           fontVariantNumeric: 'tabular-nums'
         }
-      }, "$", total, "K")), /*#__PURE__*/React.createElement("div", {
+      }, fmtVal(stageTotal))), /*#__PURE__*/React.createElement("div", {
         style: {
           display: 'flex',
           flexDirection: 'column',
@@ -245,8 +282,8 @@
           padding: 10,
           minHeight: 100
         }
-      }, s.deals.map((d, i) => /*#__PURE__*/React.createElement(Deal, {
-        key: i,
+      }, deals.map((d, i) => /*#__PURE__*/React.createElement(Deal, {
+        key: d.id || i,
         d: d
       }))));
     })));

@@ -9,7 +9,7 @@
     ProgressBar
   } = window.TechyFuelOSDesignSystem_be0222;
   const TF_REVENUE = [22, 26, 24, 31, 29, 35, 38, 36, 42, 40, 45, 48.2];
-  const TF_CLIENTS = [9, 11, 12, 14, 15, 18, 19, 22, 24, 26, 29, 32];
+  const TF_CLIENTS_CHART = [9, 11, 12, 14, 15, 18, 19, 22, 24, 26, 29, 32];
   function SectionHead({
     title,
     action
@@ -52,59 +52,33 @@
     icon: 'check',
     tone: 'success'
   }, {
-    who: 'Omar Ali',
-    action: 'uploaded 6 reels to',
-    target: 'Peak Fitness',
+    who: 'Ali Raza',
+    action: 'uploaded new creatives to',
+    target: 'Nova Tech',
     time: '48m',
     icon: 'upload',
     tone: 'brand'
   }, {
-    who: 'Lena Cruz',
-    action: 'sent invoice INV-0481 to',
-    target: 'Acme Studio',
+    who: 'Hina Malik',
+    action: 'scheduled 3 posts for',
+    target: 'Bloom Foods',
     time: '2h',
-    icon: 'receipt',
+    icon: 'calendar',
     tone: 'violet'
   }, {
     who: 'AI Assistant',
     action: 'flagged a deadline risk on',
-    target: 'Orbit Web Build',
+    target: 'Apex Lead Gen Ads',
     time: '3h',
     icon: 'sparkles',
     tone: 'warning'
   }, {
-    who: 'Tom Reed',
-    action: 'won the deal with',
-    target: 'Mediva Health',
+    who: 'Omar Sheikh',
+    action: 'completed wireframes for',
+    target: 'Nova Website Revamp',
     time: '5h',
-    icon: 'trophy',
+    icon: 'check',
     tone: 'success'
-  }];
-  const TF_DEADLINES = [{
-    project: 'Nova — launch campaign',
-    client: 'Nova Skincare',
-    due: 'Today',
-    urgent: true,
-    pct: 82,
-    team: ['Sara Khan', 'Omar Ali']
-  }, {
-    project: 'Orbit — web build phase 2',
-    client: 'Orbit Inc.',
-    due: 'Tomorrow',
-    pct: 64,
-    team: ['Jay Park', 'Mia Wu', 'Tom Reed']
-  }, {
-    project: 'Peak — monthly content',
-    client: 'Peak Fitness',
-    due: 'Jun 24',
-    pct: 45,
-    team: ['Omar Ali', 'Lena Cruz']
-  }, {
-    project: 'Mediva — brand kit',
-    client: 'Mediva Health',
-    due: 'Jun 27',
-    pct: 20,
-    team: ['Sara Khan']
   }];
   function ActivityRow({
     a
@@ -163,7 +137,73 @@
       }
     }, a.time));
   }
+  function fmtMoney(n) {
+    if (!n) return '$0';
+    if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
+    return '$' + n;
+  }
+  function fmtDueDate(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((d - today) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    return d.toLocaleDateString('en', {
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+  const FALLBACK_DEADLINES = [{
+    project: 'Apex Lead Gen Ads',
+    client: 'Apex Realty',
+    due: 'Jun 28',
+    urgent: false,
+    pct: 82,
+    team: ['Sara Khan', 'Ali Raza']
+  }, {
+    project: 'Nova Launch Campaign',
+    client: 'Nova Tech',
+    due: 'Jul 15',
+    urgent: false,
+    pct: 65,
+    team: ['Zara Ahmed']
+  }];
   function Dashboard() {
+    const [stats, setStats] = React.useState({
+      activeClients: 0,
+      activeProjects: 0,
+      openTasks: 0,
+      revenue: 0
+    });
+    const [deadlines, setDeadlines] = React.useState(FALLBACK_DEADLINES);
+    const [loaded, setLoaded] = React.useState(false);
+    React.useEffect(() => {
+      if (!window.API) return;
+      window.API.getDashboardStats().then(s => {
+        if (s) {
+          setStats(s);
+          setLoaded(true);
+        }
+      }).catch(() => {});
+      window.API.getTasks().then(r => {
+        if (!r.data) return;
+        const upcoming = r.data.filter(t => t.due_date && t.status !== 'done').sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 4).map(t => ({
+          project: t.title,
+          client: t.clients ? t.clients.name : t.projects ? t.projects.name : '',
+          due: fmtDueDate(t.due_date),
+          urgent: new Date(t.due_date) < new Date(),
+          pct: t.projects ? t.projects.progress || 50 : 50,
+          team: t.team_members ? [t.team_members.name] : []
+        }));
+        if (upcoming.length > 0) setDeadlines(upcoming);
+      }).catch(() => {});
+    }, []);
+    const revenueDisplay = loaded ? fmtMoney(stats.revenue) : '$12,400';
+    const projectsDisplay = loaded ? String(stats.activeProjects) : '5';
+    const tasksDisplay = loaded ? String(stats.openTasks) : '6';
+    const clientsDisplay = loaded ? String(stats.activeClients) : '4';
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
@@ -253,8 +293,8 @@
         marginBottom: 16
       }
     }, /*#__PURE__*/React.createElement(StatCard, {
-      label: "Monthly revenue",
-      value: "$48,250",
+      label: "Revenue (paid)",
+      value: revenueDisplay,
       delta: "12.5%",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "dollar-sign"
@@ -262,24 +302,24 @@
       tone: "success"
     }), /*#__PURE__*/React.createElement(StatCard, {
       label: "Active projects",
-      value: "27",
+      value: projectsDisplay,
       delta: "4.0%",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "folder-kanban"
       }),
       tone: "brand"
     }), /*#__PURE__*/React.createElement(StatCard, {
-      label: "Outstanding",
-      value: "$9,420",
+      label: "Open tasks",
+      value: tasksDisplay,
       delta: "-3.1%",
       deltaDirection: "down",
       icon: /*#__PURE__*/React.createElement(Icon, {
-        name: "receipt"
+        name: "circle-check-big"
       }),
       tone: "warning"
     }), /*#__PURE__*/React.createElement(StatCard, {
       label: "Active clients",
-      value: "38",
+      value: clientsDisplay,
       delta: "6.2%",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "users"
@@ -413,7 +453,7 @@
         flexDirection: 'column',
         gap: 14
       }
-    }, TF_DEADLINES.map((d, i) => /*#__PURE__*/React.createElement("div", {
+    }, deadlines.map((d, i) => /*#__PURE__*/React.createElement("div", {
       key: i,
       style: {
         display: 'flex',

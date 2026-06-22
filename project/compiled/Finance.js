@@ -7,44 +7,78 @@
     StatCard
   } = window.TechyFuelOSDesignSystem_be0222;
   const PROFIT = [12, 14, 13, 17, 16, 19, 21, 20, 24, 23, 26, 29];
-  const INVOICES = [{
-    id: 'INV-2026-0481',
-    client: 'Nova Skincare',
-    amount: '$12,400',
-    status: 'paid',
-    due: 'Jun 30'
-  }, {
-    id: 'INV-2026-0480',
-    client: 'Orbit Inc.',
-    amount: '$28,900',
-    status: 'sent',
-    due: 'Jul 2'
-  }, {
-    id: 'INV-2026-0479',
-    client: 'Mediva Health',
-    amount: '$18,000',
-    status: 'overdue',
-    due: 'Jun 12'
-  }, {
-    id: 'INV-2026-0478',
-    client: 'Peak Fitness',
-    amount: '$9,200',
-    status: 'paid',
-    due: 'Jun 8'
-  }, {
-    id: 'INV-2026-0477',
-    client: 'Verde Foods',
-    amount: '$22,300',
-    status: 'draft',
-    due: '—'
-  }];
   const IS = {
     paid: ['success', 'Paid'],
     sent: ['info', 'Sent'],
     overdue: ['danger', 'Overdue'],
-    draft: ['neutral', 'Draft']
+    draft: ['neutral', 'Draft'],
+    cancelled: ['neutral', 'Cancelled']
   };
+  const FALLBACK_INVOICES = [{
+    id: 'f1',
+    invoice_no: 'INV-2025-001',
+    clients: {
+      name: 'Nova Tech'
+    },
+    amount: 4500,
+    status: 'paid',
+    due_date: '2025-06-01'
+  }, {
+    id: 'f2',
+    invoice_no: 'INV-2025-002',
+    clients: {
+      name: 'Bloom Foods'
+    },
+    amount: 2800,
+    status: 'sent',
+    due_date: '2025-06-30'
+  }, {
+    id: 'f3',
+    invoice_no: 'INV-2025-003',
+    clients: {
+      name: 'Apex Realty'
+    },
+    amount: 3200,
+    status: 'overdue',
+    due_date: '2025-06-15'
+  }, {
+    id: 'f4',
+    invoice_no: 'INV-2025-004',
+    clients: {
+      name: 'Spark Academy'
+    },
+    amount: 1900,
+    status: 'draft',
+    due_date: '2025-07-15'
+  }];
+  function fmtAmt(n) {
+    if (!n && n !== 0) return '$0';
+    return '$' + Number(n).toLocaleString();
+  }
+  function fmtDate(ds) {
+    if (!ds) return '—';
+    return new Date(ds).toLocaleDateString('en', {
+      month: 'short',
+      day: 'numeric',
+      year: '2-digit'
+    });
+  }
   function Finance() {
+    const [invoices, setInvoices] = React.useState(FALLBACK_INVOICES);
+    React.useEffect(() => {
+      if (!window.API) return;
+      window.API.getInvoices().then(r => {
+        if (r.data && r.data.length > 0) setInvoices(r.data);
+      }).catch(() => {});
+    }, []);
+    const paidRevenue = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
+    const outstanding = invoices.filter(i => i.status === 'sent' || i.status === 'overdue').reduce((s, i) => s + Number(i.amount || 0), 0);
+    const totalAmount = invoices.reduce((s, i) => s + Number(i.amount || 0), 0);
+    const now = new Date();
+    const monthName = now.toLocaleDateString('en', {
+      month: 'long',
+      year: 'numeric'
+    });
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
@@ -72,7 +106,7 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, "June 2026 · 5 invoices this cycle")), /*#__PURE__*/React.createElement("button", {
+    }, monthName, " · ", invoices.length, " invoices")), /*#__PURE__*/React.createElement("button", {
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -100,38 +134,37 @@
         marginBottom: 16
       }
     }, /*#__PURE__*/React.createElement(StatCard, {
-      label: "Monthly revenue",
-      value: "$48,250",
+      label: "Revenue (paid)",
+      value: fmtAmt(paidRevenue),
       delta: "12.5%",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "trending-up"
       }),
       tone: "success"
     }), /*#__PURE__*/React.createElement(StatCard, {
-      label: "Net profit",
-      value: "$29,180",
+      label: "Total invoiced",
+      value: fmtAmt(totalAmount),
       delta: "8.4%",
-      icon: /*#__PURE__*/React.createElement(Icon, {
-        name: "piggy-bank"
-      }),
-      tone: "brand"
-    }), /*#__PURE__*/React.createElement(StatCard, {
-      label: "Expenses",
-      value: "$19,070",
-      delta: "3.0%",
-      deltaDirection: "down",
-      icon: /*#__PURE__*/React.createElement(Icon, {
-        name: "credit-card"
-      }),
-      tone: "violet"
-    }), /*#__PURE__*/React.createElement(StatCard, {
-      label: "Outstanding",
-      value: "$46,900",
-      delta: "—",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "receipt"
       }),
+      tone: "brand"
+    }), /*#__PURE__*/React.createElement(StatCard, {
+      label: "Outstanding",
+      value: fmtAmt(outstanding),
+      delta: "—",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "clock"
+      }),
       tone: "warning"
+    }), /*#__PURE__*/React.createElement(StatCard, {
+      label: "Invoices",
+      value: String(invoices.length),
+      delta: "—",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "file-text"
+      }),
+      tone: "violet"
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
@@ -193,7 +226,8 @@
         gap: 6,
         fontSize: 'var(--text-xs)',
         fontWeight: 'var(--fw-semibold)',
-        color: 'var(--text-body)'
+        color: 'var(--text-body)',
+        cursor: 'pointer'
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "download",
@@ -214,10 +248,11 @@
         textTransform: 'uppercase',
         color: 'var(--text-subtle)'
       }
-    }, h)))), /*#__PURE__*/React.createElement("tbody", null, INVOICES.map((inv, i) => {
-      const [t, l] = IS[inv.status];
+    }, h)))), /*#__PURE__*/React.createElement("tbody", null, invoices.map((inv, i) => {
+      const [t, l] = IS[inv.status] || ['neutral', inv.status];
+      const clientName = inv.clients ? inv.clients.name : '—';
       return /*#__PURE__*/React.createElement("tr", {
-        key: i,
+        key: inv.id || i,
         style: {
           borderTop: '1px solid var(--border-subtle)'
         }
@@ -228,14 +263,14 @@
           fontSize: 'var(--text-xs)',
           color: 'var(--text-body)'
         }
-      }, inv.id), /*#__PURE__*/React.createElement("td", {
+      }, inv.invoice_no), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '11px 18px',
           fontSize: 'var(--text-sm)',
           fontWeight: 'var(--fw-semibold)',
           color: 'var(--text-strong)'
         }
-      }, inv.client), /*#__PURE__*/React.createElement("td", {
+      }, clientName), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '11px 18px',
           textAlign: 'right',
@@ -244,7 +279,7 @@
           color: 'var(--text-strong)',
           fontVariantNumeric: 'tabular-nums'
         }
-      }, inv.amount), /*#__PURE__*/React.createElement("td", {
+      }, fmtAmt(inv.amount)), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '11px 18px'
         }
@@ -257,7 +292,7 @@
           fontSize: 'var(--text-sm)',
           color: 'var(--text-muted)'
         }
-      }, inv.due));
+      }, fmtDate(inv.due_date)));
     }))))));
   }
   Object.assign(window, {

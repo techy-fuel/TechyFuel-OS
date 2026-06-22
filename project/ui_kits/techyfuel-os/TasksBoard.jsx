@@ -8,67 +8,106 @@ const TF_PRIORITY = {
   medium: { color: 'var(--blue-600)', bg: 'var(--blue-50)', label: 'Medium', icon: 'equal' },
   low: { color: 'var(--slate-500)', bg: 'var(--slate-100)', label: 'Low', icon: 'chevron-down' },
 };
-const TYPE_TONE = { Design: 'violet', Video: 'teal', Ads: 'brand', Web: 'info', SEO: 'warning', Social: 'success' };
 
-const TF_COLUMNS = [
-  { id: 'backlog', label: 'Backlog', dot: 'var(--slate-400)', tasks: [
-    { t: 'Q3 content strategy deck', type: 'Social', pri: 'low', who: 'Lena Cruz', due: 'Jul 2', sub: '0/4' },
-    { t: 'Competitor SEO audit — Orbit', type: 'SEO', pri: 'medium', who: 'Jay Park', due: 'Jul 5', sub: '1/6' },
-  ]},
-  { id: 'todo', label: 'To do', dot: 'var(--blue-500)', tasks: [
-    { t: 'Reels batch — Peak Fitness', type: 'Video', pri: 'high', who: 'Omar Ali', due: 'Jun 24', sub: '2/8', cmt: 3 },
-    { t: 'Landing page wireframes', type: 'Web', pri: 'medium', who: 'Mia Wu', due: 'Jun 25', sub: '0/5' },
-    { t: 'Meta ad creatives v3', type: 'Ads', pri: 'urgent', who: 'Sara Khan', due: 'Today', sub: '3/5', cmt: 6 },
-  ]},
-  { id: 'progress', label: 'In progress', dot: 'var(--violet-500)', tasks: [
-    { t: 'Homepage hero design', type: 'Design', pri: 'high', who: 'Sara Khan', due: 'Jun 23', sub: '4/6', cmt: 2, team: ['Sara Khan', 'Mia Wu'] },
-    { t: 'Brand kit — Mediva', type: 'Design', pri: 'medium', who: 'Tom Reed', due: 'Jun 27', sub: '2/7' },
-  ]},
-  { id: 'review', label: 'Review', dot: 'var(--amber-500)', tasks: [
-    { t: 'Launch campaign captions', type: 'Social', pri: 'urgent', who: 'Lena Cruz', due: 'Today', sub: '5/5', cmt: 1, flag: true },
-    { t: 'Product demo edit', type: 'Video', pri: 'high', who: 'Omar Ali', due: 'Jun 23', sub: '6/6' },
-  ]},
-  { id: 'done', label: 'Completed', dot: 'var(--green-500)', tasks: [
-    { t: 'Logo refresh — Nova', type: 'Design', pri: 'medium', who: 'Sara Khan', due: 'Jun 18', sub: '6/6', done: true },
-    { t: 'June ad report', type: 'Ads', pri: 'low', who: 'Jay Park', due: 'Jun 17', sub: '3/3', done: true },
-  ]},
+const COLUMN_CONFIG = [
+  { id: 'backlog',     label: 'Backlog',     dot: 'var(--slate-400)',  dbStatus: null },
+  { id: 'todo',        label: 'To do',       dot: 'var(--blue-500)',   dbStatus: 'todo' },
+  { id: 'in_progress', label: 'In progress', dot: 'var(--violet-500)', dbStatus: 'in_progress' },
+  { id: 'review',      label: 'Review',      dot: 'var(--amber-500)',  dbStatus: 'review' },
+  { id: 'done',        label: 'Completed',   dot: 'var(--green-500)',  dbStatus: 'done' },
 ];
+
+const FALLBACK_TASKS = {
+  backlog: [],
+  todo: [
+    { id: 'f1', title: 'Write 30 captions', priority: 'medium', assigned_to_name: 'Zara Ahmed', due_date: '2025-07-01', project_name: 'Bloom Social Relaunch' },
+    { id: 'f2', title: 'Set up CMS', priority: 'low', assigned_to_name: 'Omar Sheikh', due_date: '2025-07-10', project_name: 'Nova Website Revamp' },
+  ],
+  in_progress: [
+    { id: 'f3', title: 'Finalise ad creatives', priority: 'high', assigned_to_name: 'Zara Ahmed', due_date: '2025-06-25', project_name: 'Nova Launch Campaign' },
+    { id: 'f4', title: 'Wireframes for homepage', priority: 'medium', assigned_to_name: 'Ali Raza', due_date: '2025-06-30', project_name: 'Nova Website Revamp' },
+  ],
+  review: [
+    { id: 'f5', title: 'Client approval — round 2', priority: 'high', assigned_to_name: 'Ali Raza', due_date: '2025-06-24', project_name: 'Nova Launch Campaign' },
+  ],
+  done: [
+    { id: 'f6', title: 'Launch Meta campaign', priority: 'high', assigned_to_name: 'Omar Sheikh', due_date: '2025-06-20', project_name: 'Apex Lead Gen Ads', done: true },
+  ],
+};
+
+function fmtDue(ds) {
+  if (!ds) return '—';
+  const d = new Date(ds); const t = new Date(); t.setHours(0,0,0,0);
+  const diff = Math.round((d - t) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  return d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+}
 
 function TaskCard({ task }) {
   const [hover, setHover] = React.useState(false);
-  const p = TF_PRIORITY[task.pri];
+  const p = TF_PRIORITY[task.priority] || TF_PRIORITY.medium;
+  const dueStr = fmtDue(task.due_date);
+  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
   return (
     <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{ background: 'var(--slate-0)', border: `1px solid ${hover ? 'var(--slate-200)' : 'var(--border-subtle)'}`, borderRadius: 'var(--radius-lg)',
         padding: 12, boxShadow: hover ? 'var(--shadow-md)' : 'var(--shadow-xs)', cursor: 'grab',
         transform: hover ? 'translateY(-1px)' : 'none', transition: 'all var(--dur-fast) var(--ease-out)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-        <Badge tone={TYPE_TONE[task.type]} size="sm">{task.type}</Badge>
+        {task.project_name && <Badge tone="neutral" size="sm">{task.project_name}</Badge>}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: p.color, background: p.bg, borderRadius: 'var(--radius-full)', padding: '2px 7px' }}>
           <Icon name={p.icon} size={12} /> {p.label}
         </span>
-        {task.flag && <Icon name="flag" size={13} style={{ color: 'var(--red-500)', marginLeft: 'auto' }} />}
       </div>
-      <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', lineHeight: 1.4, marginBottom: 10, textDecoration: task.done ? 'line-through' : 'none', opacity: task.done ? 0.6 : 1 }}>{task.t}</div>
+      <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', lineHeight: 1.4, marginBottom: 10, textDecoration: task.done ? 'line-through' : 'none', opacity: task.done ? 0.6 : 1 }}>{task.title}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="check-square" size={13} /> {task.sub}</span>
-        {task.cmt && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="message-square" size={13} /> {task.cmt}</span>}
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: task.due === 'Today' ? 'var(--red-600)' : 'var(--text-muted)', fontWeight: task.due === 'Today' ? 'var(--fw-bold)' : 'var(--fw-medium)' }}>
-          <Icon name="calendar" size={13} /> {task.due}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: isOverdue ? 'var(--red-600)' : 'var(--text-muted)', fontWeight: isOverdue ? 'var(--fw-bold)' : 'var(--fw-medium)' }}>
+          <Icon name="calendar" size={13} /> {dueStr}
         </span>
-        <div style={{ marginLeft: 'auto' }}>{task.team ? <AvatarGroup people={task.team} size="xs" max={2} /> : <Avatar name={task.who} size="xs" />}</div>
+        <div style={{ marginLeft: 'auto' }}>
+          <Avatar name={task.assigned_to_name || '?'} size="xs" />
+        </div>
       </div>
     </div>
   );
 }
 
 function TasksBoard() {
+  const [taskMap, setTaskMap] = React.useState(FALLBACK_TASKS);
+  const [totalOpen, setTotalOpen] = React.useState(5);
+
+  React.useEffect(() => {
+    if (!window.API) return;
+    window.API.getTasks().then(r => {
+      if (!r.data) return;
+      const map = { backlog: [], todo: [], in_progress: [], review: [], done: [] };
+      r.data.forEach(t => {
+        const key = t.status || 'todo';
+        if (!map[key]) map[key] = [];
+        map[key].push({
+          id: t.id,
+          title: t.title,
+          priority: t.priority,
+          due_date: t.due_date,
+          status: t.status,
+          done: t.status === 'done',
+          assigned_to_name: t.team_members ? t.team_members.name : null,
+          project_name: t.projects ? t.projects.name : null,
+        });
+      });
+      setTaskMap(map);
+      const open = (map.todo.length + map.in_progress.length + map.review.length + map.backlog.length);
+      setTotalOpen(open);
+    }).catch(() => {});
+  }, []);
+
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Tasks</h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>All projects · 24 open tasks</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>All projects · {totalOpen} open tasks</p>
         </div>
         <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
           <Icon name="plus" size={16} /> Add task
@@ -77,28 +116,30 @@ function TasksBoard() {
       <div style={{ marginBottom: 16 }}>
         <Tabs defaultValue="kanban" tabs={[
           { id: 'list', label: 'List', icon: <Icon name="list" size={16} /> },
-          { id: 'kanban', label: 'Board', icon: <Icon name="columns-3" size={16} />, count: 24 },
+          { id: 'kanban', label: 'Board', icon: <Icon name="columns-3" size={16} />, count: totalOpen },
           { id: 'calendar', label: 'Calendar', icon: <Icon name="calendar" size={16} /> },
         ]} />
       </div>
-      {/* Board */}
       <div className="tf-scroll" style={{ flex: 1, display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start' }}>
-        {TF_COLUMNS.map(col => (
-          <div key={col.id} style={{ width: 268, flex: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 4px' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.dot }} />
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{col.label}</span>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', color: 'var(--text-muted)', background: 'var(--slate-150)', borderRadius: 'var(--radius-full)', padding: '0px 7px', fontVariantNumeric: 'tabular-nums' }}>{col.tasks.length}</span>
-              <Icon name="plus" size={15} style={{ color: 'var(--text-subtle)', marginLeft: 'auto', cursor: 'pointer' }} />
+        {COLUMN_CONFIG.map(col => {
+          const colTasks = taskMap[col.id] || [];
+          return (
+            <div key={col.id} style={{ width: 268, flex: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 4px' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.dot }} />
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{col.label}</span>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', color: 'var(--text-muted)', background: 'var(--slate-150)', borderRadius: 'var(--radius-full)', padding: '0px 7px', fontVariantNumeric: 'tabular-nums' }}>{colTasks.length}</span>
+                <Icon name="plus" size={15} style={{ color: 'var(--text-subtle)', marginLeft: 'auto', cursor: 'pointer' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--slate-100)', borderRadius: 'var(--radius-xl)', padding: 10, minHeight: 120 }}>
+                {colTasks.map((t, i) => <TaskCard key={t.id || i} task={t} />)}
+                <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0', background: 'transparent', border: '1px dashed var(--border-strong)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+                  <Icon name="plus" size={14} /> Add task
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--slate-100)', borderRadius: 'var(--radius-xl)', padding: 10, minHeight: 120 }}>
-              {col.tasks.map((t, i) => <TaskCard key={i} task={t} />)}
-              <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0', background: 'transparent', border: '1px dashed var(--border-strong)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
-                <Icon name="plus" size={14} /> Add task
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

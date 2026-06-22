@@ -8,116 +8,19 @@
     Input
   } = window.TechyFuelOSDesignSystem_be0222;
   const TF_STATUS = {
-    lead: {
-      tone: 'brand',
-      label: 'Lead'
-    },
-    proposal: {
-      tone: 'violet',
-      label: 'Proposal sent'
-    },
-    negotiation: {
-      tone: 'warning',
-      label: 'Negotiation'
-    },
     active: {
       tone: 'success',
       label: 'Active client'
     },
-    completed: {
+    inactive: {
       tone: 'neutral',
-      label: 'Completed'
+      label: 'Inactive'
     },
-    lost: {
-      tone: 'danger',
-      label: 'Lost'
+    lead: {
+      tone: 'brand',
+      label: 'Lead'
     }
   };
-  const TF_CLIENTS_DATA = [{
-    id: 1,
-    company: 'Nova Skincare',
-    contact: 'Amelia Stone',
-    email: 'amelia@novaskin.co',
-    country: '🇺🇸 United States',
-    industry: 'E-commerce',
-    status: 'active',
-    value: '$12,400',
-    source: 'Referral',
-    site: 'novaskin.co',
-    wa: '+1 415 555 0182'
-  }, {
-    id: 2,
-    company: 'Orbit Inc.',
-    contact: 'Daniel Wu',
-    email: 'dan@orbit.io',
-    country: '🇬🇧 United Kingdom',
-    industry: 'SaaS',
-    status: 'active',
-    value: '$28,900',
-    source: 'Inbound',
-    site: 'orbit.io',
-    wa: '+44 20 7946 0958'
-  }, {
-    id: 3,
-    company: 'Mediva Health',
-    contact: 'Priya Nair',
-    email: 'priya@mediva.health',
-    country: '🇦🇪 UAE',
-    industry: 'Healthcare',
-    status: 'negotiation',
-    value: '$18,000',
-    source: 'LinkedIn',
-    site: 'mediva.health',
-    wa: '+971 50 123 4567'
-  }, {
-    id: 4,
-    company: 'Peak Fitness',
-    contact: 'Marco Bianchi',
-    email: 'marco@peakfit.com',
-    country: '🇮🇹 Italy',
-    industry: 'Fitness',
-    status: 'active',
-    value: '$9,200',
-    source: 'Referral',
-    site: 'peakfit.com',
-    wa: '+39 06 5555 123'
-  }, {
-    id: 5,
-    company: 'Lumen Cafe',
-    contact: 'Sofia Reyes',
-    email: 'sofia@lumencafe.com',
-    country: '🇪🇸 Spain',
-    industry: 'Hospitality',
-    status: 'proposal',
-    value: '$6,500',
-    source: 'Instagram',
-    site: 'lumencafe.com',
-    wa: '+34 91 555 0199'
-  }, {
-    id: 6,
-    company: 'Atlas Realty',
-    contact: 'James Carter',
-    email: 'james@atlasrealty.com',
-    country: '🇺🇸 United States',
-    industry: 'Real estate',
-    status: 'lead',
-    value: '$15,000',
-    source: 'Cold outreach',
-    site: 'atlasrealty.com',
-    wa: '+1 212 555 0143'
-  }, {
-    id: 7,
-    company: 'Verde Foods',
-    contact: 'Lena Müller',
-    email: 'lena@verdefoods.de',
-    country: '🇩🇪 Germany',
-    industry: 'CPG',
-    status: 'completed',
-    value: '$22,300',
-    source: 'Referral',
-    site: 'verdefoods.de',
-    wa: '+49 30 5555 012'
-  }];
   const TF_TIMELINE = [{
     icon: 'phone',
     tone: 'brand',
@@ -126,7 +29,7 @@
   }, {
     icon: 'file-text',
     tone: 'violet',
-    text: 'Proposal v2 sent ($12,400/mo retainer)',
+    text: 'Proposal sent',
     time: 'Jun 15'
   }, {
     icon: 'mail',
@@ -139,6 +42,56 @@
     text: 'Kickoff meeting scheduled',
     time: 'Jun 10'
   }];
+  const FALLBACK_CLIENTS = [{
+    id: 'aaaa0001-0000-0000-0000-000000000001',
+    name: 'Nova Tech',
+    company: 'Nova Technology Ltd',
+    email: 'contact@novatech.io',
+    status: 'active',
+    industry: 'SaaS',
+    monthly_value: 4500,
+    website: 'novatech.io'
+  }, {
+    id: 'aaaa0002-0000-0000-0000-000000000002',
+    name: 'Bloom Foods',
+    company: 'Bloom Foods Co',
+    email: 'hi@bloomfoods.com',
+    status: 'active',
+    industry: 'F&B',
+    monthly_value: 2800,
+    website: 'bloomfoods.com'
+  }, {
+    id: 'aaaa0003-0000-0000-0000-000000000003',
+    name: 'Apex Realty',
+    company: 'Apex Realty Group',
+    email: 'info@apexrealty.com',
+    status: 'active',
+    industry: 'Real Estate',
+    monthly_value: 3200,
+    website: 'apexrealty.com'
+  }, {
+    id: 'aaaa0004-0000-0000-0000-000000000004',
+    name: 'Spark Academy',
+    company: 'Spark Online Academy',
+    email: 'hello@sparkacademy.co',
+    status: 'active',
+    industry: 'EdTech',
+    monthly_value: 1900,
+    website: 'sparkacademy.co'
+  }, {
+    id: 'aaaa0005-0000-0000-0000-000000000005',
+    name: 'Swift Logistics',
+    company: 'Swift Logistics LLC',
+    email: 'ops@swiftlogistics.com',
+    status: 'lead',
+    industry: 'Logistics',
+    monthly_value: 0,
+    website: 'swiftlogistics.com'
+  }];
+  function fmtValue(n) {
+    if (!n) return '$0/mo';
+    return '$' + Number(n).toLocaleString() + '/mo';
+  }
   function Th({
     children,
     w
@@ -162,7 +115,8 @@
     onClick
   }) {
     const [hover, setHover] = React.useState(false);
-    const s = TF_STATUS[c.status];
+    const s = TF_STATUS[c.status] || TF_STATUS.lead;
+    const displayName = c.company || c.name;
     return /*#__PURE__*/React.createElement("tr", {
       onClick: onClick,
       onMouseEnter: () => setHover(true),
@@ -184,7 +138,7 @@
         gap: 10
       }
     }, /*#__PURE__*/React.createElement(Avatar, {
-      name: c.company,
+      name: displayName,
       size: "sm"
     }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -192,19 +146,19 @@
         fontWeight: 'var(--fw-semibold)',
         color: 'var(--text-strong)'
       }
-    }, c.company), /*#__PURE__*/React.createElement("div", {
+    }, displayName), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-xs)',
         color: 'var(--text-muted)'
       }
-    }, c.site)))), /*#__PURE__*/React.createElement("td", {
+    }, c.website || c.email)))), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '11px 14px',
         borderTop: '1px solid var(--border-subtle)',
         fontSize: 'var(--text-sm)',
         color: 'var(--text-body)'
       }
-    }, c.contact), /*#__PURE__*/React.createElement("td", {
+    }, c.name), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '11px 14px',
         borderTop: '1px solid var(--border-subtle)'
@@ -219,14 +173,14 @@
         fontSize: 'var(--text-sm)',
         color: 'var(--text-body)'
       }
-    }, c.industry), /*#__PURE__*/React.createElement("td", {
+    }, c.industry || '—'), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '11px 14px',
         borderTop: '1px solid var(--border-subtle)',
         fontSize: 'var(--text-sm)',
         color: 'var(--text-body)'
       }
-    }, c.country), /*#__PURE__*/React.createElement("td", {
+    }, c.email), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: '11px 14px',
         borderTop: '1px solid var(--border-subtle)',
@@ -236,7 +190,7 @@
         textAlign: 'right',
         fontVariantNumeric: 'tabular-nums'
       }
-    }, c.value));
+    }, fmtValue(c.monthly_value)));
   }
   function ProfileField({
     icon,
@@ -276,9 +230,28 @@
     }, value));
   }
   function CRM() {
-    const [selId, setSelId] = React.useState(1);
-    const sel = TF_CLIENTS_DATA.find(c => c.id === selId);
-    const s = TF_STATUS[sel.status];
+    const [clients, setClients] = React.useState(FALLBACK_CLIENTS);
+    const [selId, setSelId] = React.useState(FALLBACK_CLIENTS[0].id);
+    const [search, setSearch] = React.useState('');
+    React.useEffect(() => {
+      if (!window.API) return;
+      window.API.getClients().then(r => {
+        if (r.data && r.data.length > 0) {
+          setClients(r.data);
+          setSelId(r.data[0].id);
+        }
+      }).catch(() => {});
+    }, []);
+    const filtered = clients.filter(c => {
+      const q = search.toLowerCase();
+      return !q || (c.company || c.name || '').toLowerCase().includes(q) || (c.name || '').toLowerCase().includes(q);
+    });
+    const sel = clients.find(c => c.id === selId) || clients[0];
+    if (!sel) return null;
+    const s = TF_STATUS[sel.status] || TF_STATUS.lead;
+    const displayName = sel.company || sel.name;
+    const activeCount = clients.filter(c => c.status === 'active').length;
+    const totalValue = clients.reduce((s, c) => s + (Number(c.monthly_value) || 0), 0);
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24
@@ -304,7 +277,7 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, "38 clients · $112.7K in active retainers")), /*#__PURE__*/React.createElement("button", {
+    }, clients.length, " clients · $", Number(totalValue).toLocaleString(), "/mo in retainers")), /*#__PURE__*/React.createElement("button", {
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -351,7 +324,9 @@
       iconLeft: /*#__PURE__*/React.createElement(Icon, {
         name: "search",
         size: 16
-      })
+      }),
+      value: search,
+      onChange: e => setSearch(e.target.value)
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'inline-flex',
@@ -381,14 +356,14 @@
         fontSize: 'var(--text-xs)',
         color: 'var(--text-muted)'
       }
-    }, "7 of 38")), /*#__PURE__*/React.createElement("table", {
+    }, filtered.length, " of ", clients.length)), /*#__PURE__*/React.createElement("table", {
       style: {
         width: '100%',
         borderCollapse: 'collapse'
       }
-    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(Th, null, "Company"), /*#__PURE__*/React.createElement(Th, null, "Contact"), /*#__PURE__*/React.createElement(Th, null, "Status"), /*#__PURE__*/React.createElement(Th, null, "Industry"), /*#__PURE__*/React.createElement(Th, null, "Country"), /*#__PURE__*/React.createElement(Th, {
-      w: "90"
-    }, "Value"))), /*#__PURE__*/React.createElement("tbody", null, TF_CLIENTS_DATA.map(c => /*#__PURE__*/React.createElement(ClientRow, {
+    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(Th, null, "Company"), /*#__PURE__*/React.createElement(Th, null, "Contact"), /*#__PURE__*/React.createElement(Th, null, "Status"), /*#__PURE__*/React.createElement(Th, null, "Industry"), /*#__PURE__*/React.createElement(Th, null, "Email"), /*#__PURE__*/React.createElement(Th, {
+      w: "100"
+    }, "Value"))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(c => /*#__PURE__*/React.createElement(ClientRow, {
       key: c.id,
       c: c,
       selected: c.id === selId,
@@ -413,7 +388,7 @@
         gap: 12
       }
     }, /*#__PURE__*/React.createElement(Avatar, {
-      name: sel.company,
+      name: displayName,
       size: "lg"
     }), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -427,7 +402,7 @@
         color: 'var(--text-strong)',
         letterSpacing: '-0.01em'
       }
-    }, sel.company), /*#__PURE__*/React.createElement("div", {
+    }, displayName), /*#__PURE__*/React.createElement("div", {
       style: {
         marginTop: 4
       }
@@ -471,23 +446,23 @@
     }, /*#__PURE__*/React.createElement(ProfileField, {
       icon: "user",
       label: "Contact",
-      value: sel.contact
+      value: sel.name
     }), /*#__PURE__*/React.createElement(ProfileField, {
       icon: "at-sign",
       label: "Email",
-      value: sel.email
+      value: sel.email || '—'
     }), /*#__PURE__*/React.createElement(ProfileField, {
       icon: "globe",
       label: "Website",
-      value: sel.site
+      value: sel.website || '—'
     }), /*#__PURE__*/React.createElement(ProfileField, {
-      icon: "target",
-      label: "Source",
-      value: sel.source
+      icon: "briefcase",
+      label: "Industry",
+      value: sel.industry || '—'
     }), /*#__PURE__*/React.createElement(ProfileField, {
       icon: "banknote",
       label: "Value",
-      value: sel.value + '/mo'
+      value: fmtValue(sel.monthly_value)
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         padding: '0 18px 18px'
