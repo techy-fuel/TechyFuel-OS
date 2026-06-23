@@ -87,6 +87,16 @@ function CRM() {
     }).catch(() => {});
   }, []);
 
+  async function handleDeleteClient(id) {
+    if (!window.confirm('Delete this client? This cannot be undone.')) return;
+    if (window.API) {
+      await window.API.deleteClient(id).catch(() => {});
+    }
+    const remaining = clients.filter(c => c.id !== id);
+    setClients(remaining);
+    if (selId === id) setSelId(remaining[0]?.id || null);
+  }
+
   async function handleAddClient() {
     if (!form.name.trim()) return;
     setSaving(true);
@@ -159,6 +169,9 @@ function CRM() {
                 <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', letterSpacing: '-0.01em' }}>{displayName}</div>
                 <div style={{ marginTop: 4 }}><Badge tone={s.tone} dot>{s.label}</Badge></div>
               </div>
+              <button onClick={() => handleDeleteClient(sel.id)} title="Delete client" style={{ width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--red-50)', border: '1px solid var(--red-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--red-600)', flex: 'none' }}>
+                <Icon name="trash-2" size={15} />
+              </button>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               {[['mail', 'Email'], ['message-circle', 'WhatsApp'], ['calendar-plus', 'Meeting']].map(([ic, l]) => (

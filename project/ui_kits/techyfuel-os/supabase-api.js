@@ -39,6 +39,7 @@
     getClient: (id) => client.from('clients').select('*').eq('id', id).single(),
     createClient: (d) => client.from('clients').insert(d).select().single(),
     updateClient: (id, d) => client.from('clients').update(d).eq('id', id).select().single(),
+    deleteClient: (id) => client.from('clients').delete().eq('id', id),
 
     // ── PROJECTS ─────────────────────────────────────────
     getProjects: () =>
