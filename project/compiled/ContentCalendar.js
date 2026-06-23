@@ -40,28 +40,10 @@
     }
     return days;
   }
-  const FALLBACK_POSTS = {
-    0: [{
-      id: 'f1',
-      platform: 'instagram',
-      title: 'Summer Menu Drop',
-      status: 'scheduled',
-      assigned_to_name: 'Hina Malik'
-    }],
-    1: [{
-      id: 'f2',
-      platform: 'linkedin',
-      title: 'Client Testimonial',
-      status: 'scheduled',
-      assigned_to_name: 'Hina Malik'
-    }],
-    2: [{
-      id: 'f3',
-      platform: 'instagram',
-      title: 'Product Launch Reel',
-      status: 'draft',
-      assigned_to_name: 'Zara Ahmed'
-    }],
+  const EMPTY_WEEK = {
+    0: [],
+    1: [],
+    2: [],
     3: [],
     4: [],
     5: [],
@@ -121,8 +103,8 @@
     }, post.assigned_to_name));
   }
   function ContentCalendar() {
-    const [postMap, setPostMap] = React.useState(FALLBACK_POSTS);
-    const [totalPosts, setTotalPosts] = React.useState(3);
+    const [postMap, setPostMap] = React.useState(EMPTY_WEEK);
+    const [totalPosts, setTotalPosts] = React.useState(0);
     const days = React.useMemo(() => getWeekDays(), []);
     const [weekLabel, setWeekLabel] = React.useState('This week');
     const [clients, setClients] = React.useState([]);
@@ -187,11 +169,8 @@
             count++;
           }
         });
-        const hasPosts = Object.values(map).some(arr => arr.length > 0);
-        if (hasPosts) {
-          setPostMap(map);
-          setTotalPosts(r.data.length);
-        }
+        setPostMap(map);
+        setTotalPosts(r.data.length);
       }).catch(() => {});
       window.API.getClients().then(r => {
         if (r.data) setClients(r.data);
@@ -272,7 +251,7 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, weekLabel, " · ", totalPosts, " posts across ", platforms.size || 3, " platforms")), /*#__PURE__*/React.createElement("div", {
+    }, weekLabel, " · ", totalPosts, " posts across ", platforms.size, " platforms")), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         gap: 8

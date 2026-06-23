@@ -29,12 +29,7 @@ function getWeekDays() {
   return days;
 }
 
-const FALLBACK_POSTS = {
-  0: [{ id: 'f1', platform: 'instagram', title: 'Summer Menu Drop',    status: 'scheduled', assigned_to_name: 'Hina Malik' }],
-  1: [{ id: 'f2', platform: 'linkedin',  title: 'Client Testimonial', status: 'scheduled', assigned_to_name: 'Hina Malik' }],
-  2: [{ id: 'f3', platform: 'instagram', title: 'Product Launch Reel', status: 'draft',     assigned_to_name: 'Zara Ahmed' }],
-  3: [], 4: [], 5: [], 6: [],
-};
+const EMPTY_WEEK = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
 function PostCard({ post }) {
   const [pi, pc] = PLAT[post.platform] || ['image', 'var(--slate-500)'];
@@ -54,8 +49,8 @@ function PostCard({ post }) {
 }
 
 function ContentCalendar() {
-  const [postMap, setPostMap] = React.useState(FALLBACK_POSTS);
-  const [totalPosts, setTotalPosts] = React.useState(3);
+  const [postMap, setPostMap] = React.useState(EMPTY_WEEK);
+  const [totalPosts, setTotalPosts] = React.useState(0);
   const days = React.useMemo(() => getWeekDays(), []);
   const [weekLabel, setWeekLabel] = React.useState('This week');
   const [clients, setClients] = React.useState([]);
@@ -92,11 +87,8 @@ function ContentCalendar() {
         }
       });
 
-      const hasPosts = Object.values(map).some(arr => arr.length > 0);
-      if (hasPosts) {
-        setPostMap(map);
-        setTotalPosts(r.data.length);
-      }
+      setPostMap(map);
+      setTotalPosts(r.data.length);
     }).catch(() => {});
     window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
     window.API.getTeam().then(r => { if (r.data) setTeam(r.data); }).catch(() => {});
@@ -133,7 +125,7 @@ function ContentCalendar() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Content calendar</h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{weekLabel} · {totalPosts} posts across {platforms.size || 3} platforms</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{weekLabel} · {totalPosts} posts across {platforms.size} platforms</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 10px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)' }}>
