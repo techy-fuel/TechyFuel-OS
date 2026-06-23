@@ -58,32 +58,43 @@ function Files() {
     if (!selected.length) return;
     setUploading(true);
     for (const file of selected) {
-      try {
-        let url = null;
-        if (window.API) {
-          try {
-            const path = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-            url = await window.API.uploadFile('files', path, file);
-          } catch(_) {}
+      const filePath = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      let savedToDb = false;
 
-          const payload = { name: file.name, mime_type: file.type || 'application/octet-stream', file_size: file.size };
-          if (url) payload.url = url;
-          const { data } = await window.API.createFile(payload).catch(() => ({ data: null }));
-          if (data) {
-            setFiles(prev => [{ ...data, team_members: null }, ...prev]);
-            continue;
+      // Try Supabase Storage upload
+      if (window.API) {
+        try { await window.API.uploadFile('files', filePath, file); } catch(_) {}
+      }
+
+      // Save metadata to files table
+      if (window.API) {
+        try {
+          const payload = {
+            name:      file.name,
+            file_path: filePath,
+            mime_type: file.type || 'application/octet-stream',
+            file_size: file.size,
+          };
+          const result = await window.API.createFile(payload);
+          if (result && result.data) {
+            setFiles(prev => [{ ...result.data, team_members: null }, ...prev]);
+            savedToDb = true;
           }
-        }
-        // Optimistic local update if API unavailable
+        } catch(_) {}
+      }
+
+      // Always show in list even if DB save failed
+      if (!savedToDb) {
         setFiles(prev => [{
           id: 'local_' + Date.now(),
           name: file.name,
+          file_path: filePath,
           mime_type: file.type || 'application/octet-stream',
           file_size: file.size,
           created_at: new Date().toISOString(),
           team_members: null,
         }, ...prev]);
-      } catch(_) {}
+      }
     }
     setUploading(false);
     e.target.value = '';
