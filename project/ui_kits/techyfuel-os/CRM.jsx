@@ -73,6 +73,8 @@ function CRM() {
   const [search, setSearch] = React.useState('');
   const [modalOpen, setModalOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [form, setForm] = React.useState({ name: '', company: '', email: '', website: '', industry: '', monthly_value: '', status: 'active' });
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
@@ -88,13 +90,14 @@ function CRM() {
   }, []);
 
   async function handleDeleteClient(id) {
-    if (!window.confirm('Delete this client? This cannot be undone.')) return;
-    if (window.API) {
-      await window.API.deleteClient(id).catch(() => {});
-    }
-    const remaining = clients.filter(c => c.id !== id);
-    setClients(remaining);
-    if (selId === id) setSelId(remaining[0]?.id || null);
+    setDeleting(true);
+    try {
+      if (window.API) await window.API.deleteClient(id).catch(() => {});
+      const remaining = clients.filter(c => c.id !== id);
+      setClients(remaining);
+      setSelId(remaining[0]?.id || null);
+      setConfirmDelete(false);
+    } finally { setDeleting(false); }
   }
 
   async function handleAddClient() {
@@ -157,7 +160,7 @@ function CRM() {
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><Th>Company</Th><Th>Contact</Th><Th>Status</Th><Th>Industry</Th><Th>Email</Th><Th w="100">Value</Th></tr></thead>
-            <tbody>{filtered.map(c => <ClientRow key={c.id} c={c} selected={c.id === selId} onClick={() => setSelId(c.id)} />)}</tbody>
+            <tbody>{filtered.map(c => <ClientRow key={c.id} c={c} selected={c.id === selId} onClick={() => { setSelId(c.id); setConfirmDelete(false); }} />)}</tbody>
           </table>
         </Card>
 
@@ -169,9 +172,15 @@ function CRM() {
                 <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', letterSpacing: '-0.01em' }}>{displayName}</div>
                 <div style={{ marginTop: 4 }}><Badge tone={s.tone} dot>{s.label}</Badge></div>
               </div>
-              <button onClick={() => handleDeleteClient(sel.id)} title="Delete client" style={{ width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--red-50)', border: '1px solid var(--red-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--red-600)', flex: 'none' }}>
-                <Icon name="trash-2" size={15} />
-              </button>
+              {confirmDelete
+                ? <div style={{ display: 'flex', gap: 5, flex: 'none' }}>
+                    <button onClick={() => handleDeleteClient(sel.id)} disabled={deleting} style={{ height: 28, padding: '0 10px', background: 'var(--red-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', cursor: 'pointer' }}>{deleting ? '…' : 'Delete'}</button>
+                    <button onClick={() => setConfirmDelete(false)} style={{ height: 28, padding: '0 10px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer', color: 'var(--text-body)' }}>Cancel</button>
+                  </div>
+                : <button onClick={() => setConfirmDelete(true)} title="Delete client" style={{ width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--red-50)', border: '1px solid var(--red-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--red-600)', flex: 'none' }}>
+                    <Icon name="trash-2" size={15} />
+                  </button>
+              }
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               {[['mail', 'Email'], ['message-circle', 'WhatsApp'], ['calendar-plus', 'Meeting']].map(([ic, l]) => (

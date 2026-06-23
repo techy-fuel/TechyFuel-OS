@@ -235,6 +235,8 @@
     const [search, setSearch] = React.useState('');
     const [modalOpen, setModalOpen] = React.useState(false);
     const [saving, setSaving] = React.useState(false);
+    const [deleting, setDeleting] = React.useState(false);
+    const [confirmDelete, setConfirmDelete] = React.useState(false);
     const [form, setForm] = React.useState({
       name: '',
       company: '',
@@ -260,13 +262,16 @@
       }).catch(() => {});
     }, []);
     async function handleDeleteClient(id) {
-      if (!window.confirm('Delete this client? This cannot be undone.')) return;
-      if (window.API) {
-        await window.API.deleteClient(id).catch(() => {});
+      setDeleting(true);
+      try {
+        if (window.API) await window.API.deleteClient(id).catch(() => {});
+        const remaining = clients.filter(c => c.id !== id);
+        setClients(remaining);
+        setSelId(remaining[0]?.id || null);
+        setConfirmDelete(false);
+      } finally {
+        setDeleting(false);
       }
-      const remaining = clients.filter(c => c.id !== id);
-      setClients(remaining);
-      if (selId === id) setSelId(remaining[0]?.id || null);
     }
     async function handleAddClient() {
       if (!form.name.trim()) return;
@@ -431,7 +436,10 @@
       key: c.id,
       c: c,
       selected: c.id === selId,
-      onClick: () => setSelId(c.id)
+      onClick: () => {
+        setSelId(c.id);
+        setConfirmDelete(false);
+      }
     }))))), /*#__PURE__*/React.createElement(Card, {
       padding: "none",
       style: {
@@ -473,8 +481,43 @@
     }, /*#__PURE__*/React.createElement(Badge, {
       tone: s.tone,
       dot: true
-    }, s.label))), /*#__PURE__*/React.createElement("button", {
+    }, s.label))), confirmDelete ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 5,
+        flex: 'none'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
       onClick: () => handleDeleteClient(sel.id),
+      disabled: deleting,
+      style: {
+        height: 28,
+        padding: '0 10px',
+        background: 'var(--red-600)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-bold)',
+        cursor: 'pointer'
+      }
+    }, deleting ? '…' : 'Delete'), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setConfirmDelete(false),
+      style: {
+        height: 28,
+        padding: '0 10px',
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        cursor: 'pointer',
+        color: 'var(--text-body)'
+      }
+    }, "Cancel")) : /*#__PURE__*/React.createElement("button", {
+      onClick: () => setConfirmDelete(true),
       title: "Delete client",
       style: {
         width: 30,
