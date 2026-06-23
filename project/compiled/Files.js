@@ -95,6 +95,8 @@
   function Files() {
     const [files, setFiles] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
+    const [uploading, setUploading] = React.useState(false);
+    const fileInputRef = React.useRef();
     React.useEffect(() => {
       if (!window.API) {
         setLoading(false);
@@ -104,6 +106,51 @@
         if (r.data) setFiles(r.data);
       }).catch(() => {}).finally(() => setLoading(false));
     }, []);
+    async function handleFileSelect(e) {
+      const selected = Array.from(e.target.files || []);
+      if (!selected.length) return;
+      setUploading(true);
+      for (const file of selected) {
+        try {
+          let url = null;
+          if (window.API) {
+            try {
+              const path = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+              url = await window.API.uploadFile('files', path, file);
+            } catch (_) {}
+            const payload = {
+              name: file.name,
+              mime_type: file.type || 'application/octet-stream',
+              file_size: file.size
+            };
+            if (url) payload.url = url;
+            const {
+              data
+            } = await window.API.createFile(payload).catch(() => ({
+              data: null
+            }));
+            if (data) {
+              setFiles(prev => [{
+                ...data,
+                team_members: null
+              }, ...prev]);
+              continue;
+            }
+          }
+          // Optimistic local update if API unavailable
+          setFiles(prev => [{
+            id: 'local_' + Date.now(),
+            name: file.name,
+            mime_type: file.type || 'application/octet-stream',
+            file_size: file.size,
+            created_at: new Date().toISOString(),
+            team_members: null
+          }, ...prev]);
+        } catch (_) {}
+      }
+      setUploading(false);
+      e.target.value = '';
+    }
     function folderCount(f) {
       return files.filter(file => f.mimeKeys.some(k => (file.mime_type || '').toLowerCase().includes(k))).length;
     }
@@ -139,6 +186,8 @@
         marginTop: 2
       }
     }, files.length, " files · Shared workspace")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => fileInputRef.current.click(),
+      disabled: uploading,
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -153,12 +202,21 @@
         fontFamily: 'var(--font-sans)',
         fontSize: 'var(--text-sm)',
         fontWeight: 'var(--fw-semibold)',
-        cursor: 'pointer'
+        cursor: uploading ? 'not-allowed' : 'pointer',
+        opacity: uploading ? 0.7 : 1
       }
     }, /*#__PURE__*/React.createElement(Icon, {
-      name: "upload",
+      name: uploading ? 'loader' : 'upload',
       size: 16
-    }), " Upload")), /*#__PURE__*/React.createElement("div", {
+    }), " ", uploading ? 'Uploading…' : 'Upload'), /*#__PURE__*/React.createElement("input", {
+      ref: fileInputRef,
+      type: "file",
+      multiple: true,
+      style: {
+        display: 'none'
+      },
+      onChange: handleFileSelect
+    })), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',

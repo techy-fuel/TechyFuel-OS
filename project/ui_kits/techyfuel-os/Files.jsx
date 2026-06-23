@@ -41,8 +41,10 @@ function fmtWhen(ds) {
 }
 
 function Files() {
-  const [files, setFiles]   = React.useState([]);
+  const [files, setFiles]     = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef();
 
   React.useEffect(() => {
     if (!window.API) { setLoading(false); return; }
@@ -50,6 +52,42 @@ function Files() {
       if (r.data) setFiles(r.data);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  async function handleFileSelect(e) {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+    setUploading(true);
+    for (const file of selected) {
+      try {
+        let url = null;
+        if (window.API) {
+          try {
+            const path = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+            url = await window.API.uploadFile('files', path, file);
+          } catch(_) {}
+
+          const payload = { name: file.name, mime_type: file.type || 'application/octet-stream', file_size: file.size };
+          if (url) payload.url = url;
+          const { data } = await window.API.createFile(payload).catch(() => ({ data: null }));
+          if (data) {
+            setFiles(prev => [{ ...data, team_members: null }, ...prev]);
+            continue;
+          }
+        }
+        // Optimistic local update if API unavailable
+        setFiles(prev => [{
+          id: 'local_' + Date.now(),
+          name: file.name,
+          mime_type: file.type || 'application/octet-stream',
+          file_size: file.size,
+          created_at: new Date().toISOString(),
+          team_members: null,
+        }, ...prev]);
+      } catch(_) {}
+    }
+    setUploading(false);
+    e.target.value = '';
+  }
 
   function folderCount(f) {
     return files.filter(file => f.mimeKeys.some(k => (file.mime_type || '').toLowerCase().includes(k))).length;
@@ -66,9 +104,11 @@ function Files() {
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Files</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{files.length} files · Shared workspace</p>
         </div>
-        <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
-          <Icon name="upload" size={16} /> Upload
+        <button onClick={() => fileInputRef.current.click()} disabled={uploading}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }}>
+          <Icon name={uploading ? 'loader' : 'upload'} size={16} /> {uploading ? 'Uploading…' : 'Upload'}
         </button>
+        <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={handleFileSelect} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
         {FOLDERS.map((f, i) => (

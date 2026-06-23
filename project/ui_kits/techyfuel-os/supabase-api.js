@@ -111,6 +111,7 @@
       if (error) throw error;
       return client.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
     },
+    createFile: (d) => client.from('files').insert(d).select().single(),
   };
 
   console.log('[TechyFuel OS] Supabase connected:', window.__SUPABASE_URL);
