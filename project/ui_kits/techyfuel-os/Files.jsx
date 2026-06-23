@@ -3,18 +3,10 @@
 const { Card, Badge, Avatar } = window.TechyFuelOSDesignSystem_be0222;
 
 const FOLDERS = [
-  { name: 'Designs',   count: 248, color: 'var(--violet-500)', bg: 'var(--violet-50)', icon: 'palette',       size: '4.2 GB' },
-  { name: 'Videos',    count: 86,  color: 'var(--teal-500)',   bg: 'var(--teal-50)',   icon: 'film',           size: '38 GB' },
-  { name: 'Documents', count: 412, color: 'var(--blue-500)',   bg: 'var(--blue-50)',   icon: 'file-text',      size: '1.1 GB' },
-  { name: 'Contracts', count: 64,  color: 'var(--green-500)',  bg: 'var(--green-50)',  icon: 'file-check',     size: '320 MB' },
-];
-
-const FALLBACK_FILES = [
-  { id: 'f1', name: 'Nova — launch hero v3.fig',       mime_type: 'figma',   file_size: 12582912,  team_members: { name: 'Ali Raza' },    created_at: new Date(Date.now() - 7200000).toISOString() },
-  { id: 'f2', name: 'Bloom — social pack.zip',         mime_type: 'zip',     file_size: 52428800,  team_members: { name: 'Hina Malik' },  created_at: new Date(Date.now() - 86400000).toISOString() },
-  { id: 'f3', name: 'Apex — brand guidelines.pdf',     mime_type: 'pdf',     file_size: 8800000,   team_members: { name: 'Sara Khan' },   created_at: new Date(Date.now() - 172800000).toISOString() },
-  { id: 'f4', name: 'Spark — service agreement.pdf',   mime_type: 'pdf',     file_size: 327680,    team_members: { name: 'Zara Ahmed' },  created_at: new Date(Date.now() - 259200000).toISOString() },
-  { id: 'f5', name: 'Swift — proposal deck.pptx',      mime_type: 'pptx',    file_size: 163840000, team_members: { name: 'Omar Sheikh' }, created_at: new Date(Date.now() - 345600000).toISOString() },
+  { name: 'Designs',   color: 'var(--violet-500)', bg: 'var(--violet-50)', icon: 'palette',   mimeKeys: ['figma', 'image'] },
+  { name: 'Videos',    color: 'var(--teal-500)',   bg: 'var(--teal-50)',   icon: 'film',       mimeKeys: ['video'] },
+  { name: 'Documents', color: 'var(--blue-500)',   bg: 'var(--blue-50)',   icon: 'file-text',  mimeKeys: ['pdf', 'doc', 'sheet', 'excel', 'txt'] },
+  { name: 'Contracts', color: 'var(--green-500)',  bg: 'var(--green-50)',  icon: 'file-check', mimeKeys: ['contract'] },
 ];
 
 function mimeIcon(mime) {
@@ -49,25 +41,30 @@ function fmtWhen(ds) {
 }
 
 function Files() {
-  const [files, setFiles] = React.useState(FALLBACK_FILES);
-  const [totalFiles, setTotalFiles] = React.useState(810);
+  const [files, setFiles]   = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    if (!window.API) return;
+    if (!window.API) { setLoading(false); return; }
     window.API.getFiles().then(r => {
-      if (r.data && r.data.length > 0) {
-        setFiles(r.data);
-        setTotalFiles(r.data.length);
-      }
-    }).catch(() => {});
+      if (r.data) setFiles(r.data);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  function folderCount(f) {
+    return files.filter(file => f.mimeKeys.some(k => (file.mime_type || '').toLowerCase().includes(k))).length;
+  }
+  function folderSize(f) {
+    const total = files.filter(file => f.mimeKeys.some(k => (file.mime_type || '').toLowerCase().includes(k))).reduce((s, file) => s + (file.file_size || 0), 0);
+    return fmtSize(total) === '—' ? '0 KB' : fmtSize(total);
+  }
 
   return (
     <div style={{ padding: 24, maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Files</h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{totalFiles} files · Shared workspace</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{files.length} files · Shared workspace</p>
         </div>
         <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
           <Icon name="upload" size={16} /> Upload
@@ -79,7 +76,7 @@ function Files() {
             <span style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', background: f.bg, color: f.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={f.icon} size={22} /></span>
             <div>
               <div style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{f.name}</div>
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>{f.count} files · {f.size}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>{folderCount(f)} files · {folderSize(f)}</div>
             </div>
           </Card>
         ))}
@@ -89,7 +86,21 @@ function Files() {
           <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)' }}>Recent files</h3>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Team access · version controlled</span>
         </div>
-        {files.map((f, i) => {
+        {loading && (
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading…</div>
+        )}
+        {!loading && files.length === 0 && (
+          <div style={{ padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <span style={{ width: 52, height: 52, borderRadius: 'var(--radius-xl)', background: 'var(--slate-100)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="folder-open" size={26} style={{ color: 'var(--text-subtle)' }} />
+            </span>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>No files yet</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 4 }}>Upload your first file using the button above</div>
+            </div>
+          </div>
+        )}
+        {!loading && files.map((f, i) => {
           const { icon, color } = mimeIcon(f.mime_type);
           const uploaderName = f.team_members ? f.team_members.name : '—';
           return (

@@ -7,78 +7,28 @@
   } = window.TechyFuelOSDesignSystem_be0222;
   const FOLDERS = [{
     name: 'Designs',
-    count: 248,
     color: 'var(--violet-500)',
     bg: 'var(--violet-50)',
     icon: 'palette',
-    size: '4.2 GB'
+    mimeKeys: ['figma', 'image']
   }, {
     name: 'Videos',
-    count: 86,
     color: 'var(--teal-500)',
     bg: 'var(--teal-50)',
     icon: 'film',
-    size: '38 GB'
+    mimeKeys: ['video']
   }, {
     name: 'Documents',
-    count: 412,
     color: 'var(--blue-500)',
     bg: 'var(--blue-50)',
     icon: 'file-text',
-    size: '1.1 GB'
+    mimeKeys: ['pdf', 'doc', 'sheet', 'excel', 'txt']
   }, {
     name: 'Contracts',
-    count: 64,
     color: 'var(--green-500)',
     bg: 'var(--green-50)',
     icon: 'file-check',
-    size: '320 MB'
-  }];
-  const FALLBACK_FILES = [{
-    id: 'f1',
-    name: 'Nova — launch hero v3.fig',
-    mime_type: 'figma',
-    file_size: 12582912,
-    team_members: {
-      name: 'Ali Raza'
-    },
-    created_at: new Date(Date.now() - 7200000).toISOString()
-  }, {
-    id: 'f2',
-    name: 'Bloom — social pack.zip',
-    mime_type: 'zip',
-    file_size: 52428800,
-    team_members: {
-      name: 'Hina Malik'
-    },
-    created_at: new Date(Date.now() - 86400000).toISOString()
-  }, {
-    id: 'f3',
-    name: 'Apex — brand guidelines.pdf',
-    mime_type: 'pdf',
-    file_size: 8800000,
-    team_members: {
-      name: 'Sara Khan'
-    },
-    created_at: new Date(Date.now() - 172800000).toISOString()
-  }, {
-    id: 'f4',
-    name: 'Spark — service agreement.pdf',
-    mime_type: 'pdf',
-    file_size: 327680,
-    team_members: {
-      name: 'Zara Ahmed'
-    },
-    created_at: new Date(Date.now() - 259200000).toISOString()
-  }, {
-    id: 'f5',
-    name: 'Swift — proposal deck.pptx',
-    mime_type: 'pptx',
-    file_size: 163840000,
-    team_members: {
-      name: 'Omar Sheikh'
-    },
-    created_at: new Date(Date.now() - 345600000).toISOString()
+    mimeKeys: ['contract']
   }];
   function mimeIcon(mime) {
     if (!mime) return {
@@ -143,17 +93,24 @@
     });
   }
   function Files() {
-    const [files, setFiles] = React.useState(FALLBACK_FILES);
-    const [totalFiles, setTotalFiles] = React.useState(810);
+    const [files, setFiles] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
     React.useEffect(() => {
-      if (!window.API) return;
+      if (!window.API) {
+        setLoading(false);
+        return;
+      }
       window.API.getFiles().then(r => {
-        if (r.data && r.data.length > 0) {
-          setFiles(r.data);
-          setTotalFiles(r.data.length);
-        }
-      }).catch(() => {});
+        if (r.data) setFiles(r.data);
+      }).catch(() => {}).finally(() => setLoading(false));
     }, []);
+    function folderCount(f) {
+      return files.filter(file => f.mimeKeys.some(k => (file.mime_type || '').toLowerCase().includes(k))).length;
+    }
+    function folderSize(f) {
+      const total = files.filter(file => f.mimeKeys.some(k => (file.mime_type || '').toLowerCase().includes(k))).reduce((s, file) => s + (file.file_size || 0), 0);
+      return fmtSize(total) === '—' ? '0 KB' : fmtSize(total);
+    }
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
@@ -181,7 +138,7 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, totalFiles, " files · Shared workspace")), /*#__PURE__*/React.createElement("button", {
+    }, files.length, " files · Shared workspace")), /*#__PURE__*/React.createElement("button", {
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -243,7 +200,7 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, f.count, " files · ", f.size))))), /*#__PURE__*/React.createElement(Card, {
+    }, folderCount(f), " files · ", folderSize(f)))))), /*#__PURE__*/React.createElement(Card, {
       padding: "none"
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -263,7 +220,54 @@
         fontSize: 'var(--text-xs)',
         color: 'var(--text-muted)'
       }
-    }, "Team access · version controlled")), files.map((f, i) => {
+    }, "Team access · version controlled")), loading && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: 32,
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "Loading…"), !loading && files.length === 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '48px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 52,
+        height: 52,
+        borderRadius: 'var(--radius-xl)',
+        background: 'var(--slate-100)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "folder-open",
+      size: 26,
+      style: {
+        color: 'var(--text-subtle)'
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-strong)'
+      }
+    }, "No files yet"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        marginTop: 4
+      }
+    }, "Upload your first file using the button above"))), !loading && files.map((f, i) => {
       const {
         icon,
         color
