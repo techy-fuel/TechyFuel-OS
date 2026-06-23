@@ -1,63 +1,63 @@
--- TechyFuel OS — Delete seed/fake data from all tables
--- Run this in Supabase SQL Editor to remove demo data
+-- TechyFuel OS — Delete ALL seed/fake data
+-- Run this in Supabase SQL Editor
 
--- Delete in dependency order (foreign keys)
-
--- Tasks
-delete from tasks where id in (
+-- Tasks (no fixed IDs, delete by project)
+delete from tasks where project_id in (
   'bbbb0001-0000-0000-0000-000000000001',
   'bbbb0002-0000-0000-0000-000000000002',
   'bbbb0003-0000-0000-0000-000000000003',
   'bbbb0004-0000-0000-0000-000000000004',
-  'bbbb0005-0000-0000-0000-000000000005',
-  'bbbb0006-0000-0000-0000-000000000006'
+  'bbbb0005-0000-0000-0000-000000000005'
 );
 
--- Content posts
-delete from content_posts where id in (
-  'cccc0001-0000-0000-0000-000000000001',
-  'cccc0002-0000-0000-0000-000000000002',
-  'cccc0003-0000-0000-0000-000000000003'
+-- Content posts (delete by client)
+delete from content_posts where client_id in (
+  'aaaa0001-0000-0000-0000-000000000001',
+  'aaaa0002-0000-0000-0000-000000000002',
+  'aaaa0003-0000-0000-0000-000000000003',
+  'aaaa0004-0000-0000-0000-000000000004',
+  'aaaa0005-0000-0000-0000-000000000005'
 );
 
--- Ad campaigns
-delete from ad_campaigns where id in (
-  'dddd0001-0000-0000-0000-000000000001',
-  'dddd0002-0000-0000-0000-000000000002',
-  'dddd0003-0000-0000-0000-000000000003'
+-- Ad campaigns (delete by client)
+delete from ad_campaigns where client_id in (
+  'aaaa0001-0000-0000-0000-000000000001',
+  'aaaa0002-0000-0000-0000-000000000002',
+  'aaaa0003-0000-0000-0000-000000000003',
+  'aaaa0004-0000-0000-0000-000000000004',
+  'aaaa0005-0000-0000-0000-000000000005'
 );
 
--- Pipeline deals
-delete from pipeline_deals where id in (
-  'eeee0001-0000-0000-0000-000000000001',
-  'eeee0002-0000-0000-0000-000000000002',
-  'eeee0003-0000-0000-0000-000000000003'
+-- Pipeline deals (delete by client)
+delete from pipeline_deals where client_id in (
+  'aaaa0001-0000-0000-0000-000000000001',
+  'aaaa0002-0000-0000-0000-000000000002',
+  'aaaa0003-0000-0000-0000-000000000003',
+  'aaaa0004-0000-0000-0000-000000000004',
+  'aaaa0005-0000-0000-0000-000000000005'
 );
 
--- Invoices
-delete from invoices where id in (
-  'ffff0001-0000-0000-0000-000000000001',
-  'ffff0002-0000-0000-0000-000000000002',
-  'ffff0003-0000-0000-0000-000000000003',
-  'ffff0004-0000-0000-0000-000000000004'
+-- Invoices (delete by invoice number)
+delete from invoices where invoice_no in (
+  'INV-2025-001', 'INV-2025-002', 'INV-2025-003', 'INV-2025-004'
 );
 
 -- Project members
 delete from project_members where project_id in (
-  'aaaa0001-1111-0000-0000-000000000001',
-  'aaaa0002-1111-0000-0000-000000000002',
-  'aaaa0003-1111-0000-0000-000000000003',
-  'aaaa0004-1111-0000-0000-000000000004',
-  'aaaa0005-1111-0000-0000-000000000005'
+  'bbbb0001-0000-0000-0000-000000000001',
+  'bbbb0002-0000-0000-0000-000000000002',
+  'bbbb0003-0000-0000-0000-000000000003',
+  'bbbb0004-0000-0000-0000-000000000004',
+  'bbbb0005-0000-0000-0000-000000000005'
 );
 
 -- Projects
 delete from projects where id in (
-  'aaaa0001-1111-0000-0000-000000000001',
-  'aaaa0002-1111-0000-0000-000000000002',
-  'aaaa0003-1111-0000-0000-000000000003',
-  'aaaa0004-1111-0000-0000-000000000004',
-  'aaaa0005-1111-0000-0000-000000000005'
+  'bbbb0001-0000-0000-0000-000000000001',
+  'bbbb0002-0000-0000-0000-000000000002',
+  'bbbb0003-0000-0000-0000-000000000003',
+  'bbbb0004-0000-0000-0000-000000000004',
+  'bbbb0005-0000-0000-0000-000000000005'
 );
 
 -- Clients
@@ -69,7 +69,7 @@ delete from clients where id in (
   'aaaa0005-0000-0000-0000-000000000005'
 );
 
--- Team members (seed)
+-- Team members
 delete from team_members where id in (
   '11111111-1111-1111-1111-111111111111',
   '22222222-2222-2222-2222-222222222222',
