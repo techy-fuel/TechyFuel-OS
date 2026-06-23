@@ -54,6 +54,12 @@ function Pipeline() {
     return m;
   });
   const [totals, setTotals] = React.useState({ count: FALLBACK_DEALS.length, value: FALLBACK_DEALS.reduce((s, d) => s + d.value, 0) });
+  const [clients, setClients] = React.useState([]);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({ title: '', client_id: '', value: '', stage: 'lead', probability: '' });
+
+  function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
     if (!window.API) return;
@@ -73,7 +79,33 @@ function Pipeline() {
         value: openDeals.reduce((s, d) => s + (d.value || 0), 0),
       });
     }).catch(() => {});
+    window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
   }, []);
+
+  async function handleAddDeal() {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    try {
+      const payload = { title: form.title, stage: form.stage };
+      if (form.client_id)   payload.client_id   = form.client_id;
+      if (form.value)       payload.value       = Number(form.value);
+      if (form.probability) payload.probability = Number(form.probability);
+      if (window.API) {
+        const { data, error } = await window.API.createDeal(payload);
+        if (!error && data) {
+          const clientName = clients.find(c => c.id === form.client_id)?.name || null;
+          const newDeal = { ...data, clients: clientName ? { name: clientName } : null };
+          const stage = data.stage || 'lead';
+          setStageMap(prev => ({ ...prev, [stage]: [...(prev[stage] || []), newDeal] }));
+          if (stage !== 'won' && stage !== 'lost') {
+            setTotals(prev => ({ count: prev.count + 1, value: prev.value + (data.value || 0) }));
+          }
+        }
+      }
+      setModalOpen(false);
+      setForm({ title: '', client_id: '', value: '', stage: 'lead', probability: '' });
+    } finally { setSaving(false); }
+  }
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
@@ -82,7 +114,7 @@ function Pipeline() {
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Sales pipeline</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{totals.count} open deals · {fmtVal(totals.value)} weighted value</p>
         </div>
-        <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+        <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
           <Icon name="plus" size={16} /> Add deal
         </button>
       </div>
@@ -104,6 +136,34 @@ function Pipeline() {
           );
         })}
       </div>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add deal" onSubmit={handleAddDeal} loading={saving} submitLabel="Add deal">
+        <FormRow label="Deal title" required>
+          <input style={FF.input} placeholder="Deal description…" value={form.title} onChange={e => set('title', e.target.value)} />
+        </FormRow>
+        <FormRow label="Client">
+          <select style={FF.select} value={form.client_id} onChange={e => set('client_id', e.target.value)}>
+            <option value="">No client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
+          </select>
+        </FormRow>
+        <div style={FF.row2}>
+          <FormRow label="Value ($)">
+            <input style={FF.input} type="number" placeholder="0" value={form.value} onChange={e => set('value', e.target.value)} />
+          </FormRow>
+          <FormRow label="Probability (%)">
+            <input style={FF.input} type="number" placeholder="50" min="0" max="100" value={form.probability} onChange={e => set('probability', e.target.value)} />
+          </FormRow>
+        </div>
+        <FormRow label="Stage">
+          <select style={FF.select} value={form.stage} onChange={e => set('stage', e.target.value)}>
+            <option value="lead">New lead</option>
+            <option value="qualified">Qualified</option>
+            <option value="proposal">Proposal sent</option>
+            <option value="negotiation">Negotiation</option>
+            <option value="won">Won</option>
+          </select>
+        </FormRow>
+      </Modal>
     </div>
   );
 }

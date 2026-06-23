@@ -233,6 +233,23 @@
     const [clients, setClients] = React.useState(FALLBACK_CLIENTS);
     const [selId, setSelId] = React.useState(FALLBACK_CLIENTS[0].id);
     const [search, setSearch] = React.useState('');
+    const [modalOpen, setModalOpen] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [form, setForm] = React.useState({
+      name: '',
+      company: '',
+      email: '',
+      website: '',
+      industry: '',
+      monthly_value: '',
+      status: 'active'
+    });
+    function set(k, v) {
+      setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
     React.useEffect(() => {
       if (!window.API) return;
       window.API.getClients().then(r => {
@@ -242,6 +259,43 @@
         }
       }).catch(() => {});
     }, []);
+    async function handleAddClient() {
+      if (!form.name.trim()) return;
+      setSaving(true);
+      try {
+        const payload = {
+          name: form.name,
+          status: form.status
+        };
+        if (form.company) payload.company = form.company;
+        if (form.email) payload.email = form.email;
+        if (form.website) payload.website = form.website;
+        if (form.industry) payload.industry = form.industry;
+        if (form.monthly_value) payload.monthly_value = Number(form.monthly_value);
+        if (window.API) {
+          const {
+            data,
+            error
+          } = await window.API.createClient(payload);
+          if (!error && data) {
+            setClients(prev => [...prev, data]);
+            setSelId(data.id);
+          }
+        }
+        setModalOpen(false);
+        setForm({
+          name: '',
+          company: '',
+          email: '',
+          website: '',
+          industry: '',
+          monthly_value: '',
+          status: 'active'
+        });
+      } finally {
+        setSaving(false);
+      }
+    }
     const filtered = clients.filter(c => {
       const q = search.toLowerCase();
       return !q || (c.company || c.name || '').toLowerCase().includes(q) || (c.name || '').toLowerCase().includes(q);
@@ -278,6 +332,7 @@
         marginTop: 2
       }
     }, clients.length, " clients · $", Number(totalValue).toLocaleString(), "/mo in retainers")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModalOpen(true),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -535,7 +590,77 @@
           marginTop: 1
         }
       }, t.time)));
-    }))))));
+    }))))), /*#__PURE__*/React.createElement(Modal, {
+      open: modalOpen,
+      onClose: () => setModalOpen(false),
+      title: "Add client",
+      onSubmit: handleAddClient,
+      loading: saving,
+      submitLabel: "Add client"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Contact name",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Full name…",
+      value: form.name,
+      onChange: e => set('name', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Company"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Company name…",
+      value: form.company,
+      onChange: e => set('company', e.target.value)
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Email"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "email",
+      placeholder: "email@company.com",
+      value: form.email,
+      onChange: e => set('email', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Website"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "company.com",
+      value: form.website,
+      onChange: e => set('website', e.target.value)
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Industry"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "SaaS, F&B…",
+      value: form.industry,
+      onChange: e => set('industry', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Monthly value ($)"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      placeholder: "0",
+      value: form.monthly_value,
+      onChange: e => set('monthly_value', e.target.value)
+    }))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Status"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.status,
+      onChange: e => set('status', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "lead"
+    }, "Lead"), /*#__PURE__*/React.createElement("option", {
+      value: "active"
+    }, "Active client"), /*#__PURE__*/React.createElement("option", {
+      value: "inactive"
+    }, "Inactive")))));
   }
   Object.assign(window, {
     CRM

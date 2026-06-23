@@ -65,12 +65,70 @@
   }
   function Finance() {
     const [invoices, setInvoices] = React.useState(FALLBACK_INVOICES);
+    const [clients, setClients] = React.useState([]);
+    const [modalOpen, setModalOpen] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [form, setForm] = React.useState({
+      invoice_no: '',
+      client_id: '',
+      amount: '',
+      due_date: '',
+      status: 'draft'
+    });
+    function set(k, v) {
+      setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
     React.useEffect(() => {
       if (!window.API) return;
       window.API.getInvoices().then(r => {
         if (r.data && r.data.length > 0) setInvoices(r.data);
       }).catch(() => {});
+      window.API.getClients().then(r => {
+        if (r.data) setClients(r.data);
+      }).catch(() => {});
     }, []);
+    async function handleAddInvoice() {
+      if (!form.invoice_no.trim()) return;
+      setSaving(true);
+      try {
+        const payload = {
+          invoice_no: form.invoice_no,
+          status: form.status
+        };
+        if (form.client_id) payload.client_id = form.client_id;
+        if (form.amount) payload.amount = Number(form.amount);
+        if (form.due_date) payload.due_date = form.due_date;
+        if (window.API) {
+          const {
+            data,
+            error
+          } = await window.API.createInvoice(payload);
+          if (!error && data) {
+            const clientName = clients.find(c => c.id === form.client_id)?.name || null;
+            const newInv = {
+              ...data,
+              clients: clientName ? {
+                name: clientName
+              } : null
+            };
+            setInvoices(prev => [...prev, newInv]);
+          }
+        }
+        setModalOpen(false);
+        setForm({
+          invoice_no: '',
+          client_id: '',
+          amount: '',
+          due_date: '',
+          status: 'draft'
+        });
+      } finally {
+        setSaving(false);
+      }
+    }
     const paidRevenue = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
     const outstanding = invoices.filter(i => i.status === 'sent' || i.status === 'overdue').reduce((s, i) => s + Number(i.amount || 0), 0);
     const totalAmount = invoices.reduce((s, i) => s + Number(i.amount || 0), 0);
@@ -107,6 +165,7 @@
         marginTop: 2
       }
     }, monthName, " · ", invoices.length, " invoices")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModalOpen(true),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -293,7 +352,64 @@
           color: 'var(--text-muted)'
         }
       }, fmtDate(inv.due_date)));
-    }))))));
+    }))))), /*#__PURE__*/React.createElement(Modal, {
+      open: modalOpen,
+      onClose: () => setModalOpen(false),
+      title: "New invoice",
+      onSubmit: handleAddInvoice,
+      loading: saving,
+      submitLabel: "Create invoice"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Invoice #",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "INV-2025-005",
+      value: form.invoice_no,
+      onChange: e => set('invoice_no', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Status"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.status,
+      onChange: e => set('status', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "draft"
+    }, "Draft"), /*#__PURE__*/React.createElement("option", {
+      value: "sent"
+    }, "Sent"), /*#__PURE__*/React.createElement("option", {
+      value: "paid"
+    }, "Paid")))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Client"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.client_id,
+      onChange: e => set('client_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "No client"), clients.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.company || c.name)))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Amount ($)"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      placeholder: "0",
+      value: form.amount,
+      onChange: e => set('amount', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Due date"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "date",
+      value: form.due_date,
+      onChange: e => set('due_date', e.target.value)
+    })))));
   }
   Object.assign(window, {
     Finance

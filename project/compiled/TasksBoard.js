@@ -93,7 +93,7 @@
     }],
     review: [{
       id: 'f5',
-      title: 'Client approval — round 2',
+      title: 'Client approval round 2',
       priority: 'high',
       assigned_to_name: 'Ali Raza',
       due_date: '2025-06-24',
@@ -208,6 +208,24 @@
   function TasksBoard() {
     const [taskMap, setTaskMap] = React.useState(FALLBACK_TASKS);
     const [totalOpen, setTotalOpen] = React.useState(5);
+    const [modalOpen, setModalOpen] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [team, setTeam] = React.useState([]);
+    const [projects, setProjects] = React.useState([]);
+    const [form, setForm] = React.useState({
+      title: '',
+      priority: 'medium',
+      status: 'todo',
+      due_date: '',
+      assigned_to: '',
+      project_id: ''
+    });
+    function set(k, v) {
+      setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
     React.useEffect(() => {
       if (!window.API) return;
       window.API.getTasks().then(r => {
@@ -234,10 +252,65 @@
           });
         });
         setTaskMap(map);
-        const open = map.todo.length + map.in_progress.length + map.review.length + map.backlog.length;
-        setTotalOpen(open);
+        setTotalOpen(map.todo.length + map.in_progress.length + map.review.length + map.backlog.length);
+      }).catch(() => {});
+      window.API.getTeam().then(r => {
+        if (r.data) setTeam(r.data);
+      }).catch(() => {});
+      window.API.getProjects().then(r => {
+        if (r.data) setProjects(r.data);
       }).catch(() => {});
     }, []);
+    async function handleAddTask() {
+      if (!form.title.trim()) return;
+      setSaving(true);
+      try {
+        const payload = {
+          title: form.title,
+          priority: form.priority,
+          status: form.status
+        };
+        if (form.due_date) payload.due_date = form.due_date;
+        if (form.assigned_to) payload.assigned_to = form.assigned_to;
+        if (form.project_id) payload.project_id = form.project_id;
+        if (window.API) {
+          const {
+            data,
+            error
+          } = await window.API.createTask(payload);
+          if (!error && data) {
+            const assigneeName = team.find(m => m.id === form.assigned_to)?.name || null;
+            const projectName = projects.find(p => p.id === form.project_id)?.name || null;
+            const newTask = {
+              id: data.id,
+              title: data.title,
+              priority: data.priority,
+              due_date: data.due_date,
+              status: data.status,
+              done: false,
+              assigned_to_name: assigneeName,
+              project_name: projectName
+            };
+            setTaskMap(prev => ({
+              ...prev,
+              [data.status || 'todo']: [...(prev[data.status || 'todo'] || []), newTask]
+            }));
+            setTotalOpen(prev => prev + 1);
+          }
+        }
+        setModalOpen(false);
+        setForm({
+          title: '',
+          priority: 'medium',
+          status: 'todo',
+          due_date: '',
+          assigned_to: '',
+          project_id: ''
+        });
+      } finally {
+        setSaving(false);
+      }
+    }
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
@@ -268,6 +341,7 @@
         marginTop: 2
       }
     }, "All projects · ", totalOpen, " open tasks")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModalOpen(true),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -364,12 +438,15 @@
           color: 'var(--text-muted)',
           background: 'var(--slate-150)',
           borderRadius: 'var(--radius-full)',
-          padding: '0px 7px',
-          fontVariantNumeric: 'tabular-nums'
+          padding: '0px 7px'
         }
       }, colTasks.length), /*#__PURE__*/React.createElement(Icon, {
         name: "plus",
         size: 15,
+        onClick: () => {
+          set('status', col.id === 'backlog' ? 'todo' : col.id);
+          setModalOpen(true);
+        },
         style: {
           color: 'var(--text-subtle)',
           marginLeft: 'auto',
@@ -389,6 +466,10 @@
         key: t.id || i,
         task: t
       })), /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          set('status', col.id === 'backlog' ? 'todo' : col.id);
+          setModalOpen(true);
+        },
         style: {
           display: 'flex',
           alignItems: 'center',
@@ -408,7 +489,83 @@
         name: "plus",
         size: 14
       }), " Add task")));
-    })));
+    })), /*#__PURE__*/React.createElement(Modal, {
+      open: modalOpen,
+      onClose: () => setModalOpen(false),
+      title: "Add task",
+      onSubmit: handleAddTask,
+      loading: saving,
+      submitLabel: "Add task"
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Title",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Task title…",
+      value: form.title,
+      onChange: e => set('title', e.target.value)
+    })), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Priority"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.priority,
+      onChange: e => set('priority', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "low"
+    }, "Low"), /*#__PURE__*/React.createElement("option", {
+      value: "medium"
+    }, "Medium"), /*#__PURE__*/React.createElement("option", {
+      value: "high"
+    }, "High"), /*#__PURE__*/React.createElement("option", {
+      value: "urgent"
+    }, "Urgent"))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Status"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.status,
+      onChange: e => set('status', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "todo"
+    }, "To do"), /*#__PURE__*/React.createElement("option", {
+      value: "in_progress"
+    }, "In progress"), /*#__PURE__*/React.createElement("option", {
+      value: "review"
+    }, "Review"), /*#__PURE__*/React.createElement("option", {
+      value: "done"
+    }, "Done")))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Due date"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "date",
+      value: form.due_date,
+      onChange: e => set('due_date', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Assign to"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.assigned_to,
+      onChange: e => set('assigned_to', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "Unassigned"), team.map(m => /*#__PURE__*/React.createElement("option", {
+      key: m.id,
+      value: m.id
+    }, m.name))))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Project"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.project_id,
+      onChange: e => set('project_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "No project"), projects.map(p => /*#__PURE__*/React.createElement("option", {
+      key: p.id,
+      value: p.id
+    }, p.name))))));
   }
   Object.assign(window, {
     TasksBoard

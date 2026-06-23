@@ -222,6 +222,23 @@
     const [projects, setProjects] = React.useState(FALLBACK);
     const [activeCount, setActiveCount] = React.useState(FALLBACK.filter(p => p.status === 'active').length);
     const [totalBudget, setTotalBudget] = React.useState(FALLBACK.reduce((s, p) => s + (p.budget || 0), 0));
+    const [clients, setClients] = React.useState([]);
+    const [modalOpen, setModalOpen] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [form, setForm] = React.useState({
+      name: '',
+      client_id: '',
+      budget: '',
+      due_date: '',
+      priority: 'medium',
+      status: 'active'
+    });
+    function set(k, v) {
+      setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
     React.useEffect(() => {
       if (!window.API) return;
       window.API.getProjects().then(r => {
@@ -231,10 +248,56 @@
           setTotalBudget(r.data.reduce((s, p) => s + (p.budget || 0), 0));
         }
       }).catch(() => {});
+      window.API.getClients().then(r => {
+        if (r.data) setClients(r.data);
+      }).catch(() => {});
     }, []);
     function fmtTotal(n) {
       if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
       return '$' + n;
+    }
+    async function handleAddProject() {
+      if (!form.name.trim()) return;
+      setSaving(true);
+      try {
+        const payload = {
+          name: form.name,
+          status: form.status,
+          priority: form.priority
+        };
+        if (form.client_id) payload.client_id = form.client_id;
+        if (form.budget) payload.budget = Number(form.budget);
+        if (form.due_date) payload.due_date = form.due_date;
+        if (window.API) {
+          const {
+            data,
+            error
+          } = await window.API.createProject(payload);
+          if (!error && data) {
+            const clientName = clients.find(c => c.id === form.client_id)?.name || null;
+            const newP = {
+              ...data,
+              clients: clientName ? {
+                name: clientName
+              } : null
+            };
+            setProjects(prev => [...prev, newP]);
+            if (data.status === 'active') setActiveCount(prev => prev + 1);
+            setTotalBudget(prev => prev + (data.budget || 0));
+          }
+        }
+        setModalOpen(false);
+        setForm({
+          name: '',
+          client_id: '',
+          budget: '',
+          due_date: '',
+          priority: 'medium',
+          status: 'active'
+        });
+      } finally {
+        setSaving(false);
+      }
     }
     return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -264,6 +327,7 @@
         marginTop: 2
       }
     }, activeCount, " active · ", fmtTotal(totalBudget), " in committed budget")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModalOpen(true),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -292,7 +356,76 @@
     }, projects.map((p, i) => /*#__PURE__*/React.createElement(ProjectCard, {
       key: p.id || i,
       p: p
-    }))));
+    }))), /*#__PURE__*/React.createElement(Modal, {
+      open: modalOpen,
+      onClose: () => setModalOpen(false),
+      title: "New project",
+      onSubmit: handleAddProject,
+      loading: saving,
+      submitLabel: "Create project"
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Project name",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Project name…",
+      value: form.name,
+      onChange: e => set('name', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Client"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.client_id,
+      onChange: e => set('client_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "No client"), clients.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.company || c.name)))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Priority"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.priority,
+      onChange: e => set('priority', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "low"
+    }, "Low"), /*#__PURE__*/React.createElement("option", {
+      value: "medium"
+    }, "Medium"), /*#__PURE__*/React.createElement("option", {
+      value: "high"
+    }, "High"))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Status"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.status,
+      onChange: e => set('status', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "active"
+    }, "Active"), /*#__PURE__*/React.createElement("option", {
+      value: "paused"
+    }, "Paused"), /*#__PURE__*/React.createElement("option", {
+      value: "completed"
+    }, "Completed")))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Budget ($)"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      placeholder: "0",
+      value: form.budget,
+      onChange: e => set('budget', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Due date"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "date",
+      value: form.due_date,
+      onChange: e => set('due_date', e.target.value)
+    })))));
   }
   Object.assign(window, {
     Projects

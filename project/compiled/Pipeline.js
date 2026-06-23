@@ -152,6 +152,22 @@
       count: FALLBACK_DEALS.length,
       value: FALLBACK_DEALS.reduce((s, d) => s + d.value, 0)
     });
+    const [clients, setClients] = React.useState([]);
+    const [modalOpen, setModalOpen] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [form, setForm] = React.useState({
+      title: '',
+      client_id: '',
+      value: '',
+      stage: 'lead',
+      probability: ''
+    });
+    function set(k, v) {
+      setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
     React.useEffect(() => {
       if (!window.API) return;
       window.API.getPipeline().then(r => {
@@ -172,7 +188,59 @@
           value: openDeals.reduce((s, d) => s + (d.value || 0), 0)
         });
       }).catch(() => {});
+      window.API.getClients().then(r => {
+        if (r.data) setClients(r.data);
+      }).catch(() => {});
     }, []);
+    async function handleAddDeal() {
+      if (!form.title.trim()) return;
+      setSaving(true);
+      try {
+        const payload = {
+          title: form.title,
+          stage: form.stage
+        };
+        if (form.client_id) payload.client_id = form.client_id;
+        if (form.value) payload.value = Number(form.value);
+        if (form.probability) payload.probability = Number(form.probability);
+        if (window.API) {
+          const {
+            data,
+            error
+          } = await window.API.createDeal(payload);
+          if (!error && data) {
+            const clientName = clients.find(c => c.id === form.client_id)?.name || null;
+            const newDeal = {
+              ...data,
+              clients: clientName ? {
+                name: clientName
+              } : null
+            };
+            const stage = data.stage || 'lead';
+            setStageMap(prev => ({
+              ...prev,
+              [stage]: [...(prev[stage] || []), newDeal]
+            }));
+            if (stage !== 'won' && stage !== 'lost') {
+              setTotals(prev => ({
+                count: prev.count + 1,
+                value: prev.value + (data.value || 0)
+              }));
+            }
+          }
+        }
+        setModalOpen(false);
+        setForm({
+          title: '',
+          client_id: '',
+          value: '',
+          stage: 'lead',
+          probability: ''
+        });
+      } finally {
+        setSaving(false);
+      }
+    }
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
@@ -203,6 +271,7 @@
         marginTop: 2
       }
     }, totals.count, " open deals · ", fmtVal(totals.value), " weighted value")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModalOpen(true),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -286,7 +355,69 @@
         key: d.id || i,
         d: d
       }))));
-    })));
+    })), /*#__PURE__*/React.createElement(Modal, {
+      open: modalOpen,
+      onClose: () => setModalOpen(false),
+      title: "Add deal",
+      onSubmit: handleAddDeal,
+      loading: saving,
+      submitLabel: "Add deal"
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Deal title",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Deal description…",
+      value: form.title,
+      onChange: e => set('title', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Client"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.client_id,
+      onChange: e => set('client_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "No client"), clients.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.company || c.name)))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Value ($)"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      placeholder: "0",
+      value: form.value,
+      onChange: e => set('value', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Probability (%)"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      placeholder: "50",
+      min: "0",
+      max: "100",
+      value: form.probability,
+      onChange: e => set('probability', e.target.value)
+    }))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Stage"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.stage,
+      onChange: e => set('stage', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "lead"
+    }, "New lead"), /*#__PURE__*/React.createElement("option", {
+      value: "qualified"
+    }, "Qualified"), /*#__PURE__*/React.createElement("option", {
+      value: "proposal"
+    }, "Proposal sent"), /*#__PURE__*/React.createElement("option", {
+      value: "negotiation"
+    }, "Negotiation"), /*#__PURE__*/React.createElement("option", {
+      value: "won"
+    }, "Won")))));
   }
   Object.assign(window, {
     Pipeline

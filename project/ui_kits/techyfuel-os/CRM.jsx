@@ -71,6 +71,11 @@ function CRM() {
   const [clients, setClients] = React.useState(FALLBACK_CLIENTS);
   const [selId, setSelId] = React.useState(FALLBACK_CLIENTS[0].id);
   const [search, setSearch] = React.useState('');
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({ name: '', company: '', email: '', website: '', industry: '', monthly_value: '', status: 'active' });
+
+  function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
     if (!window.API) return;
@@ -81,6 +86,28 @@ function CRM() {
       }
     }).catch(() => {});
   }, []);
+
+  async function handleAddClient() {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    try {
+      const payload = { name: form.name, status: form.status };
+      if (form.company)       payload.company       = form.company;
+      if (form.email)         payload.email         = form.email;
+      if (form.website)       payload.website       = form.website;
+      if (form.industry)      payload.industry      = form.industry;
+      if (form.monthly_value) payload.monthly_value = Number(form.monthly_value);
+      if (window.API) {
+        const { data, error } = await window.API.createClient(payload);
+        if (!error && data) {
+          setClients(prev => [...prev, data]);
+          setSelId(data.id);
+        }
+      }
+      setModalOpen(false);
+      setForm({ name: '', company: '', email: '', website: '', industry: '', monthly_value: '', status: 'active' });
+    } finally { setSaving(false); }
+  }
 
   const filtered = clients.filter(c => {
     const q = search.toLowerCase();
@@ -101,7 +128,7 @@ function CRM() {
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Client CRM</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{clients.length} clients · ${Number(totalValue).toLocaleString()}/mo in retainers</p>
         </div>
-        <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+        <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
           <Icon name="user-plus" size={16} /> Add client
         </button>
       </div>
@@ -168,9 +195,43 @@ function CRM() {
           </div>
         </Card>
       </div>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add client" onSubmit={handleAddClient} loading={saving} submitLabel="Add client">
+        <div style={FF.row2}>
+          <FormRow label="Contact name" required>
+            <input style={FF.input} placeholder="Full name…" value={form.name} onChange={e => set('name', e.target.value)} />
+          </FormRow>
+          <FormRow label="Company">
+            <input style={FF.input} placeholder="Company name…" value={form.company} onChange={e => set('company', e.target.value)} />
+          </FormRow>
+        </div>
+        <div style={FF.row2}>
+          <FormRow label="Email">
+            <input style={FF.input} type="email" placeholder="email@company.com" value={form.email} onChange={e => set('email', e.target.value)} />
+          </FormRow>
+          <FormRow label="Website">
+            <input style={FF.input} placeholder="company.com" value={form.website} onChange={e => set('website', e.target.value)} />
+          </FormRow>
+        </div>
+        <div style={FF.row2}>
+          <FormRow label="Industry">
+            <input style={FF.input} placeholder="SaaS, F&B…" value={form.industry} onChange={e => set('industry', e.target.value)} />
+          </FormRow>
+          <FormRow label="Monthly value ($)">
+            <input style={FF.input} type="number" placeholder="0" value={form.monthly_value} onChange={e => set('monthly_value', e.target.value)} />
+          </FormRow>
+        </div>
+        <FormRow label="Status">
+          <select style={FF.select} value={form.status} onChange={e => set('status', e.target.value)}>
+            <option value="lead">Lead</option>
+            <option value="active">Active client</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </FormRow>
+      </Modal>
     </div>
   );
 }
 
 Object.assign(window, { CRM });
+
 })();

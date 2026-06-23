@@ -125,6 +125,24 @@
     const [totalPosts, setTotalPosts] = React.useState(3);
     const days = React.useMemo(() => getWeekDays(), []);
     const [weekLabel, setWeekLabel] = React.useState('This week');
+    const [clients, setClients] = React.useState([]);
+    const [team, setTeam] = React.useState([]);
+    const [modalOpen, setModalOpen] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [form, setForm] = React.useState({
+      title: '',
+      platform: 'instagram',
+      status: 'draft',
+      scheduled_at: '',
+      client_id: '',
+      assigned_to: ''
+    });
+    function set(k, v) {
+      setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
     React.useEffect(() => {
       if (!window.API) return;
       window.API.getContent().then(r => {
@@ -175,7 +193,59 @@
           setTotalPosts(r.data.length);
         }
       }).catch(() => {});
+      window.API.getClients().then(r => {
+        if (r.data) setClients(r.data);
+      }).catch(() => {});
+      window.API.getTeam().then(r => {
+        if (r.data) setTeam(r.data);
+      }).catch(() => {});
     }, []);
+    async function handleAddPost() {
+      if (!form.title.trim()) return;
+      setSaving(true);
+      try {
+        const payload = {
+          title: form.title,
+          platform: form.platform,
+          status: form.status
+        };
+        if (form.scheduled_at) payload.scheduled_at = form.scheduled_at + ':00';
+        if (form.client_id) payload.client_id = form.client_id;
+        if (form.assigned_to) payload.assigned_to = form.assigned_to;
+        if (window.API) {
+          const {
+            data,
+            error
+          } = await window.API.createPost(payload);
+          if (!error && data) {
+            const assigneeName = team.find(m => m.id === form.assigned_to)?.name || null;
+            const newPost = {
+              id: data.id,
+              platform: data.platform,
+              title: data.title,
+              status: data.status,
+              assigned_to_name: assigneeName
+            };
+            setPostMap(prev => ({
+              ...prev,
+              0: [...(prev[0] || []), newPost]
+            }));
+            setTotalPosts(prev => prev + 1);
+          }
+        }
+        setModalOpen(false);
+        setForm({
+          title: '',
+          platform: 'instagram',
+          status: 'draft',
+          scheduled_at: '',
+          client_id: '',
+          assigned_to: ''
+        });
+      } finally {
+        setSaving(false);
+      }
+    }
     const platforms = new Set(Object.values(postMap).flat().map(p => p.platform).filter(Boolean));
     return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -239,6 +309,7 @@
         cursor: 'pointer'
       }
     })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModalOpen(true),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -296,7 +367,85 @@
         key: p.id || j,
         post: p
       }))));
-    }))));
+    }))), /*#__PURE__*/React.createElement(Modal, {
+      open: modalOpen,
+      onClose: () => setModalOpen(false),
+      title: "Plan post",
+      onSubmit: handleAddPost,
+      loading: saving,
+      submitLabel: "Add post"
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Post title",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Post caption or title…",
+      value: form.title,
+      onChange: e => set('title', e.target.value)
+    })), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Platform"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.platform,
+      onChange: e => set('platform', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "instagram"
+    }, "Instagram"), /*#__PURE__*/React.createElement("option", {
+      value: "facebook"
+    }, "Facebook"), /*#__PURE__*/React.createElement("option", {
+      value: "linkedin"
+    }, "LinkedIn"), /*#__PURE__*/React.createElement("option", {
+      value: "twitter"
+    }, "Twitter"), /*#__PURE__*/React.createElement("option", {
+      value: "youtube"
+    }, "YouTube"), /*#__PURE__*/React.createElement("option", {
+      value: "tiktok"
+    }, "TikTok"))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Status"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.status,
+      onChange: e => set('status', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "draft"
+    }, "Draft"), /*#__PURE__*/React.createElement("option", {
+      value: "approval"
+    }, "Needs approval"), /*#__PURE__*/React.createElement("option", {
+      value: "scheduled"
+    }, "Scheduled")))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Scheduled at"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "datetime-local",
+      value: form.scheduled_at,
+      onChange: e => set('scheduled_at', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Assign to"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.assigned_to,
+      onChange: e => set('assigned_to', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "Unassigned"), team.map(m => /*#__PURE__*/React.createElement("option", {
+      key: m.id,
+      value: m.id
+    }, m.name))))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Client"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.client_id,
+      onChange: e => set('client_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "No client"), clients.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.company || c.name))))));
   }
   Object.assign(window, {
     ContentCalendar

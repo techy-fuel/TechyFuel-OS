@@ -55,6 +55,20 @@
   function Team() {
     const [team, setTeam] = React.useState(FALLBACK_TEAM);
     const [taskCounts, setTaskCounts] = React.useState({});
+    const [modalOpen, setModalOpen] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [form, setForm] = React.useState({
+      name: '',
+      email: '',
+      department: '',
+      role: 'member'
+    });
+    function set(k, v) {
+      setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
     React.useEffect(() => {
       if (!window.API) return;
       window.API.getTeam().then(r => {
@@ -69,6 +83,35 @@
         setTaskCounts(counts);
       }).catch(() => {});
     }, []);
+    async function handleInviteMember() {
+      if (!form.name.trim()) return;
+      setSaving(true);
+      try {
+        const payload = {
+          name: form.name,
+          role: form.role,
+          status: 'active'
+        };
+        if (form.email) payload.email = form.email;
+        if (form.department) payload.department = form.department;
+        if (window.API) {
+          const {
+            data,
+            error
+          } = await window.API.addTeamMember(payload);
+          if (!error && data) setTeam(prev => [...prev, data]);
+        }
+        setModalOpen(false);
+        setForm({
+          name: '',
+          email: '',
+          department: '',
+          role: 'member'
+        });
+      } finally {
+        setSaving(false);
+      }
+    }
     const departments = [...new Set(team.map(m => m.department).filter(Boolean))];
     const maxTasks = Math.max(...team.map(m => taskCounts[m.id] || 0), 1);
     return /*#__PURE__*/React.createElement("div", {
@@ -99,6 +142,7 @@
         marginTop: 2
       }
     }, team.length, " members · ", departments.length, " departments")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModalOpen(true),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -248,7 +292,53 @@
         name: "mail",
         size: 14
       }), " ", m.email || '—')));
-    })));
+    })), /*#__PURE__*/React.createElement(Modal, {
+      open: modalOpen,
+      onClose: () => setModalOpen(false),
+      title: "Invite member",
+      onSubmit: handleInviteMember,
+      loading: saving,
+      submitLabel: "Add member"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Full name",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Name…",
+      value: form.name,
+      onChange: e => set('name', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Email"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "email",
+      placeholder: "email@agency.com",
+      value: form.email,
+      onChange: e => set('email', e.target.value)
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Department"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Design, Marketing…",
+      value: form.department,
+      onChange: e => set('department', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Role"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.role,
+      onChange: e => set('role', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "member"
+    }, "Member"), /*#__PURE__*/React.createElement("option", {
+      value: "admin"
+    }, "Admin"), /*#__PURE__*/React.createElement("option", {
+      value: "owner"
+    }, "Owner"))))));
   }
   Object.assign(window, {
     Team

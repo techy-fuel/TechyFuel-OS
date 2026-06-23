@@ -58,6 +58,13 @@ function ContentCalendar() {
   const [totalPosts, setTotalPosts] = React.useState(3);
   const days = React.useMemo(() => getWeekDays(), []);
   const [weekLabel, setWeekLabel] = React.useState('This week');
+  const [clients, setClients] = React.useState([]);
+  const [team, setTeam] = React.useState([]);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({ title: '', platform: 'instagram', status: 'draft', scheduled_at: '', client_id: '', assigned_to: '' });
+
+  function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
     if (!window.API) return;
@@ -91,7 +98,31 @@ function ContentCalendar() {
         setTotalPosts(r.data.length);
       }
     }).catch(() => {});
+    window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
+    window.API.getTeam().then(r => { if (r.data) setTeam(r.data); }).catch(() => {});
   }, []);
+
+  async function handleAddPost() {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    try {
+      const payload = { title: form.title, platform: form.platform, status: form.status };
+      if (form.scheduled_at) payload.scheduled_at = form.scheduled_at + ':00';
+      if (form.client_id)    payload.client_id    = form.client_id;
+      if (form.assigned_to)  payload.assigned_to  = form.assigned_to;
+      if (window.API) {
+        const { data, error } = await window.API.createPost(payload);
+        if (!error && data) {
+          const assigneeName = team.find(m => m.id === form.assigned_to)?.name || null;
+          const newPost = { id: data.id, platform: data.platform, title: data.title, status: data.status, assigned_to_name: assigneeName };
+          setPostMap(prev => ({ ...prev, 0: [...(prev[0] || []), newPost] }));
+          setTotalPosts(prev => prev + 1);
+        }
+      }
+      setModalOpen(false);
+      setForm({ title: '', platform: 'instagram', status: 'draft', scheduled_at: '', client_id: '', assigned_to: '' });
+    } finally { setSaving(false); }
+  }
 
   const platforms = new Set(
     Object.values(postMap).flat().map(p => p.platform).filter(Boolean)
@@ -110,7 +141,7 @@ function ContentCalendar() {
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)' }}>{weekLabel}</span>
             <Icon name="chevron-right" size={16} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} />
           </div>
-          <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+          <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
             <Icon name="plus" size={16} /> Plan post
           </button>
         </div>
@@ -130,6 +161,47 @@ function ContentCalendar() {
           })}
         </div>
       </Card>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Plan post" onSubmit={handleAddPost} loading={saving} submitLabel="Add post">
+        <FormRow label="Post title" required>
+          <input style={FF.input} placeholder="Post caption or title…" value={form.title} onChange={e => set('title', e.target.value)} />
+        </FormRow>
+        <div style={FF.row2}>
+          <FormRow label="Platform">
+            <select style={FF.select} value={form.platform} onChange={e => set('platform', e.target.value)}>
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="twitter">Twitter</option>
+              <option value="youtube">YouTube</option>
+              <option value="tiktok">TikTok</option>
+            </select>
+          </FormRow>
+          <FormRow label="Status">
+            <select style={FF.select} value={form.status} onChange={e => set('status', e.target.value)}>
+              <option value="draft">Draft</option>
+              <option value="approval">Needs approval</option>
+              <option value="scheduled">Scheduled</option>
+            </select>
+          </FormRow>
+        </div>
+        <div style={FF.row2}>
+          <FormRow label="Scheduled at">
+            <input style={FF.input} type="datetime-local" value={form.scheduled_at} onChange={e => set('scheduled_at', e.target.value)} />
+          </FormRow>
+          <FormRow label="Assign to">
+            <select style={FF.select} value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)}>
+              <option value="">Unassigned</option>
+              {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </FormRow>
+        </div>
+        <FormRow label="Client">
+          <select style={FF.select} value={form.client_id} onChange={e => set('client_id', e.target.value)}>
+            <option value="">No client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
+          </select>
+        </FormRow>
+      </Modal>
     </div>
   );
 }

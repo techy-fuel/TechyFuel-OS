@@ -29,13 +29,41 @@ function fmtDate(ds) {
 
 function Finance() {
   const [invoices, setInvoices] = React.useState(FALLBACK_INVOICES);
+  const [clients, setClients] = React.useState([]);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({ invoice_no: '', client_id: '', amount: '', due_date: '', status: 'draft' });
+
+  function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
     if (!window.API) return;
     window.API.getInvoices().then(r => {
       if (r.data && r.data.length > 0) setInvoices(r.data);
     }).catch(() => {});
+    window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
   }, []);
+
+  async function handleAddInvoice() {
+    if (!form.invoice_no.trim()) return;
+    setSaving(true);
+    try {
+      const payload = { invoice_no: form.invoice_no, status: form.status };
+      if (form.client_id) payload.client_id = form.client_id;
+      if (form.amount)    payload.amount    = Number(form.amount);
+      if (form.due_date)  payload.due_date  = form.due_date;
+      if (window.API) {
+        const { data, error } = await window.API.createInvoice(payload);
+        if (!error && data) {
+          const clientName = clients.find(c => c.id === form.client_id)?.name || null;
+          const newInv = { ...data, clients: clientName ? { name: clientName } : null };
+          setInvoices(prev => [...prev, newInv]);
+        }
+      }
+      setModalOpen(false);
+      setForm({ invoice_no: '', client_id: '', amount: '', due_date: '', status: 'draft' });
+    } finally { setSaving(false); }
+  }
 
   const paidRevenue = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
   const outstanding = invoices.filter(i => i.status === 'sent' || i.status === 'overdue').reduce((s, i) => s + Number(i.amount || 0), 0);
@@ -50,7 +78,7 @@ function Finance() {
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Finance</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{monthName} · {invoices.length} invoices</p>
         </div>
-        <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+        <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
           <Icon name="plus" size={16} /> New invoice
         </button>
       </div>
@@ -98,6 +126,34 @@ function Finance() {
           </table>
         </Card>
       </div>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New invoice" onSubmit={handleAddInvoice} loading={saving} submitLabel="Create invoice">
+        <div style={FF.row2}>
+          <FormRow label="Invoice #" required>
+            <input style={FF.input} placeholder="INV-2025-005" value={form.invoice_no} onChange={e => set('invoice_no', e.target.value)} />
+          </FormRow>
+          <FormRow label="Status">
+            <select style={FF.select} value={form.status} onChange={e => set('status', e.target.value)}>
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="paid">Paid</option>
+            </select>
+          </FormRow>
+        </div>
+        <FormRow label="Client">
+          <select style={FF.select} value={form.client_id} onChange={e => set('client_id', e.target.value)}>
+            <option value="">No client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
+          </select>
+        </FormRow>
+        <div style={FF.row2}>
+          <FormRow label="Amount ($)">
+            <input style={FF.input} type="number" placeholder="0" value={form.amount} onChange={e => set('amount', e.target.value)} />
+          </FormRow>
+          <FormRow label="Due date">
+            <input style={FF.input} type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+          </FormRow>
+        </div>
+      </Modal>
     </div>
   );
 }

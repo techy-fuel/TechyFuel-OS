@@ -75,6 +75,12 @@ function Projects() {
   const [projects, setProjects] = React.useState(FALLBACK);
   const [activeCount, setActiveCount] = React.useState(FALLBACK.filter(p => p.status === 'active').length);
   const [totalBudget, setTotalBudget] = React.useState(FALLBACK.reduce((s, p) => s + (p.budget || 0), 0));
+  const [clients, setClients] = React.useState([]);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({ name: '', client_id: '', budget: '', due_date: '', priority: 'medium', status: 'active' });
+
+  function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
     if (!window.API) return;
@@ -85,11 +91,35 @@ function Projects() {
         setTotalBudget(r.data.reduce((s, p) => s + (p.budget || 0), 0));
       }
     }).catch(() => {});
+    window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
   }, []);
 
   function fmtTotal(n) {
     if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
     return '$' + n;
+  }
+
+  async function handleAddProject() {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    try {
+      const payload = { name: form.name, status: form.status, priority: form.priority };
+      if (form.client_id) payload.client_id = form.client_id;
+      if (form.budget)    payload.budget    = Number(form.budget);
+      if (form.due_date)  payload.due_date  = form.due_date;
+      if (window.API) {
+        const { data, error } = await window.API.createProject(payload);
+        if (!error && data) {
+          const clientName = clients.find(c => c.id === form.client_id)?.name || null;
+          const newP = { ...data, clients: clientName ? { name: clientName } : null };
+          setProjects(prev => [...prev, newP]);
+          if (data.status === 'active') setActiveCount(prev => prev + 1);
+          setTotalBudget(prev => prev + (data.budget || 0));
+        }
+      }
+      setModalOpen(false);
+      setForm({ name: '', client_id: '', budget: '', due_date: '', priority: 'medium', status: 'active' });
+    } finally { setSaving(false); }
   }
 
   return (
@@ -99,13 +129,49 @@ function Projects() {
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Projects</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{activeCount} active · {fmtTotal(totalBudget)} in committed budget</p>
         </div>
-        <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+        <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
           <Icon name="plus" size={16} /> New project
         </button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         {projects.map((p, i) => <ProjectCard key={p.id || i} p={p} />)}
       </div>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New project" onSubmit={handleAddProject} loading={saving} submitLabel="Create project">
+        <FormRow label="Project name" required>
+          <input style={FF.input} placeholder="Project name…" value={form.name} onChange={e => set('name', e.target.value)} />
+        </FormRow>
+        <FormRow label="Client">
+          <select style={FF.select} value={form.client_id} onChange={e => set('client_id', e.target.value)}>
+            <option value="">No client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
+          </select>
+        </FormRow>
+        <div style={FF.row2}>
+          <FormRow label="Priority">
+            <select style={FF.select} value={form.priority} onChange={e => set('priority', e.target.value)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </FormRow>
+          <FormRow label="Status">
+            <select style={FF.select} value={form.status} onChange={e => set('status', e.target.value)}>
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+              <option value="completed">Completed</option>
+            </select>
+          </FormRow>
+        </div>
+        <div style={FF.row2}>
+          <FormRow label="Budget ($)">
+            <input style={FF.input} type="number" placeholder="0" value={form.budget} onChange={e => set('budget', e.target.value)} />
+          </FormRow>
+          <FormRow label="Due date">
+            <input style={FF.input} type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+          </FormRow>
+        </div>
+      </Modal>
     </div>
   );
 }
