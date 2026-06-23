@@ -91,13 +91,14 @@ function CRM() {
 
   async function handleDeleteClient(id) {
     setDeleting(true);
-    try {
-      if (window.API) await window.API.deleteClient(id).catch(() => {});
-      const remaining = clients.filter(c => c.id !== id);
-      setClients(remaining);
-      setSelId(remaining[0]?.id || null);
-      setConfirmDelete(false);
-    } finally { setDeleting(false); }
+    if (window.API) {
+      try { await window.API.deleteClient(id); } catch(_) {}
+    }
+    const remaining = clients.filter(c => c.id !== id);
+    setClients(remaining);
+    setSelId(remaining[0]?.id || null);
+    setConfirmDelete(false);
+    setDeleting(false);
   }
 
   async function handleAddClient() {
