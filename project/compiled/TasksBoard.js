@@ -710,6 +710,122 @@
       }, "+", dayTasks.length - 3, " more")));
     }))));
   }
+  function AttachArea({
+    files,
+    onChange
+  }) {
+    const ref = React.useRef();
+    function add(e) {
+      const picked = Array.from(e.target.files || []);
+      onChange(prev => [...prev, ...picked]);
+      e.target.value = '';
+    }
+    function remove(name) {
+      onChange(prev => prev.filter(f => f.name !== name));
+    }
+    return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("input", {
+      ref: ref,
+      type: "file",
+      multiple: true,
+      style: {
+        display: 'none'
+      },
+      onChange: add
+    }), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => ref.current.click(),
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        height: 32,
+        padding: '0 12px',
+        border: '1px dashed var(--border-strong)',
+        borderRadius: 'var(--radius-md)',
+        background: 'transparent',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-muted)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "paperclip",
+      size: 13
+    }), " Attach files"), files.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4
+      }
+    }, files.map(f => /*#__PURE__*/React.createElement("div", {
+      key: f.name,
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '5px 10px',
+        background: 'var(--slate-50)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-md)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "file",
+      size: 13,
+      style: {
+        color: 'var(--text-subtle)',
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-body)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, f.name), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-2xs)',
+        color: 'var(--text-subtle)',
+        flexShrink: 0
+      }
+    }, f.size > 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.round(f.size / 1024) + ' KB'), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => remove(f.name),
+      style: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'var(--text-subtle)',
+        padding: 0,
+        display: 'inline-flex'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "x",
+      size: 13
+    }))))));
+  }
+  async function uploadTaskFiles(taskId, files) {
+    if (!window.API || !files.length) return;
+    for (const file of files) {
+      const filePath = `tasks/${taskId}/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      try {
+        await window.API.uploadFile('files', filePath, file);
+      } catch (_) {}
+      try {
+        await window.API.createFile({
+          name: file.name,
+          file_path: filePath,
+          mime_type: file.type || 'application/octet-stream',
+          file_size: file.size,
+          task_id: taskId
+        });
+      } catch (_) {}
+    }
+  }
   function TasksBoard() {
     const [activeTab, setActiveTab] = React.useState('kanban');
     const [taskMap, setTaskMap] = React.useState(FALLBACK_TASKS);
@@ -727,11 +843,13 @@
       assigned_to: '',
       project_id: ''
     });
+    const [attachments, setAttachments] = React.useState([]);
 
     // Edit task state
     const [editTask, setEditTask] = React.useState(null);
     const [editForm, setEditForm] = React.useState({});
     const [editSaving, setEditSaving] = React.useState(false);
+    const [editAttachments, setEditAttachments] = React.useState([]);
     function openEdit(task) {
       setEditTask(task);
       setEditForm({
@@ -741,6 +859,7 @@
         due_date: task.due_date || '',
         assigned_to: task.assigned_to || ''
       });
+      setEditAttachments([]);
     }
     function setEF(k, v) {
       setEditForm(f => ({
@@ -794,6 +913,8 @@
           if (!wasOpen && isOpen) return prev + 1;
           return prev;
         });
+        await uploadTaskFiles(editTask.id, editAttachments);
+        setEditAttachments([]);
         setEditTask(null);
       } finally {
         setEditSaving(false);
@@ -872,7 +993,8 @@
               status: data.status || 'todo',
               done: false,
               assigned_to_name: assigneeName,
-              project_name: projectName
+              project_name: projectName,
+              attachment_count: attachments.length
             };
             setTaskMap(prev => ({
               ...prev,
@@ -880,6 +1002,7 @@
             }));
             setAllTasks(prev => [...prev, newTask]);
             if (newTask.status !== 'done') setTotalOpen(prev => prev + 1);
+            await uploadTaskFiles(data.id, attachments);
           }
         }
         setModalOpen(false);
@@ -891,6 +1014,7 @@
           assigned_to: '',
           project_id: ''
         });
+        setAttachments([]);
       } finally {
         setSaving(false);
       }
@@ -1150,7 +1274,12 @@
     }, "Unassigned"), team.map(m => /*#__PURE__*/React.createElement("option", {
       key: m.id,
       value: m.id
-    }, m.name)))))), /*#__PURE__*/React.createElement(Modal, {
+    }, m.name))))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Attachments"
+    }, /*#__PURE__*/React.createElement(AttachArea, {
+      files: editAttachments,
+      onChange: setEditAttachments
+    }))), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
       onClose: () => setModalOpen(false),
       title: "Add task",
@@ -1226,7 +1355,12 @@
     }, "No project"), projects.map(p => /*#__PURE__*/React.createElement("option", {
       key: p.id,
       value: p.id
-    }, p.name))))));
+    }, p.name)))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Attachments"
+    }, /*#__PURE__*/React.createElement(AttachArea, {
+      files: attachments,
+      onChange: setAttachments
+    }))));
   }
   Object.assign(window, {
     TasksBoard

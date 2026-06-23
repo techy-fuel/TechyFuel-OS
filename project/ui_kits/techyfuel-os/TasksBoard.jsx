@@ -262,6 +262,54 @@ function TaskCalView({ allTasks, onAdd, onEdit }) {
   );
 }
 
+function AttachArea({ files, onChange }) {
+  const ref = React.useRef();
+  function add(e) {
+    const picked = Array.from(e.target.files || []);
+    onChange(prev => [...prev, ...picked]);
+    e.target.value = '';
+  }
+  function remove(name) { onChange(prev => prev.filter(f => f.name !== name)); }
+  return (
+    <div>
+      <input ref={ref} type="file" multiple style={{ display: 'none' }} onChange={add} />
+      <button type="button" onClick={() => ref.current.click()}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', border: '1px dashed var(--border-strong)', borderRadius: 'var(--radius-md)', background: 'transparent', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+        <Icon name="paperclip" size={13} /> Attach files
+      </button>
+      {files.length > 0 && (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {files.map(f => (
+            <div key={f.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', background: 'var(--slate-50)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+              <Icon name="file" size={13} style={{ color: 'var(--text-subtle)', flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: 'var(--text-xs)', color: 'var(--text-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-subtle)', flexShrink: 0 }}>{f.size > 1048576 ? (f.size/1048576).toFixed(1)+' MB' : Math.round(f.size/1024)+' KB'}</span>
+              <button type="button" onClick={() => remove(f.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-subtle)', padding: 0, display: 'inline-flex' }}>
+                <Icon name="x" size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function uploadTaskFiles(taskId, files) {
+  if (!window.API || !files.length) return;
+  for (const file of files) {
+    const filePath = `tasks/${taskId}/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+    try { await window.API.uploadFile('files', filePath, file); } catch(_) {}
+    try {
+      await window.API.createFile({
+        name: file.name, file_path: filePath,
+        mime_type: file.type || 'application/octet-stream',
+        file_size: file.size, task_id: taskId,
+      });
+    } catch(_) {}
+  }
+}
+
 function TasksBoard() {
   const [activeTab, setActiveTab] = React.useState('kanban');
   const [taskMap, setTaskMap]     = React.useState(FALLBACK_TASKS);
@@ -272,15 +320,18 @@ function TasksBoard() {
   const [team, setTeam]           = React.useState([]);
   const [projects, setProjects]   = React.useState([]);
   const [form, setForm] = React.useState({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '' });
+  const [attachments, setAttachments] = React.useState([]);
 
   // Edit task state
-  const [editTask, setEditTask]   = React.useState(null);
-  const [editForm, setEditForm]   = React.useState({});
-  const [editSaving, setEditSaving] = React.useState(false);
+  const [editTask, setEditTask]       = React.useState(null);
+  const [editForm, setEditForm]       = React.useState({});
+  const [editSaving, setEditSaving]   = React.useState(false);
+  const [editAttachments, setEditAttachments] = React.useState([]);
 
   function openEdit(task) {
     setEditTask(task);
     setEditForm({ title: task.title, priority: task.priority || 'medium', status: task.status || 'todo', due_date: task.due_date || '', assigned_to: task.assigned_to || '' });
+    setEditAttachments([]);
   }
   function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
 
@@ -312,6 +363,8 @@ function TasksBoard() {
         if (!wasOpen && isOpen) return prev + 1;
         return prev;
       });
+      await uploadTaskFiles(editTask.id, editAttachments);
+      setEditAttachments([]);
       setEditTask(null);
     } finally { setEditSaving(false); }
   }
@@ -357,14 +410,17 @@ function TasksBoard() {
           const assigneeName = team.find(m => m.id === form.assigned_to)?.name || null;
           const projectName  = projects.find(p => p.id === form.project_id)?.name || null;
           const newTask = { id: data.id, title: data.title, priority: data.priority, due_date: data.due_date,
-            status: data.status || 'todo', done: false, assigned_to_name: assigneeName, project_name: projectName };
+            status: data.status || 'todo', done: false, assigned_to_name: assigneeName, project_name: projectName,
+            attachment_count: attachments.length };
           setTaskMap(prev => ({ ...prev, [newTask.status]: [...(prev[newTask.status] || []), newTask] }));
           setAllTasks(prev => [...prev, newTask]);
           if (newTask.status !== 'done') setTotalOpen(prev => prev + 1);
+          await uploadTaskFiles(data.id, attachments);
         }
       }
       setModalOpen(false);
       setForm({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '' });
+      setAttachments([]);
     } finally { setSaving(false); }
   }
 
@@ -455,6 +511,9 @@ function TasksBoard() {
             </select>
           </FormRow>
         </div>
+        <FormRow label="Attachments">
+          <AttachArea files={editAttachments} onChange={setEditAttachments} />
+        </FormRow>
       </Modal>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add task" onSubmit={handleAddTask} loading={saving} submitLabel="Add task">
@@ -495,6 +554,9 @@ function TasksBoard() {
             <option value="">No project</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
+        </FormRow>
+        <FormRow label="Attachments">
+          <AttachArea files={attachments} onChange={setAttachments} />
         </FormRow>
       </Modal>
     </div>
