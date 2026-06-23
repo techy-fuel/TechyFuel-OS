@@ -64,6 +64,12 @@ function Dashboard() {
   const [stats, setStats] = React.useState({ activeClients: 0, activeProjects: 0, openTasks: 0, revenue: 0 });
   const [deadlines, setDeadlines] = React.useState(FALLBACK_DEADLINES);
   const [loaded, setLoaded] = React.useState(false);
+  const [clients, setClients] = React.useState([]);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({ name: '', client_id: '', budget: '', due_date: '', priority: 'medium', status: 'active' });
+
+  function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
     if (!window.API) return;
@@ -88,7 +94,23 @@ function Dashboard() {
         if (upcoming.length > 0) setDeadlines(upcoming);
       })
       .catch(() => {});
+    window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
   }, []);
+
+  async function handleNewProject() {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    try {
+      const payload = { name: form.name, status: form.status, priority: form.priority };
+      if (form.client_id) payload.client_id = form.client_id;
+      if (form.budget)    payload.budget    = Number(form.budget);
+      if (form.due_date)  payload.due_date  = form.due_date;
+      if (window.API) await window.API.createProject(payload);
+      setModalOpen(false);
+      setForm({ name: '', client_id: '', budget: '', due_date: '', priority: 'medium', status: 'active' });
+      if (window.TFNavigate) window.TFNavigate('projects');
+    } finally { setSaving(false); }
+  }
 
   const revenueDisplay = loaded ? fmtMoney(stats.revenue) : '$12,400';
   const projectsDisplay = loaded ? String(stats.activeProjects) : '5';
@@ -106,7 +128,7 @@ function Dashboard() {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 36, padding: '0 12px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)' }}>
             <Icon name="calendar" size={16} style={{ color: 'var(--text-muted)' }} /> This month <Icon name="chevron-down" size={15} style={{ color: 'var(--text-subtle)' }} />
           </div>
-          <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+          <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
             <Icon name="plus" size={16} /> New project
           </button>
         </div>
@@ -175,6 +197,41 @@ function Dashboard() {
           </div>
         </Card>
       </div>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New project" onSubmit={handleNewProject} loading={saving} submitLabel="Create project">
+        <FormRow label="Project name" required>
+          <input style={FF.input} placeholder="Project name…" value={form.name} onChange={e => set('name', e.target.value)} />
+        </FormRow>
+        <FormRow label="Client">
+          <select style={FF.select} value={form.client_id} onChange={e => set('client_id', e.target.value)}>
+            <option value="">No client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
+          </select>
+        </FormRow>
+        <div style={FF.row2}>
+          <FormRow label="Priority">
+            <select style={FF.select} value={form.priority} onChange={e => set('priority', e.target.value)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </FormRow>
+          <FormRow label="Status">
+            <select style={FF.select} value={form.status} onChange={e => set('status', e.target.value)}>
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+            </select>
+          </FormRow>
+        </div>
+        <div style={FF.row2}>
+          <FormRow label="Budget ($)">
+            <input style={FF.input} type="number" placeholder="0" value={form.budget} onChange={e => set('budget', e.target.value)} />
+          </FormRow>
+          <FormRow label="Due date">
+            <input style={FF.input} type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+          </FormRow>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -79,6 +79,9 @@ function App() {
   const [aiOpen, setAiOpen] = React.useState(false);
   const route = ROUTES[active];
   const meta = route || { crumb: 'TechyFuel OS', title: (PLACEHOLDER[active] || ['', 'Module'])[1] };
+
+  React.useEffect(() => { window.TFNavigate = setActive; }, [setActive]);
+
   return (
     <>
       <AppShell active={active} onNavigate={setActive} title={meta.title} crumb={meta.crumb} onOpenAI={() => setAiOpen(true)}>
