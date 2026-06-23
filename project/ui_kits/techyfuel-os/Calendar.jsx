@@ -57,7 +57,7 @@ function CalendarCell({ day, year, month, events, isToday, isOtherMonth }) {
     <div style={{ borderRight: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)', minHeight: 100, padding: '6px 6px 4px', background: isToday ? 'var(--blue-50)' : 'transparent', opacity: isOtherMonth ? 0.35 : 1 }}>
       {day && (
         <>
-          <div style={{ fontSize: 'var(--text-xs)', fontWeight: isToday ? 'var(--fw-extrabold)' : 'var(--fw-semibold)', color: isToday ? 'var(--blue-700)' : 'var(--text-body)', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: isToday ? 'var(--blue-600)' : 'transparent', color: isToday ? '#fff' : 'var(--text-body)', marginBottom: 4 }}>{day}</div>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: isToday ? 'var(--fw-extrabold)' : 'var(--fw-semibold)', color: isToday ? '#fff' : 'var(--text-body)', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: isToday ? 'var(--blue-600)' : 'transparent', marginBottom: 4 }}>{day}</div>
           {dayEvents.slice(0, 3).map((ev, i) => <CalendarEvent key={i} ev={ev} />)}
           {dayEvents.length > 3 && <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, padding: '1px 5px' }}>+{dayEvents.length - 3} more</div>}
         </>

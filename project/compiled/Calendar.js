@@ -97,7 +97,7 @@
       style: {
         fontSize: 'var(--text-xs)',
         fontWeight: isToday ? 'var(--fw-extrabold)' : 'var(--fw-semibold)',
-        color: isToday ? 'var(--blue-700)' : 'var(--text-body)',
+        color: isToday ? '#fff' : 'var(--text-body)',
         width: 22,
         height: 22,
         display: 'flex',
@@ -105,7 +105,6 @@
         justifyContent: 'center',
         borderRadius: '50%',
         background: isToday ? 'var(--blue-600)' : 'transparent',
-        color: isToday ? '#fff' : 'var(--text-body)',
         marginBottom: 4
       }
     }, day), dayEvents.slice(0, 3).map((ev, i) => /*#__PURE__*/React.createElement(CalendarEvent, {
