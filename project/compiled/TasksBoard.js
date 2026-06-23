@@ -138,7 +138,8 @@
     });
   }
   function TaskCard({
-    task
+    task,
+    onEdit
   }) {
     const [hover, setHover] = React.useState(false);
     const p = TF_PRIORITY[task.priority] || TF_PRIORITY.medium;
@@ -147,13 +148,14 @@
     return /*#__PURE__*/React.createElement("div", {
       onMouseEnter: () => setHover(true),
       onMouseLeave: () => setHover(false),
+      onClick: () => onEdit && onEdit(task),
       style: {
         background: 'var(--slate-0)',
         border: `1px solid ${hover ? 'var(--slate-200)' : 'var(--border-subtle)'}`,
         borderRadius: 'var(--radius-lg)',
         padding: 12,
         boxShadow: hover ? 'var(--shadow-md)' : 'var(--shadow-xs)',
-        cursor: 'grab',
+        cursor: 'pointer',
         transform: hover ? 'translateY(-1px)' : 'none',
         transition: 'all var(--dur-fast) var(--ease-out)'
       }
@@ -182,7 +184,15 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: p.icon,
       size: 12
-    }), " ", p.label)), /*#__PURE__*/React.createElement("div", {
+    }), " ", p.label), hover && /*#__PURE__*/React.createElement("span", {
+      style: {
+        marginLeft: 'auto',
+        color: 'var(--text-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "pencil",
+      size: 12
+    }))), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-sm)',
         fontWeight: 'var(--fw-semibold)',
@@ -237,7 +247,8 @@
   }
   function TaskListView({
     allTasks,
-    onAdd
+    onAdd,
+    onEdit
   }) {
     const thStyle = {
       textAlign: 'left',
@@ -333,10 +344,12 @@
       const isOverdue = t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done';
       return /*#__PURE__*/React.createElement("tr", {
         key: t.id || i,
+        onClick: () => onEdit && onEdit(t),
         style: {
+          cursor: 'pointer',
           transition: 'background var(--dur-fast)'
         },
-        onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
+        onMouseEnter: e => e.currentTarget.style.background = 'var(--blue-50)',
         onMouseLeave: e => e.currentTarget.style.background = ''
       }, /*#__PURE__*/React.createElement("td", {
         style: {
@@ -452,7 +465,8 @@
   }
   function TaskCalView({
     allTasks,
-    onAdd
+    onAdd,
+    onEdit
   }) {
     const today = new Date();
     const [year, setYear] = React.useState(today.getFullYear());
@@ -669,6 +683,10 @@
         return /*#__PURE__*/React.createElement("div", {
           key: t.id || ti,
           title: t.title,
+          onClick: e => {
+            e.stopPropagation();
+            onEdit && onEdit(t);
+          },
           style: {
             fontSize: 11,
             fontWeight: 'var(--fw-semibold)',
@@ -679,7 +697,7 @@
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            cursor: 'default'
+            cursor: 'pointer'
           }
         }, t.title);
       }), dayTasks.length > 3 && /*#__PURE__*/React.createElement("div", {
@@ -709,6 +727,74 @@
       assigned_to: '',
       project_id: ''
     });
+
+    // Edit task state
+    const [editTask, setEditTask] = React.useState(null);
+    const [editForm, setEditForm] = React.useState({});
+    const [editSaving, setEditSaving] = React.useState(false);
+    function openEdit(task) {
+      setEditTask(task);
+      setEditForm({
+        title: task.title,
+        priority: task.priority || 'medium',
+        status: task.status || 'todo',
+        due_date: task.due_date || ''
+      });
+    }
+    function setEF(k, v) {
+      setEditForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
+    async function handleUpdateTask() {
+      if (!editTask || !editForm.title?.trim()) return;
+      setEditSaving(true);
+      try {
+        const changes = {
+          title: editForm.title,
+          priority: editForm.priority,
+          status: editForm.status,
+          due_date: editForm.due_date || null
+        };
+        if (window.API && editTask.id && !editTask.id.startsWith('f')) {
+          const {
+            error
+          } = await window.API.updateTask(editTask.id, changes);
+          if (error) {
+            setEditSaving(false);
+            return;
+          }
+        }
+        // Update local state
+        const updated = {
+          ...editTask,
+          ...changes,
+          done: changes.status === 'done'
+        };
+        setAllTasks(prev => prev.map(t => t.id === editTask.id ? updated : t));
+        setTaskMap(prev => {
+          const next = {};
+          COLUMN_CONFIG.forEach(c => {
+            next[c.id] = (prev[c.id] || []).filter(t => t.id !== editTask.id);
+          });
+          const col = updated.status || 'todo';
+          next[col] = [...(next[col] || []), updated];
+          return next;
+        });
+        const openCount = t => t.status !== 'done';
+        setTotalOpen(prev => {
+          const wasOpen = openCount(editTask);
+          const isOpen = openCount(updated);
+          if (wasOpen && !isOpen) return prev - 1;
+          if (!wasOpen && isOpen) return prev + 1;
+          return prev;
+        });
+        setEditTask(null);
+      } finally {
+        setEditSaving(false);
+      }
+    }
     function set(k, v) {
       setForm(f => ({
         ...f,
@@ -959,7 +1045,8 @@
         }
       }, colTasks.map((t, i) => /*#__PURE__*/React.createElement(TaskCard, {
         key: t.id || i,
-        task: t
+        task: t,
+        onEdit: openEdit
       })), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           set('status', col.id === 'backlog' ? 'todo' : col.id);
@@ -986,11 +1073,67 @@
       }), " Add task")));
     })), activeTab === 'list' && /*#__PURE__*/React.createElement(TaskListView, {
       allTasks: allTasks,
-      onAdd: () => setModalOpen(true)
+      onAdd: () => setModalOpen(true),
+      onEdit: openEdit
     }), activeTab === 'calendar' && /*#__PURE__*/React.createElement(TaskCalView, {
       allTasks: allTasks,
-      onAdd: () => setModalOpen(true)
+      onAdd: () => setModalOpen(true),
+      onEdit: openEdit
     }), /*#__PURE__*/React.createElement(Modal, {
+      open: !!editTask,
+      onClose: () => setEditTask(null),
+      title: "Edit task",
+      onSubmit: handleUpdateTask,
+      loading: editSaving,
+      submitLabel: "Save changes"
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Title",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Task title…",
+      value: editForm.title || '',
+      onChange: e => setEF('title', e.target.value)
+    })), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Status"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: editForm.status || 'todo',
+      onChange: e => setEF('status', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "backlog"
+    }, "Backlog"), /*#__PURE__*/React.createElement("option", {
+      value: "todo"
+    }, "To do"), /*#__PURE__*/React.createElement("option", {
+      value: "in_progress"
+    }, "In progress"), /*#__PURE__*/React.createElement("option", {
+      value: "review"
+    }, "Review"), /*#__PURE__*/React.createElement("option", {
+      value: "done"
+    }, "Done"))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Priority"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: editForm.priority || 'medium',
+      onChange: e => setEF('priority', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "low"
+    }, "Low"), /*#__PURE__*/React.createElement("option", {
+      value: "medium"
+    }, "Medium"), /*#__PURE__*/React.createElement("option", {
+      value: "high"
+    }, "High"), /*#__PURE__*/React.createElement("option", {
+      value: "urgent"
+    }, "Urgent")))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Due date"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "date",
+      value: editForm.due_date || '',
+      onChange: e => setEF('due_date', e.target.value)
+    }))), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
       onClose: () => setModalOpen(false),
       title: "Add task",

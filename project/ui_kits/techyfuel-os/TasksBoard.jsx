@@ -51,21 +51,23 @@ function fmtDateFull(ds) {
   return new Date(ds).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function TaskCard({ task }) {
+function TaskCard({ task, onEdit }) {
   const [hover, setHover] = React.useState(false);
   const p = TF_PRIORITY[task.priority] || TF_PRIORITY.medium;
   const dueStr = fmtDue(task.due_date);
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
   return (
     <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      onClick={() => onEdit && onEdit(task)}
       style={{ background: 'var(--slate-0)', border: `1px solid ${hover ? 'var(--slate-200)' : 'var(--border-subtle)'}`,
         borderRadius: 'var(--radius-lg)', padding: 12, boxShadow: hover ? 'var(--shadow-md)' : 'var(--shadow-xs)',
-        cursor: 'grab', transform: hover ? 'translateY(-1px)' : 'none', transition: 'all var(--dur-fast) var(--ease-out)' }}>
+        cursor: 'pointer', transform: hover ? 'translateY(-1px)' : 'none', transition: 'all var(--dur-fast) var(--ease-out)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         {task.project_name && <Badge tone="neutral" size="sm">{task.project_name}</Badge>}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: p.color, background: p.bg, borderRadius: 'var(--radius-full)', padding: '2px 7px' }}>
           <Icon name={p.icon} size={12} /> {p.label}
         </span>
+        {hover && <span style={{ marginLeft: 'auto', color: 'var(--text-subtle)' }}><Icon name="pencil" size={12} /></span>}
       </div>
       <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', lineHeight: 1.4, marginBottom: 10, textDecoration: task.done ? 'line-through' : 'none', opacity: task.done ? 0.6 : 1 }}>{task.title}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
@@ -85,7 +87,7 @@ function StatusDot({ status }) {
   return <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot, display: 'inline-block', flexShrink: 0 }} />;
 }
 
-function TaskListView({ allTasks, onAdd }) {
+function TaskListView({ allTasks, onAdd, onEdit }) {
   const thStyle = { textAlign: 'left', padding: '10px 12px', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-subtle)', whiteSpace: 'nowrap' };
   const tdStyle = { padding: '10px 12px', fontSize: 'var(--text-sm)', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'middle' };
 
@@ -118,8 +120,9 @@ function TaskListView({ allTasks, onAdd }) {
             const cfg = COLUMN_CONFIG.find(c => c.id === t.status) || COLUMN_CONFIG[1];
             const isOverdue = t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done';
             return (
-              <tr key={t.id || i} style={{ transition: 'background var(--dur-fast)' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--slate-50)'}
+              <tr key={t.id || i} onClick={() => onEdit && onEdit(t)}
+                style={{ cursor: 'pointer', transition: 'background var(--dur-fast)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--blue-50)'}
                 onMouseLeave={e => e.currentTarget.style.background = ''}>
                 <td style={{ ...tdStyle, fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', maxWidth: 280 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -167,7 +170,7 @@ function TaskListView({ allTasks, onAdd }) {
   );
 }
 
-function TaskCalView({ allTasks, onAdd }) {
+function TaskCalView({ allTasks, onAdd, onEdit }) {
   const today = new Date();
   const [year,  setYear]  = React.useState(today.getFullYear());
   const [month, setMonth] = React.useState(today.getMonth());
@@ -240,7 +243,8 @@ function TaskCalView({ allTasks, onAdd }) {
                   {dayTasks.slice(0, 3).map((t, ti) => {
                     const p = TF_PRIORITY[t.priority] || TF_PRIORITY.medium;
                     return (
-                      <div key={t.id || ti} title={t.title} style={{ fontSize: 11, fontWeight: 'var(--fw-semibold)', color: p.color, background: p.bg, borderRadius: 3, padding: '2px 5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'default' }}>
+                      <div key={t.id || ti} title={t.title} onClick={e => { e.stopPropagation(); onEdit && onEdit(t); }}
+                        style={{ fontSize: 11, fontWeight: 'var(--fw-semibold)', color: p.color, background: p.bg, borderRadius: 3, padding: '2px 5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}>
                         {t.title}
                       </div>
                     );
@@ -268,6 +272,48 @@ function TasksBoard() {
   const [team, setTeam]           = React.useState([]);
   const [projects, setProjects]   = React.useState([]);
   const [form, setForm] = React.useState({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '' });
+
+  // Edit task state
+  const [editTask, setEditTask]   = React.useState(null);
+  const [editForm, setEditForm]   = React.useState({});
+  const [editSaving, setEditSaving] = React.useState(false);
+
+  function openEdit(task) {
+    setEditTask(task);
+    setEditForm({ title: task.title, priority: task.priority || 'medium', status: task.status || 'todo', due_date: task.due_date || '' });
+  }
+  function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
+
+  async function handleUpdateTask() {
+    if (!editTask || !editForm.title?.trim()) return;
+    setEditSaving(true);
+    try {
+      const changes = { title: editForm.title, priority: editForm.priority, status: editForm.status, due_date: editForm.due_date || null };
+      if (window.API && editTask.id && !editTask.id.startsWith('f')) {
+        const { error } = await window.API.updateTask(editTask.id, changes);
+        if (error) { setEditSaving(false); return; }
+      }
+      // Update local state
+      const updated = { ...editTask, ...changes, done: changes.status === 'done' };
+      setAllTasks(prev => prev.map(t => t.id === editTask.id ? updated : t));
+      setTaskMap(prev => {
+        const next = {};
+        COLUMN_CONFIG.forEach(c => { next[c.id] = (prev[c.id] || []).filter(t => t.id !== editTask.id); });
+        const col = updated.status || 'todo';
+        next[col] = [...(next[col] || []), updated];
+        return next;
+      });
+      const openCount = t => t.status !== 'done';
+      setTotalOpen(prev => {
+        const wasOpen = openCount(editTask);
+        const isOpen  = openCount(updated);
+        if (wasOpen && !isOpen) return prev - 1;
+        if (!wasOpen && isOpen) return prev + 1;
+        return prev;
+      });
+      setEditTask(null);
+    } finally { setEditSaving(false); }
+  }
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -354,7 +400,7 @@ function TasksBoard() {
                   <Icon name="plus" size={15} onClick={() => { set('status', col.id === 'backlog' ? 'todo' : col.id); setModalOpen(true); }} style={{ color: 'var(--text-subtle)', marginLeft: 'auto', cursor: 'pointer' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--slate-100)', borderRadius: 'var(--radius-xl)', padding: 10, minHeight: 120 }}>
-                  {colTasks.map((t, i) => <TaskCard key={t.id || i} task={t} />)}
+                  {colTasks.map((t, i) => <TaskCard key={t.id || i} task={t} onEdit={openEdit} />)}
                   <button onClick={() => { set('status', col.id === 'backlog' ? 'todo' : col.id); setModalOpen(true); }}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0', background: 'transparent', border: '1px dashed var(--border-strong)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
                     <Icon name="plus" size={14} /> Add task
@@ -367,12 +413,40 @@ function TasksBoard() {
       )}
 
       {activeTab === 'list' && (
-        <TaskListView allTasks={allTasks} onAdd={() => setModalOpen(true)} />
+        <TaskListView allTasks={allTasks} onAdd={() => setModalOpen(true)} onEdit={openEdit} />
       )}
 
       {activeTab === 'calendar' && (
-        <TaskCalView allTasks={allTasks} onAdd={() => setModalOpen(true)} />
+        <TaskCalView allTasks={allTasks} onAdd={() => setModalOpen(true)} onEdit={openEdit} />
       )}
+
+      <Modal open={!!editTask} onClose={() => setEditTask(null)} title="Edit task" onSubmit={handleUpdateTask} loading={editSaving} submitLabel="Save changes">
+        <FormRow label="Title" required>
+          <input style={FF.input} placeholder="Task title…" value={editForm.title || ''} onChange={e => setEF('title', e.target.value)} />
+        </FormRow>
+        <div style={FF.row2}>
+          <FormRow label="Status">
+            <select style={FF.select} value={editForm.status || 'todo'} onChange={e => setEF('status', e.target.value)}>
+              <option value="backlog">Backlog</option>
+              <option value="todo">To do</option>
+              <option value="in_progress">In progress</option>
+              <option value="review">Review</option>
+              <option value="done">Done</option>
+            </select>
+          </FormRow>
+          <FormRow label="Priority">
+            <select style={FF.select} value={editForm.priority || 'medium'} onChange={e => setEF('priority', e.target.value)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </FormRow>
+        </div>
+        <FormRow label="Due date">
+          <input style={FF.input} type="date" value={editForm.due_date || ''} onChange={e => setEF('due_date', e.target.value)} />
+        </FormRow>
+      </Modal>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add task" onSubmit={handleAddTask} loading={saving} submitLabel="Add task">
         <FormRow label="Title" required>
