@@ -280,7 +280,7 @@ function TasksBoard() {
 
   function openEdit(task) {
     setEditTask(task);
-    setEditForm({ title: task.title, priority: task.priority || 'medium', status: task.status || 'todo', due_date: task.due_date || '' });
+    setEditForm({ title: task.title, priority: task.priority || 'medium', status: task.status || 'todo', due_date: task.due_date || '', assigned_to: task.assigned_to || '' });
   }
   function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
 
@@ -288,13 +288,14 @@ function TasksBoard() {
     if (!editTask || !editForm.title?.trim()) return;
     setEditSaving(true);
     try {
-      const changes = { title: editForm.title, priority: editForm.priority, status: editForm.status, due_date: editForm.due_date || null };
+      const changes = { title: editForm.title, priority: editForm.priority, status: editForm.status, due_date: editForm.due_date || null, assigned_to: editForm.assigned_to || null };
       if (window.API && editTask.id && !editTask.id.startsWith('f')) {
         const { error } = await window.API.updateTask(editTask.id, changes);
         if (error) { setEditSaving(false); return; }
       }
       // Update local state
-      const updated = { ...editTask, ...changes, done: changes.status === 'done' };
+      const assigneeName = team.find(m => m.id === changes.assigned_to)?.name || editTask.assigned_to_name || null;
+      const updated = { ...editTask, ...changes, done: changes.status === 'done', assigned_to_name: assigneeName };
       setAllTasks(prev => prev.map(t => t.id === editTask.id ? updated : t));
       setTaskMap(prev => {
         const next = {};
@@ -443,9 +444,17 @@ function TasksBoard() {
             </select>
           </FormRow>
         </div>
-        <FormRow label="Due date">
-          <input style={FF.input} type="date" value={editForm.due_date || ''} onChange={e => setEF('due_date', e.target.value)} />
-        </FormRow>
+        <div style={FF.row2}>
+          <FormRow label="Due date">
+            <input style={FF.input} type="date" value={editForm.due_date || ''} onChange={e => setEF('due_date', e.target.value)} />
+          </FormRow>
+          <FormRow label="Assign to">
+            <select style={FF.select} value={editForm.assigned_to || ''} onChange={e => setEF('assigned_to', e.target.value)}>
+              <option value="">Unassigned</option>
+              {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </FormRow>
+        </div>
       </Modal>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add task" onSubmit={handleAddTask} loading={saving} submitLabel="Add task">

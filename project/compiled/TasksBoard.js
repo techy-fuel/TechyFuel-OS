@@ -738,7 +738,8 @@
         title: task.title,
         priority: task.priority || 'medium',
         status: task.status || 'todo',
-        due_date: task.due_date || ''
+        due_date: task.due_date || '',
+        assigned_to: task.assigned_to || ''
       });
     }
     function setEF(k, v) {
@@ -755,7 +756,8 @@
           title: editForm.title,
           priority: editForm.priority,
           status: editForm.status,
-          due_date: editForm.due_date || null
+          due_date: editForm.due_date || null,
+          assigned_to: editForm.assigned_to || null
         };
         if (window.API && editTask.id && !editTask.id.startsWith('f')) {
           const {
@@ -767,10 +769,12 @@
           }
         }
         // Update local state
+        const assigneeName = team.find(m => m.id === changes.assigned_to)?.name || editTask.assigned_to_name || null;
         const updated = {
           ...editTask,
           ...changes,
-          done: changes.status === 'done'
+          done: changes.status === 'done',
+          assigned_to_name: assigneeName
         };
         setAllTasks(prev => prev.map(t => t.id === editTask.id ? updated : t));
         setTaskMap(prev => {
@@ -1126,14 +1130,27 @@
       value: "high"
     }, "High"), /*#__PURE__*/React.createElement("option", {
       value: "urgent"
-    }, "Urgent")))), /*#__PURE__*/React.createElement(FormRow, {
+    }, "Urgent")))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
       label: "Due date"
     }, /*#__PURE__*/React.createElement("input", {
       style: FF.input,
       type: "date",
       value: editForm.due_date || '',
       onChange: e => setEF('due_date', e.target.value)
-    }))), /*#__PURE__*/React.createElement(Modal, {
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Assign to"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: editForm.assigned_to || '',
+      onChange: e => setEF('assigned_to', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "Unassigned"), team.map(m => /*#__PURE__*/React.createElement("option", {
+      key: m.id,
+      value: m.id
+    }, m.name)))))), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
       onClose: () => setModalOpen(false),
       title: "Add task",
