@@ -5,22 +5,6 @@
     Badge,
     Avatar
   } = window.TechyFuelOSDesignSystem_be0222;
-  const TF_MILESTONES = [{
-    label: 'Discovery & strategy',
-    state: 'done'
-  }, {
-    label: 'Brand & creative',
-    state: 'done'
-  }, {
-    label: 'Campaign production',
-    state: 'active'
-  }, {
-    label: 'Launch & optimization',
-    state: 'todo'
-  }, {
-    label: 'Reporting & handover',
-    state: 'todo'
-  }];
   function mimeIcon(mime) {
     if (!mime) return {
       icon: 'file',
@@ -42,6 +26,14 @@
       icon: 'folder-archive',
       tone: 'var(--amber-500)'
     };
+    if (mime.includes('sheet') || mime.includes('excel') || mime.includes('csv')) return {
+      icon: 'table',
+      tone: 'var(--green-600)'
+    };
+    if (mime.includes('word') || mime.includes('doc')) return {
+      icon: 'file-text',
+      tone: 'var(--blue-600)'
+    };
     return {
       icon: 'file',
       tone: 'var(--slate-400)'
@@ -54,15 +46,12 @@
     if (bytes >= 1024) return Math.round(bytes / 1024) + ' KB';
     return bytes + ' B';
   }
-  function fmtAmt(n) {
-    if (!n && n !== 0) return '$0';
-    return '$' + Number(n).toLocaleString();
-  }
   function fmtDate(ds) {
     if (!ds) return '—';
     return new Date(ds).toLocaleDateString('en', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      year: 'numeric'
     });
   }
   function fmtWhen(ds) {
@@ -73,67 +62,201 @@
     if (diff < 48) return 'Yesterday';
     return fmtDate(ds);
   }
+  function fmtAmt(n, currency) {
+    if (!n && n !== 0) return '—';
+    const symbols = {
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      AED: 'AED ',
+      SAR: 'SAR ',
+      PKR: '₨',
+      CAD: 'CA$',
+      AUD: 'A$'
+    };
+    return (symbols[currency] || '$') + Number(n).toLocaleString();
+  }
+  function getProjectHealth(tasks) {
+    if (!tasks || tasks.length === 0) return {
+      label: 'No tasks',
+      color: 'var(--slate-400)'
+    };
+    const total = tasks.length;
+    const done = tasks.filter(t => t.status === 'done' || t.status === 'completed').length;
+    const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done' && t.status !== 'completed').length;
+    if (overdue > 0) return {
+      label: 'At risk',
+      color: 'var(--red-500)'
+    };
+    if (done / total >= 0.8) return {
+      label: 'On track',
+      color: 'var(--green-600)'
+    };
+    return {
+      label: 'In progress',
+      color: 'var(--amber-500)'
+    };
+  }
+  function taskToMilestone(task) {
+    if (task.status === 'done' || task.status === 'completed') return 'done';
+    if (task.status === 'in_progress') return 'active';
+    return 'todo';
+  }
+  function downloadInvoicePDF(inv, agencyName) {
+    const currency = inv.currency || 'USD';
+    const symbols = {
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      AED: 'AED ',
+      SAR: 'SAR ',
+      PKR: '₨',
+      CAD: 'CA$',
+      AUD: 'A$'
+    };
+    const sym = symbols[currency] || '$';
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Invoice ${inv.invoice_no}</title>
+<style>
+  body { font-family: -apple-system, sans-serif; margin: 0; padding: 40px; color: #0f172a; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+  .logo { font-size: 22px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+    background: ${inv.status === 'paid' ? '#dcfce7' : '#fef9c3'}; color: ${inv.status === 'paid' ? '#15803d' : '#92400e'}; }
+  table { width: 100%; border-collapse: collapse; margin: 28px 0; }
+  th { background: #f8fafc; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+  td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+  .total-row td { border-top: 2px solid #0f172a; border-bottom: none; font-weight: 700; font-size: 16px; }
+  @media print { body { padding: 20px; } }
+</style></head><body>
+<div class="header">
+  <div>
+    <div class="logo">${agencyName || 'TechyFuel OS'}</div>
+    <div style="font-size:13px;color:#64748b;margin-top:4px;">Invoice</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:22px;font-weight:800;">${inv.invoice_no}</div>
+    <div class="badge">${inv.status || 'pending'}</div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+  <div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:6px;">Billed to</div>
+    <div style="font-weight:600;">${inv.client_name || inv.clients?.name || '—'}</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:4px;">Due date</div>
+    <div style="font-weight:600;">${fmtDate(inv.due_date)}</div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-top:10px;margin-bottom:4px;">Issued</div>
+    <div style="font-weight:600;">${fmtDate(inv.created_at || inv.issued_date)}</div>
+  </div>
+</div>
+<table>
+  <thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+  <tbody>
+    <tr><td>Agency services — ${inv.description || inv.invoice_no}</td><td style="text-align:right">${sym}${Number(inv.amount).toLocaleString()} ${currency}</td></tr>
+    <tr class="total-row"><td>Total due</td><td style="text-align:right">${sym}${Number(inv.amount).toLocaleString()} ${currency}</td></tr>
+  </tbody>
+</table>
+<div style="margin-top:32px;padding:16px;background:#f8fafc;border-radius:8px;font-size:13px;color:#64748b;">
+  Thank you for your business. For questions about this invoice, please contact your account manager.
+</div>
+</body></html>`);
+    win.document.close();
+    setTimeout(() => win.print(), 600);
+  }
   function ClientPortal() {
+    const [clients, setClients] = React.useState([]);
+    const [clientId, setClientId] = React.useState(null);
     const [client, setClient] = React.useState(null);
     const [project, setProject] = React.useState(null);
+    const [tasks, setTasks] = React.useState([]);
     const [invoice, setInvoice] = React.useState(null);
     const [files, setFiles] = React.useState([]);
     const [approvals, setApprovals] = React.useState([]);
     const [manager, setManager] = React.useState('');
     const [loading, setLoading] = React.useState(true);
+    const [clientDrop, setClientDrop] = React.useState(false);
+
+    // Load clients list
     React.useEffect(() => {
-      if (!window.API) {
+      if (!window.API) return;
+      (async () => {
+        try {
+          const {
+            data
+          } = await window.API.getClients();
+          if (Array.isArray(data) && data.length > 0) {
+            setClients(data);
+            const first = data.find(c => c.status === 'active') || data[0];
+            setClientId(first.id);
+          }
+        } catch {}
+      })();
+    }, []);
+
+    // Load data for selected client
+    React.useEffect(() => {
+      if (!clientId || !window.API) {
         setLoading(false);
         return;
       }
+      setLoading(true);
       (async () => {
         try {
-          // Load client
-          const {
-            data: clients
-          } = await window.API.getClients();
-          const c = (clients || []).find(x => x.status === 'active') || (clients || [])[0];
-          if (!c) {
-            setLoading(false);
-            return;
-          }
-          setClient(c);
-
-          // Parallel: project, invoice, files, content posts, team
+          const selected = clients.find(c => c.id === clientId);
+          setClient(selected || null);
           const [pRes, iRes, fRes, cRes, tRes] = await Promise.all([window.API.getProjects().catch(() => ({})), window.API.getInvoices().catch(() => ({})), window.API.getFiles({
-            clientId: c.id
+            clientId
           }).catch(() => ({})), window.API.getContent({
-            clientId: c.id
+            clientId
           }).catch(() => ({})), window.API.getTeam().catch(() => ({}))]);
+          let proj = null;
           if (pRes.data) {
-            const p = pRes.data.find(x => x.client_id === c.id) || pRes.data[0];
-            if (p) setProject(p);
+            proj = pRes.data.find(x => x.client_id === clientId) || pRes.data[0] || null;
+            setProject(proj);
+          }
+
+          // Load tasks for this project
+          if (proj) {
+            try {
+              const {
+                data: taskData
+              } = await window.API.getTasks({
+                projectId: proj.id
+              });
+              setTasks(taskData || []);
+            } catch {
+              setTasks([]);
+            }
+          } else {
+            setTasks([]);
           }
           if (iRes.data) {
-            const inv = iRes.data.find(x => x.client_id === c.id) || iRes.data[0];
-            if (inv) setInvoice(inv);
+            const unpaid = iRes.data.find(x => x.client_id === clientId && x.status !== 'paid');
+            const latest = iRes.data.find(x => x.client_id === clientId) || iRes.data[0];
+            setInvoice(unpaid || latest || null);
           }
-          if (fRes.data && fRes.data.length > 0) setFiles(fRes.data);
-
-          // Approvals = content posts that need attention (not yet published)
+          if (fRes.data) setFiles(fRes.data);
           if (cRes.data) {
             const pending = cRes.data.filter(p => ['draft', 'approval', 'scheduled'].includes(p.status));
-            setApprovals(pending.slice(0, 5));
+            setApprovals(pending.slice(0, 6));
           }
           if (tRes.data && tRes.data.length > 0) {
-            setManager(tRes.data[0].name.split(' ')[0] + ' ' + (tRes.data[0].name.split(' ')[1]?.[0] || '') + '.');
+            const m = tRes.data[0];
+            setManager(m.name);
           }
         } catch (_) {}
         setLoading(false);
       })();
-    }, []);
+    }, [clientId, clients]);
     async function handleApprove(post) {
       if (!window.API) return;
       try {
         await window.API.updatePost(post.id, {
           status: 'published'
         });
-      } catch (_) {}
+      } catch {}
       setApprovals(prev => prev.map(p => p.id === post.id ? {
         ...p,
         status: 'published'
@@ -145,13 +268,36 @@
         await window.API.updatePost(post.id, {
           status: 'draft'
         });
-      } catch (_) {}
+      } catch {}
       setApprovals(prev => prev.filter(p => p.id !== post.id));
     }
+    function handleFileDownload(f) {
+      if (f.url) {
+        const a = document.createElement('a');
+        a.href = f.url;
+        a.download = f.name || 'file';
+        a.target = '_blank';
+        a.click();
+      }
+    }
+    const agencyName = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('tf_settings') || '{}').agencyName || '';
+      } catch {
+        return '';
+      }
+    })();
     const displayName = client ? client.company || client.name : '—';
-    const completedMilestones = TF_MILESTONES.filter(m => m.state === 'done').length;
-    const progressPct = project?.progress || Math.round(completedMilestones / TF_MILESTONES.length * 100);
-    const nextMilestone = project?.due_date ? fmtDate(project.due_date) : 'On track';
+    const health = getProjectHealth(tasks);
+    const doneTasks = tasks.filter(t => t.status === 'done' || t.status === 'completed').length;
+    const progressPct = tasks.length > 0 ? Math.round(doneTasks / tasks.length * 100) : project?.progress || 0;
+    const milestones = tasks.slice(0, 6).map(t => ({
+      label: t.title,
+      state: taskToMilestone(t),
+      due: t.due_date
+    }));
+    const nextDue = tasks.filter(t => t.due_date && t.status !== 'done' && t.status !== 'completed').sort((a, b) => new Date(a.due_date) - new Date(b.due_date))[0];
+    const nextMilestone = nextDue ? fmtDate(nextDue.due_date) : project?.due_date ? fmtDate(project.due_date) : 'On track';
     const pendingCount = approvals.filter(a => a.status !== 'published').length;
     if (loading) {
       return /*#__PURE__*/React.createElement("div", {
@@ -164,6 +310,26 @@
           fontSize: 'var(--text-sm)'
         }
       }, "Loading…");
+    }
+    if (clients.length === 0) {
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: 12,
+          color: 'var(--text-muted)',
+          fontSize: 'var(--text-sm)'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "users",
+        size: 36,
+        style: {
+          opacity: 0.3
+        }
+      }), "No clients found. Add a client in CRM first.");
     }
     return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -187,44 +353,108 @@
         alignItems: 'center',
         gap: 14
       }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'relative'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setClientDrop(d => !d),
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        background: 'rgba(255,255,255,0.16)',
+        border: '1px solid rgba(255,255,255,0.25)',
+        borderRadius: 'var(--radius-xl)',
+        padding: '8px 14px',
+        cursor: 'pointer',
+        color: '#fff'
+      }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
-        width: 46,
-        height: 46,
-        borderRadius: 'var(--radius-xl)',
-        background: 'rgba(255,255,255,0.16)',
-        backdropFilter: 'blur(8px)',
+        width: 32,
+        height: 32,
+        borderRadius: '50%',
+        background: 'rgba(255,255,255,0.2)',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        border: '1px solid rgba(255,255,255,0.25)'
+        fontWeight: 700,
+        fontSize: 14
       }
-    }, /*#__PURE__*/React.createElement(Icon, {
-      name: "panel-left-open",
-      size: 22,
+    }, displayName.charAt(0).toUpperCase()), /*#__PURE__*/React.createElement("div", {
       style: {
-        color: '#fff'
+        textAlign: 'left'
       }
-    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-2xs)',
         fontWeight: 'var(--fw-bold)',
         letterSpacing: 'var(--tracking-caps)',
         textTransform: 'uppercase',
-        opacity: 0.85
+        opacity: 0.8
       }
     }, "Client portal · preview"), /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 'var(--text-2xl)',
+        fontSize: 'var(--text-xl)',
         fontWeight: 'var(--fw-extrabold)',
         letterSpacing: '-0.02em'
       }
-    }, displayName, " workspace"))), /*#__PURE__*/React.createElement("div", {
+    }, displayName)), /*#__PURE__*/React.createElement(Icon, {
+      name: "chevrons-up-down",
+      size: 16,
+      style: {
+        opacity: 0.7,
+        marginLeft: 4
+      }
+    })), clientDrop && /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'absolute',
+        top: 'calc(100% + 8px)',
+        left: 0,
+        zIndex: 200,
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-xl)',
+        minWidth: 220,
+        overflow: 'hidden'
+      },
+      onClick: () => setClientDrop(false)
+    }, clients.map(c => /*#__PURE__*/React.createElement("div", {
+      key: c.id,
+      onClick: () => setClientId(c.id),
       style: {
         display: 'flex',
-        gap: 22
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 14px',
+        cursor: 'pointer',
+        background: c.id === clientId ? 'var(--blue-50)' : 'transparent',
+        color: c.id === clientId ? 'var(--blue-700)' : 'var(--text-body)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: c.id === clientId ? 'var(--fw-semibold)' : 'var(--fw-medium)'
+      },
+      onMouseEnter: e => {
+        if (c.id !== clientId) e.currentTarget.style.background = 'var(--slate-50)';
+      },
+      onMouseLeave: e => {
+        if (c.id !== clientId) e.currentTarget.style.background = 'transparent';
       }
-    }, [['Project health', 'On track'], ['Next milestone', nextMilestone], manager ? ['Your manager', manager] : null].filter(Boolean).map(([k, v]) => /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(Avatar, {
+      name: c.company || c.name,
+      size: "xs"
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", null, c.company || c.name), c.email && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)'
+      }
+    }, c.email))))))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 28
+      }
+    }, [['Project health', health.label], ['Next deadline', nextMilestone], manager ? ['Account manager', manager.split(' ')[0]] : null].filter(Boolean).map(([k, v]) => /*#__PURE__*/React.createElement("div", {
       key: k
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -267,14 +497,21 @@
     }, "Project progress", project?.name ? ` · ${project.name}` : ''), /*#__PURE__*/React.createElement(Badge, {
       tone: progressPct >= 80 ? 'success' : 'brand',
       dot: true
-    }, progressPct, "% complete")), /*#__PURE__*/React.createElement("div", {
+    }, progressPct, "% complete")), milestones.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '24px 0',
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "No tasks assigned to this project yet.") : /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
         gap: 8
       }
-    }, TF_MILESTONES.map((m, i) => /*#__PURE__*/React.createElement("div", {
+    }, milestones.map((m, i) => /*#__PURE__*/React.createElement("div", {
       key: i,
       style: {
         flex: 1,
@@ -284,7 +521,7 @@
         gap: 9,
         position: 'relative'
       }
-    }, i < TF_MILESTONES.length - 1 && /*#__PURE__*/React.createElement("div", {
+    }, i < milestones.length - 1 && /*#__PURE__*/React.createElement("div", {
       style: {
         position: 'absolute',
         top: 15,
@@ -330,7 +567,28 @@
         textAlign: 'center',
         lineHeight: 1.3
       }
-    }, m.label))))), /*#__PURE__*/React.createElement(Card, {
+    }, m.label), m.due && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10,
+        color: 'var(--text-subtle)'
+      }
+    }, fmtDate(m.due))))), milestones.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 20,
+        height: 6,
+        background: 'var(--slate-100)',
+        borderRadius: 99,
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: '100%',
+        width: progressPct + '%',
+        background: 'var(--blue-600)',
+        borderRadius: 99,
+        transition: 'width 0.4s ease'
+      }
+    }))), /*#__PURE__*/React.createElement(Card, {
       padding: "lg"
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -360,14 +618,14 @@
         gap: 10
       }
     }, approvals.map((a, i) => {
-      const isPlatIcon = {
+      const platIcons = {
         instagram: 'instagram',
         facebook: 'facebook',
         linkedin: 'linkedin',
         youtube: 'youtube',
         twitter: 'twitter'
       };
-      const icon = isPlatIcon[a.platform] || 'file-text';
+      const icon = platIcons[a.platform] || 'file-text';
       const isPublished = a.status === 'published';
       const assigneeName = a.team_members?.name || '';
       return /*#__PURE__*/React.createElement("div", {
@@ -444,7 +702,7 @@
         size: 16
       })), /*#__PURE__*/React.createElement("button", {
         onClick: () => handleReject(a),
-        title: "Send back",
+        title: "Send back for revision",
         style: {
           width: 32,
           height: 32,
@@ -486,7 +744,7 @@
         fontSize: 'var(--text-xs)',
         color: 'var(--text-muted)'
       }
-    }, files.length, " files")), files.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    }, files.length, " file", files.length !== 1 ? 's' : '')), files.length === 0 ? /*#__PURE__*/React.createElement("div", {
       style: {
         padding: '20px 0',
         textAlign: 'center',
@@ -499,7 +757,7 @@
         flexDirection: 'column',
         gap: 4
       }
-    }, files.slice(0, 4).map((f, i) => {
+    }, files.slice(0, 5).map((f, i) => {
       const {
         icon,
         tone
@@ -512,7 +770,9 @@
           gap: 11,
           padding: '8px 6px',
           borderRadius: 'var(--radius-md)'
-        }
+        },
+        onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
+        onMouseLeave: e => e.currentTarget.style.background = 'transparent'
       }, /*#__PURE__*/React.createElement(Icon, {
         name: icon,
         size: 18,
@@ -535,15 +795,29 @@
           fontSize: 'var(--text-xs)',
           color: 'var(--text-subtle)'
         }
-      }, fmtSize(f.file_size)), /*#__PURE__*/React.createElement(Icon, {
-        name: "download",
-        size: 16,
+      }, fmtSize(f.file_size)), /*#__PURE__*/React.createElement("button", {
+        onClick: () => handleFileDownload(f),
+        title: f.url ? 'Download' : 'No URL available',
         style: {
-          color: 'var(--text-muted)',
-          cursor: 'pointer'
+          background: 'none',
+          border: 'none',
+          cursor: f.url ? 'pointer' : 'default',
+          padding: 4,
+          color: f.url ? 'var(--blue-600)' : 'var(--text-subtle)',
+          display: 'inline-flex'
         }
-      }));
-    }))), invoice && /*#__PURE__*/React.createElement(Card, {
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "download",
+        size: 16
+      })));
+    }), files.length > 5 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center',
+        paddingTop: 6,
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)'
+      }
+    }, "+", files.length - 5, " more files"))), invoice && /*#__PURE__*/React.createElement(Card, {
       padding: "lg",
       style: {
         background: 'var(--slate-900)'
@@ -560,23 +834,24 @@
         fontWeight: 'var(--fw-bold)',
         letterSpacing: 'var(--tracking-caps)',
         textTransform: 'uppercase',
-        color: 'var(--slate-400)'
+        color: 'var(--slate-400)',
+        marginBottom: 4
       }
-    }, "Latest invoice"), /*#__PURE__*/React.createElement("div", {
+    }, invoice.status === 'paid' ? 'Latest invoice (paid)' : 'Invoice due'), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-2xl)',
         fontWeight: 'var(--fw-extrabold)',
         color: '#fff',
-        marginTop: 4,
         fontVariantNumeric: 'tabular-nums'
       }
-    }, fmtAmt(invoice.amount)), /*#__PURE__*/React.createElement("div", {
+    }, fmtAmt(invoice.amount, invoice.currency)), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-xs)',
         color: 'var(--slate-400)',
-        marginTop: 2
+        marginTop: 4
       }
     }, invoice.invoice_no, " · due ", fmtDate(invoice.due_date))), /*#__PURE__*/React.createElement("button", {
+      onClick: () => downloadInvoicePDF(invoice, agencyName),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -595,7 +870,7 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "download",
       size: 16
-    }), " Download"))))));
+    }), " Download PDF"))))));
   }
   Object.assign(window, {
     ClientPortal
