@@ -95,12 +95,9 @@
       ...defaultNotif,
       ...(saved.notifications || {})
     });
-    const [integ, setInteg] = React.useState(saved.integrations || {
-      meta: false,
-      google: false,
-      slack: false,
-      stripe: false
-    });
+    const [integCreds, setIntegCreds] = React.useState(saved.integCreds || {});
+    const [integExpanded, setIntegExpanded] = React.useState(null);
+    const [integDraft, setIntegDraft] = React.useState({});
     const [apiKey] = React.useState(saved.apiKey || 'tf_live_' + Math.random().toString(36).slice(2, 18));
     React.useEffect(() => {
       if (!window.API) return;
@@ -144,17 +141,41 @@
       };
       reader.readAsDataURL(file);
     }
-    function toggleInteg(key) {
+    function openInteg(it) {
+      setIntegDraft({
+        ...(integCreds[it.key] || {})
+      });
+      setIntegExpanded(it.key);
+    }
+    function saveInteg(key) {
+      const cleaned = Object.fromEntries(Object.entries(integDraft).filter(([, v]) => v.trim()));
       const next = {
-        ...integ,
-        [key]: !integ[key]
+        ...integCreds,
+        [key]: Object.keys(cleaned).length > 0 ? cleaned : undefined
       };
-      setInteg(next);
+      if (!Object.keys(cleaned).length) delete next[key];
+      setIntegCreds(next);
       const sk = loadSaved();
       saveSettings({
         ...sk,
-        integrations: next
+        integCreds: next
       });
+      setIntegExpanded(null);
+      showToast(Object.keys(cleaned).length > 0 ? 'Integration saved!' : 'Integration disconnected');
+    }
+    function disconnectInteg(key) {
+      const next = {
+        ...integCreds
+      };
+      delete next[key];
+      setIntegCreds(next);
+      const sk = loadSaved();
+      saveSettings({
+        ...sk,
+        integCreds: next
+      });
+      setIntegExpanded(null);
+      showToast('Integration disconnected');
     }
     const inputStyle = {
       width: '100%',
@@ -173,22 +194,57 @@
       key: 'meta',
       name: 'Meta Business',
       icon: 'facebook',
-      color: 'var(--blue-600)'
+      color: 'var(--blue-600)',
+      fields: [{
+        id: 'accessToken',
+        label: 'Access Token',
+        placeholder: 'EAAxxxxxxx...',
+        type: 'password'
+      }, {
+        id: 'accountId',
+        label: 'Ad Account ID',
+        placeholder: 'act_123456789'
+      }]
     }, {
       key: 'google',
       name: 'Google Ads',
       icon: 'badge-dollar-sign',
-      color: 'var(--green-600)'
+      color: 'var(--green-600)',
+      fields: [{
+        id: 'customerId',
+        label: 'Customer ID',
+        placeholder: '123-456-7890'
+      }, {
+        id: 'developerToken',
+        label: 'Developer Token',
+        placeholder: 'ABcDef...',
+        type: 'password'
+      }]
     }, {
       key: 'slack',
       name: 'Slack',
       icon: 'slack',
-      color: 'var(--violet-500)'
+      color: 'var(--violet-500)',
+      fields: [{
+        id: 'webhookUrl',
+        label: 'Webhook URL',
+        placeholder: 'https://hooks.slack.com/services/...'
+      }]
     }, {
       key: 'stripe',
       name: 'Stripe',
       icon: 'credit-card',
-      color: 'var(--blue-500)'
+      color: 'var(--blue-500)',
+      fields: [{
+        id: 'publishableKey',
+        label: 'Publishable Key',
+        placeholder: 'pk_live_...'
+      }, {
+        id: 'secretKey',
+        label: 'Secret Key',
+        placeholder: 'sk_live_...',
+        type: 'password'
+      }]
     }];
     const ROLE_COLORS = {
       admin: 'var(--violet-600)',
@@ -551,87 +607,182 @@
       style: {
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-bold)',
-        marginBottom: 16
+        marginBottom: 4
       }
-    }, "Integrations"), /*#__PURE__*/React.createElement("div", {
+    }, "Integrations"), /*#__PURE__*/React.createElement("p", {
       style: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 12
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        marginBottom: 18
       }
-    }, INTEG_LIST.map(it => /*#__PURE__*/React.createElement("div", {
-      key: it.key,
+    }, "Connect your tools by entering API credentials. Keys are stored locally in your browser."), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: 14,
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-lg)',
-        background: integ[it.key] ? 'var(--green-50)' : 'var(--slate-50)'
+        flexDirection: 'column',
+        gap: 12
       }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        width: 36,
-        height: 36,
-        borderRadius: 'var(--radius-md)',
-        background: 'var(--slate-0)',
-        border: '1px solid var(--border-subtle)',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: it.color
-      }
-    }, /*#__PURE__*/React.createElement(Icon, {
-      name: it.icon,
-      size: 18
-    })), /*#__PURE__*/React.createElement("span", {
-      style: {
-        flex: 1,
-        fontSize: 'var(--text-sm)',
-        fontWeight: 'var(--fw-semibold)',
-        color: 'var(--text-strong)'
-      }
-    }, it.name), integ[it.key] ? /*#__PURE__*/React.createElement("button", {
-      onClick: () => toggleInteg(it.key),
-      style: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        height: 28,
-        padding: '0 10px',
-        background: 'transparent',
-        border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-md)',
-        fontFamily: 'var(--font-sans)',
-        fontSize: 'var(--text-xs)',
-        fontWeight: 'var(--fw-semibold)',
-        color: 'var(--text-muted)',
-        cursor: 'pointer'
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        width: 6,
-        height: 6,
-        borderRadius: '50%',
-        background: 'var(--green-500)',
-        display: 'inline-block'
-      }
-    }), "Connected") : /*#__PURE__*/React.createElement("button", {
-      onClick: () => toggleInteg(it.key),
-      style: {
-        height: 28,
-        padding: '0 12px',
-        background: 'var(--blue-600)',
-        color: '#fff',
-        border: 'none',
-        borderRadius: 'var(--radius-md)',
-        fontFamily: 'var(--font-sans)',
-        fontSize: 'var(--text-xs)',
-        fontWeight: 'var(--fw-semibold)',
-        cursor: 'pointer'
-      }
-    }, "Connect"))))), tab === 'API access' && /*#__PURE__*/React.createElement(Card, {
+    }, INTEG_LIST.map(it => {
+      const creds = integCreds[it.key];
+      const connected = creds && Object.values(creds).some(v => v);
+      const expanded = integExpanded === it.key;
+      return /*#__PURE__*/React.createElement("div", {
+        key: it.key,
+        style: {
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          background: connected ? 'var(--green-50)' : 'var(--slate-0)'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '12px 16px'
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          width: 36,
+          height: 36,
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--slate-0)',
+          border: '1px solid var(--border-subtle)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: it.color,
+          flexShrink: 0
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: it.icon,
+        size: 18
+      })), /*#__PURE__*/React.createElement("div", {
+        style: {
+          flex: 1
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-sm)',
+          fontWeight: 'var(--fw-semibold)',
+          color: 'var(--text-strong)'
+        }
+      }, it.name), /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-xs)',
+          color: connected ? 'var(--green-600)' : 'var(--text-muted)',
+          marginTop: 2
+        }
+      }, connected ? '● Connected' : 'Not configured')), /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          if (expanded) {
+            setIntegExpanded(null);
+          } else {
+            openInteg(it);
+          }
+        },
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          height: 30,
+          padding: '0 12px',
+          background: connected ? 'transparent' : 'var(--blue-600)',
+          color: connected ? 'var(--text-body)' : '#fff',
+          border: connected ? '1px solid var(--border-default)' : 'none',
+          borderRadius: 'var(--radius-md)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-xs)',
+          fontWeight: 'var(--fw-semibold)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: expanded ? 'chevron-up' : connected ? 'settings' : 'plug',
+        size: 13
+      }), expanded ? 'Cancel' : connected ? 'Edit' : 'Configure')), expanded && /*#__PURE__*/React.createElement("div", {
+        style: {
+          padding: '0 16px 16px',
+          borderTop: '1px solid var(--border-subtle)',
+          background: 'var(--slate-50)'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          paddingTop: 14,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12
+        }
+      }, it.fields.map(f => /*#__PURE__*/React.createElement("div", {
+        key: f.id
+      }, /*#__PURE__*/React.createElement("label", {
+        style: {
+          display: 'block',
+          fontSize: 'var(--text-xs)',
+          fontWeight: 'var(--fw-semibold)',
+          color: 'var(--text-muted)',
+          marginBottom: 5,
+          textTransform: 'uppercase',
+          letterSpacing: 'var(--tracking-caps)'
+        }
+      }, f.label), /*#__PURE__*/React.createElement("input", {
+        type: f.type || 'text',
+        placeholder: f.placeholder,
+        value: integDraft[f.id] || '',
+        onChange: e => setIntegDraft(d => ({
+          ...d,
+          [f.id]: e.target.value
+        })),
+        style: {
+          ...inputStyle,
+          fontFamily: f.type === 'password' ? 'monospace' : 'var(--font-sans)'
+        }
+      }))), /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          gap: 8,
+          marginTop: 4
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => saveInteg(it.key),
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          height: 34,
+          padding: '0 16px',
+          background: 'var(--blue-600)',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 'var(--radius-md)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-sm)',
+          fontWeight: 'var(--fw-semibold)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "save",
+        size: 14
+      }), " Save credentials"), connected && /*#__PURE__*/React.createElement("button", {
+        onClick: () => disconnectInteg(it.key),
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          height: 34,
+          padding: '0 14px',
+          background: 'transparent',
+          color: 'var(--red-600)',
+          border: '1px solid var(--red-200)',
+          borderRadius: 'var(--radius-md)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-sm)',
+          fontWeight: 'var(--fw-semibold)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "unplug",
+        size: 14
+      }), " Disconnect")))));
+    }))), tab === 'API access' && /*#__PURE__*/React.createElement(Card, {
       padding: "lg"
     }, /*#__PURE__*/React.createElement("h3", {
       style: {

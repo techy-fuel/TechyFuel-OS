@@ -57,9 +57,9 @@ function Settings() {
   const defaultNotif = { approvals: true, deadlines: true, ai_alerts: true, weekly: false };
   const [notif, setNotif] = React.useState({ ...defaultNotif, ...(saved.notifications || {}) });
 
-  const [integ, setInteg] = React.useState(saved.integrations || {
-    meta: false, google: false, slack: false, stripe: false,
-  });
+  const [integCreds, setIntegCreds] = React.useState(saved.integCreds || {});
+  const [integExpanded, setIntegExpanded] = React.useState(null);
+  const [integDraft, setIntegDraft] = React.useState({});
 
   const [apiKey] = React.useState(saved.apiKey || ('tf_live_' + Math.random().toString(36).slice(2, 18)));
 
@@ -95,11 +95,30 @@ function Settings() {
     reader.readAsDataURL(file);
   }
 
-  function toggleInteg(key) {
-    const next = { ...integ, [key]: !integ[key] };
-    setInteg(next);
+  function openInteg(it) {
+    setIntegDraft({ ...(integCreds[it.key] || {}) });
+    setIntegExpanded(it.key);
+  }
+
+  function saveInteg(key) {
+    const cleaned = Object.fromEntries(Object.entries(integDraft).filter(([, v]) => v.trim()));
+    const next = { ...integCreds, [key]: Object.keys(cleaned).length > 0 ? cleaned : undefined };
+    if (!Object.keys(cleaned).length) delete next[key];
+    setIntegCreds(next);
     const sk = loadSaved();
-    saveSettings({ ...sk, integrations: next });
+    saveSettings({ ...sk, integCreds: next });
+    setIntegExpanded(null);
+    showToast(Object.keys(cleaned).length > 0 ? 'Integration saved!' : 'Integration disconnected');
+  }
+
+  function disconnectInteg(key) {
+    const next = { ...integCreds };
+    delete next[key];
+    setIntegCreds(next);
+    const sk = loadSaved();
+    saveSettings({ ...sk, integCreds: next });
+    setIntegExpanded(null);
+    showToast('Integration disconnected');
   }
 
   const inputStyle = {
@@ -109,10 +128,10 @@ function Settings() {
   };
 
   const INTEG_LIST = [
-    { key: 'meta',   name: 'Meta Business',  icon: 'facebook',         color: 'var(--blue-600)' },
-    { key: 'google', name: 'Google Ads',      icon: 'badge-dollar-sign', color: 'var(--green-600)' },
-    { key: 'slack',  name: 'Slack',           icon: 'slack',            color: 'var(--violet-500)' },
-    { key: 'stripe', name: 'Stripe',          icon: 'credit-card',      color: 'var(--blue-500)' },
+    { key: 'meta',   name: 'Meta Business',  icon: 'facebook',          color: 'var(--blue-600)',   fields: [{ id: 'accessToken', label: 'Access Token', placeholder: 'EAAxxxxxxx...', type: 'password' }, { id: 'accountId', label: 'Ad Account ID', placeholder: 'act_123456789' }] },
+    { key: 'google', name: 'Google Ads',     icon: 'badge-dollar-sign', color: 'var(--green-600)',  fields: [{ id: 'customerId', label: 'Customer ID', placeholder: '123-456-7890' }, { id: 'developerToken', label: 'Developer Token', placeholder: 'ABcDef...', type: 'password' }] },
+    { key: 'slack',  name: 'Slack',          icon: 'slack',             color: 'var(--violet-500)', fields: [{ id: 'webhookUrl', label: 'Webhook URL', placeholder: 'https://hooks.slack.com/services/...' }] },
+    { key: 'stripe', name: 'Stripe',         icon: 'credit-card',       color: 'var(--blue-500)',   fields: [{ id: 'publishableKey', label: 'Publishable Key', placeholder: 'pk_live_...' }, { id: 'secretKey', label: 'Secret Key', placeholder: 'sk_live_...', type: 'password' }] },
   ];
 
   const ROLE_COLORS = { admin: 'var(--violet-600)', manager: 'var(--blue-600)', member: 'var(--green-700)', viewer: 'var(--slate-500)' };
@@ -225,20 +244,63 @@ function Settings() {
           {/* ── Integrations ── */}
           {tab === 'Integrations' && (
             <Card padding="lg">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 16 }}>Integrations</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                {INTEG_LIST.map(it => (
-                  <div key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', background: integ[it.key] ? 'var(--green-50)' : 'var(--slate-50)' }}>
-                    <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'var(--slate-0)', border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: it.color }}>
-                      <Icon name={it.icon} size={18} />
-                    </span>
-                    <span style={{ flex: 1, fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{it.name}</span>
-                    {integ[it.key]
-                      ? <button onClick={() => toggleInteg(it.key)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px', background: 'transparent', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', cursor: 'pointer' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green-500)', display: 'inline-block' }} />Connected</button>
-                      : <button onClick={() => toggleInteg(it.key)} style={{ height: 28, padding: '0 12px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>Connect</button>
-                    }
-                  </div>
-                ))}
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4 }}>Integrations</h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 18 }}>Connect your tools by entering API credentials. Keys are stored locally in your browser.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {INTEG_LIST.map(it => {
+                  const creds = integCreds[it.key];
+                  const connected = creds && Object.values(creds).some(v => v);
+                  const expanded = integExpanded === it.key;
+                  return (
+                    <div key={it.key} style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: connected ? 'var(--green-50)' : 'var(--slate-0)' }}>
+                      {/* Header row */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+                        <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'var(--slate-0)', border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: it.color, flexShrink: 0 }}>
+                          <Icon name={it.icon} size={18} />
+                        </span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{it.name}</div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: connected ? 'var(--green-600)' : 'var(--text-muted)', marginTop: 2 }}>
+                            {connected ? '● Connected' : 'Not configured'}
+                          </div>
+                        </div>
+                        <button onClick={() => { if (expanded) { setIntegExpanded(null); } else { openInteg(it); } }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 12px', background: connected ? 'transparent' : 'var(--blue-600)', color: connected ? 'var(--text-body)' : '#fff', border: connected ? '1px solid var(--border-default)' : 'none', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+                          <Icon name={expanded ? 'chevron-up' : (connected ? 'settings' : 'plug')} size={13} />
+                          {expanded ? 'Cancel' : (connected ? 'Edit' : 'Configure')}
+                        </button>
+                      </div>
+                      {/* Expanded credential form */}
+                      {expanded && (
+                        <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border-subtle)', background: 'var(--slate-50)' }}>
+                          <div style={{ paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {it.fields.map(f => (
+                              <div key={f.id}>
+                                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>{f.label}</label>
+                                <input
+                                  type={f.type || 'text'}
+                                  placeholder={f.placeholder}
+                                  value={integDraft[f.id] || ''}
+                                  onChange={e => setIntegDraft(d => ({ ...d, [f.id]: e.target.value }))}
+                                  style={{ ...inputStyle, fontFamily: f.type === 'password' ? 'monospace' : 'var(--font-sans)' }}
+                                />
+                              </div>
+                            ))}
+                            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                              <button onClick={() => saveInteg(it.key)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 16px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+                                <Icon name="save" size={14} /> Save credentials
+                              </button>
+                              {connected && (
+                                <button onClick={() => disconnectInteg(it.key)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 14px', background: 'transparent', color: 'var(--red-600)', border: '1px solid var(--red-200)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+                                  <Icon name="unplug" size={14} /> Disconnect
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </Card>
           )}
