@@ -11,11 +11,6 @@ const STAGE_CONFIG = [
   { id: 'lost',        label: 'Lost',           dot: 'var(--red-400)' },
 ];
 
-const FALLBACK_DEALS = [
-  { id: 'f1', title: 'Swift — Full Marketing Retainer', clients: { name: 'Swift Logistics' }, value: 4800, stage: 'proposal',     team_members: { name: 'Sara Khan' } },
-  { id: 'f2', title: 'Spark — Ads Management Upsell',  clients: { name: 'Spark Academy' },  value: 1200, stage: 'qualified',    team_members: { name: 'Sara Khan' } },
-  { id: 'f3', title: 'Apex — Q3 Campaign Expansion',   clients: { name: 'Apex Realty' },    value: 3500, stage: 'negotiation',  team_members: { name: 'Sara Khan' } },
-];
 
 function fmtVal(n) {
   if (!n) return '$0';
@@ -47,13 +42,9 @@ function Pipeline() {
   const [stageMap, setStageMap] = React.useState(() => {
     const m = {};
     STAGE_CONFIG.forEach(s => { m[s.id] = []; });
-    FALLBACK_DEALS.forEach(d => {
-      if (!m[d.stage]) m[d.stage] = [];
-      m[d.stage].push(d);
-    });
     return m;
   });
-  const [totals, setTotals] = React.useState({ count: FALLBACK_DEALS.length, value: FALLBACK_DEALS.reduce((s, d) => s + d.value, 0) });
+  const [totals, setTotals] = React.useState({ count: 0, value: 0 });
   const [clients, setClients] = React.useState([]);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -63,23 +54,27 @@ function Pipeline() {
 
   React.useEffect(() => {
     if (!window.API) return;
-    window.API.getPipeline().then(r => {
-      if (!r.data) return;
-      const m = {};
-      STAGE_CONFIG.forEach(s => { m[s.id] = []; });
-      r.data.forEach(d => {
-        const key = d.stage || 'lead';
-        if (!m[key]) m[key] = [];
-        m[key].push(d);
-      });
-      setStageMap(m);
-      const openDeals = r.data.filter(d => d.stage !== 'won' && d.stage !== 'lost');
-      setTotals({
-        count: openDeals.length,
-        value: openDeals.reduce((s, d) => s + (d.value || 0), 0),
-      });
-    }).catch(() => {});
-    window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
+    (async () => {
+      try {
+        const r = await window.API.getPipeline();
+        if (r.data) {
+          const m = {};
+          STAGE_CONFIG.forEach(s => { m[s.id] = []; });
+          r.data.forEach(d => {
+            const key = d.stage || 'lead';
+            if (!m[key]) m[key] = [];
+            m[key].push(d);
+          });
+          setStageMap(m);
+          const openDeals = r.data.filter(d => d.stage !== 'won' && d.stage !== 'lost');
+          setTotals({ count: openDeals.length, value: openDeals.reduce((s, d) => s + (d.value || 0), 0) });
+        }
+      } catch {}
+      try {
+        const r = await window.API.getClients();
+        if (r.data) setClients(r.data);
+      } catch {}
+    })();
   }, []);
 
   async function handleAddDeal() {

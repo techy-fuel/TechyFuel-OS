@@ -185,57 +185,56 @@
     }
     React.useEffect(() => {
       if (!window.API) return;
-      window.API.getDashboardStats().then(s => {
-        if (s) {
-          setStats(s);
-          setStatsLoaded(true);
-        }
-      }).catch(() => {});
-      window.API.getTasks().then(r => {
-        if (!r.data) return;
-        // Upcoming deadlines
-        const upcoming = r.data.filter(t => t.due_date && t.status !== 'done').sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 4).map(t => ({
-          project: t.title,
-          client: t.clients ? t.clients.name : t.projects ? t.projects.name : '',
-          due: fmtDueDate(t.due_date),
-          urgent: new Date(t.due_date) < new Date(),
-          pct: 50,
-          team: t.team_members ? [t.team_members.name] : []
-        }));
-        setDeadlines(upcoming);
-
-        // Task counts by status
-        const counts = {
-          todo: 0,
-          in_progress: 0,
-          review: 0,
-          done: 0
-        };
-        r.data.forEach(t => {
-          if (counts[t.status] !== undefined) counts[t.status]++;
-        });
-        setTasksByStatus(counts);
-
-        // Recent activity = last 5 tasks (any status)
-        const recent = [...r.data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5).map(t => ({
-          id: t.id,
-          title: t.title,
-          status: t.status,
-          project: t.projects?.name || '',
-          assignee: t.team_members?.name || '',
-          created_at: t.created_at
-        }));
-        setActivity(recent);
-      }).catch(() => {});
-      window.API.getTeam().then(r => {
-        if (r.data && r.data.length > 0) {
-          const first = r.data[0].name.split(' ')[0];
-          setGreeting(first);
-        }
-      }).catch(() => {});
-      window.API.getClients().then(r => {
-        if (r.data) setClients(r.data);
-      }).catch(() => {});
+      (async () => {
+        try {
+          const s = await window.API.getDashboardStats();
+          if (s) {
+            setStats(s);
+            setStatsLoaded(true);
+          }
+        } catch {}
+        try {
+          const r = await window.API.getTasks();
+          if (r.data) {
+            const upcoming = r.data.filter(t => t.due_date && t.status !== 'done').sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 4).map(t => ({
+              project: t.title,
+              client: t.clients ? t.clients.name : t.projects ? t.projects.name : '',
+              due: fmtDueDate(t.due_date),
+              urgent: new Date(t.due_date) < new Date(),
+              pct: 50,
+              team: t.team_members ? [t.team_members.name] : []
+            }));
+            setDeadlines(upcoming);
+            const counts = {
+              todo: 0,
+              in_progress: 0,
+              review: 0,
+              done: 0
+            };
+            r.data.forEach(t => {
+              if (counts[t.status] !== undefined) counts[t.status]++;
+            });
+            setTasksByStatus(counts);
+            const recent = [...r.data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5).map(t => ({
+              id: t.id,
+              title: t.title,
+              status: t.status,
+              project: t.projects?.name || '',
+              assignee: t.team_members?.name || '',
+              created_at: t.created_at
+            }));
+            setActivity(recent);
+          }
+        } catch {}
+        try {
+          const r = await window.API.getTeam();
+          if (r.data && r.data.length > 0) setGreeting(r.data[0].name.split(' ')[0]);
+        } catch {}
+        try {
+          const r = await window.API.getClients();
+          if (r.data) setClients(r.data);
+        } catch {}
+      })();
     }, []);
     async function handleNewProject() {
       if (!form.name.trim()) return;

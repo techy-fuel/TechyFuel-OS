@@ -31,15 +31,31 @@ function getWeekDays() {
 
 const EMPTY_WEEK = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
-function PostCard({ post }) {
+function PostCard({ post, onStatusChange }) {
   const [pi, pc] = PLAT[post.platform] || ['image', 'var(--slate-500)'];
   const [st, sl] = SS[post.status] || ['neutral', post.status];
+  const [open, setOpen] = React.useState(false);
+  const nextStatuses = ['draft', 'approval', 'scheduled', 'published', 'rejected'].filter(s => s !== post.status);
   return (
-    <div style={{ background: 'var(--slate-0)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 9, boxShadow: 'var(--shadow-xs)', cursor: 'pointer' }}>
+    <div style={{ background: 'var(--slate-0)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 9, boxShadow: 'var(--shadow-xs)', position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
         <span style={{ width: 22, height: 22, borderRadius: 'var(--radius-sm)', background: 'var(--slate-50)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: pc }}><Icon name={pi} size={13} /></span>
-        <Badge tone={st} size="sm">{sl}</Badge>
+        <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+          <Badge tone={st} size="sm">{sl} ▾</Badge>
+        </button>
       </div>
+      {open && (
+        <div style={{ position: 'absolute', top: 32, left: 8, zIndex: 20, background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)', padding: 4, minWidth: 120 }}>
+          {nextStatuses.map(s => {
+            const [tone, label] = SS[s] || ['neutral', s];
+            return (
+              <button key={s} onClick={() => { onStatusChange(post.id, s); setOpen(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--text-body)', borderRadius: 'var(--radius-sm)' }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', lineHeight: 1.35 }}>{post.title}</div>
       {post.assigned_to_name && (
         <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 5 }}>{post.assigned_to_name}</div>
@@ -63,36 +79,41 @@ function ContentCalendar() {
 
   React.useEffect(() => {
     if (!window.API) return;
-    window.API.getContent().then(r => {
-      if (!r.data || r.data.length === 0) return;
-      const startOfWeek = new Date(days[0].dateStr);
-      startOfWeek.setHours(0, 0, 0, 0);
-      const endOfWeek = new Date(days[6].dateStr);
-      endOfWeek.setHours(23, 59, 59, 999);
-
-      const map = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-      let count = 0;
-      r.data.forEach(post => {
-        if (!post.scheduled_at) {
-          map[0] = map[0] || [];
-          map[0].push({ id: post.id, platform: post.platform, title: post.title, status: post.status, assigned_to_name: post.team_members ? post.team_members.name : null });
-          count++;
-          return;
+    (async () => {
+      try {
+        const r = await window.API.getContent();
+        if (r.data && r.data.length > 0) {
+          const startOfWeek = new Date(days[0].dateStr);
+          startOfWeek.setHours(0, 0, 0, 0);
+          const map = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+          r.data.forEach(post => {
+            const p = { id: post.id, platform: post.platform, title: post.title, status: post.status, assigned_to_name: post.team_members ? post.team_members.name : null };
+            if (!post.scheduled_at) { map[0].push(p); return; }
+            const dayDiff = Math.round((new Date(post.scheduled_at) - startOfWeek) / 86400000);
+            if (dayDiff >= 0 && dayDiff < 7) map[dayDiff].push(p);
+          });
+          setPostMap(map);
+          setTotalPosts(r.data.length);
         }
-        const pd = new Date(post.scheduled_at);
-        const dayDiff = Math.round((pd - startOfWeek) / 86400000);
-        if (dayDiff >= 0 && dayDiff < 7) {
-          map[dayDiff].push({ id: post.id, platform: post.platform, title: post.title, status: post.status, assigned_to_name: post.team_members ? post.team_members.name : null });
-          count++;
-        }
-      });
-
-      setPostMap(map);
-      setTotalPosts(r.data.length);
-    }).catch(() => {});
-    window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
-    window.API.getTeam().then(r => { if (r.data) setTeam(r.data); }).catch(() => {});
+      } catch {}
+      try { const r = await window.API.getClients(); if (r.data) setClients(r.data); } catch {}
+      try { const r = await window.API.getTeam(); if (r.data) setTeam(r.data); } catch {}
+    })();
   }, []);
+
+  async function handleStatusChange(postId, newStatus) {
+    if (!window.API) return;
+    try {
+      await window.API.updatePost(postId, { status: newStatus });
+      setPostMap(prev => {
+        const next = {};
+        for (const [day, posts] of Object.entries(prev)) {
+          next[day] = posts.map(p => p.id === postId ? { ...p, status: newStatus } : p);
+        }
+        return next;
+      });
+    } catch {}
+  }
 
   async function handleAddPost() {
     if (!form.title.trim()) return;
@@ -146,7 +167,7 @@ function ContentCalendar() {
               <div key={i} style={{ borderRight: i < 6 ? '1px solid var(--border-subtle)' : 'none', minHeight: 360 }}>
                 <div style={{ padding: '11px 12px', borderBottom: '1px solid var(--border-subtle)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: isToday ? 'var(--blue-700)' : 'var(--text-strong)', background: isToday ? 'var(--blue-50)' : 'transparent' }}>{day.label}</div>
                 <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {(postMap[i] || []).map((p, j) => <PostCard key={p.id || j} post={p} />)}
+                  {(postMap[i] || []).map((p, j) => <PostCard key={p.id || j} post={p} onStatusChange={handleStatusChange} />)}
                 </div>
               </div>
             );

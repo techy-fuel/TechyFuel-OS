@@ -97,13 +97,30 @@
         setLoading(false);
         return;
       }
-      window.API.getAdCampaigns().then(r => {
-        if (r.data) setCampaigns(r.data);
-      }).catch(() => {}).finally(() => setLoading(false));
-      window.API.getClients().then(r => {
-        if (r.data) setClients(r.data);
-      }).catch(() => {});
+      (async () => {
+        try {
+          const r = await window.API.getAdCampaigns();
+          if (r.data) setCampaigns(r.data);
+        } catch {}
+        try {
+          const r = await window.API.getClients();
+          if (r.data) setClients(r.data);
+        } catch {}
+        setLoading(false);
+      })();
     }, []);
+    async function handleStatusChange(id, newStatus) {
+      if (!window.API) return;
+      try {
+        await window.API.updateCampaign(id, {
+          status: newStatus
+        });
+        setCampaigns(prev => prev.map(c => c.id === id ? {
+          ...c,
+          status: newStatus
+        } : c));
+      } catch {}
+    }
     async function handleNewCampaign() {
       if (!form.name.trim()) return;
       setSaving(true);
@@ -361,10 +378,32 @@
         style: {
           padding: '12px 18px'
         }
-      }, /*#__PURE__*/React.createElement(Badge, {
-        tone: s.tone,
-        dot: true
-      }, s.label)), /*#__PURE__*/React.createElement("td", {
+      }, /*#__PURE__*/React.createElement("select", {
+        value: c.status,
+        onChange: e => handleStatusChange(c.id, e.target.value),
+        style: {
+          height: 26,
+          padding: '0 6px',
+          border: '1px solid var(--border-default)',
+          borderRadius: 'var(--radius-sm)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-xs)',
+          fontWeight: 'var(--fw-semibold)',
+          color: 'var(--text-body)',
+          background: 'var(--slate-0)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement("option", {
+        value: "draft"
+      }, "Draft"), /*#__PURE__*/React.createElement("option", {
+        value: "active"
+      }, "Active"), /*#__PURE__*/React.createElement("option", {
+        value: "paused"
+      }, "Paused"), /*#__PURE__*/React.createElement("option", {
+        value: "review"
+      }, "In review"), /*#__PURE__*/React.createElement("option", {
+        value: "ended"
+      }, "Ended"))), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '12px 18px',
           textAlign: 'right',

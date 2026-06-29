@@ -42,12 +42,26 @@ function MetaAds() {
 
   React.useEffect(() => {
     if (!window.API) { setLoading(false); return; }
-    window.API.getAdCampaigns()
-      .then(r => { if (r.data) setCampaigns(r.data); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-    window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
+    (async () => {
+      try {
+        const r = await window.API.getAdCampaigns();
+        if (r.data) setCampaigns(r.data);
+      } catch {}
+      try {
+        const r = await window.API.getClients();
+        if (r.data) setClients(r.data);
+      } catch {}
+      setLoading(false);
+    })();
   }, []);
+
+  async function handleStatusChange(id, newStatus) {
+    if (!window.API) return;
+    try {
+      await window.API.updateCampaign(id, { status: newStatus });
+      setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+    } catch {}
+  }
 
   async function handleNewCampaign() {
     if (!form.name.trim()) return;
@@ -144,7 +158,15 @@ function MetaAds() {
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px 18px' }}><Badge tone={s.tone} dot>{s.label}</Badge></td>
+                    <td style={{ padding: '12px 18px' }}>
+                      <select value={c.status} onChange={e => handleStatusChange(c.id, e.target.value)} style={{ height: 26, padding: '0 6px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', background: 'var(--slate-0)', cursor: 'pointer' }}>
+                        <option value="draft">Draft</option>
+                        <option value="active">Active</option>
+                        <option value="paused">Paused</option>
+                        <option value="review">In review</option>
+                        <option value="ended">Ended</option>
+                      </select>
+                    </td>
                     <td style={{ padding: '12px 18px', textAlign: 'right', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>{fmtSpend(c.spent)}</td>
                     <td style={{ padding: '12px 18px', textAlign: 'right', fontSize: 'var(--text-sm)', color: 'var(--text-body)', fontVariantNumeric: 'tabular-nums' }}>{(c.impressions || 0).toLocaleString()}</td>
                     <td style={{ padding: '12px 18px', textAlign: 'right', fontSize: 'var(--text-sm)', color: 'var(--text-body)', fontVariantNumeric: 'tabular-nums' }}>{(c.clicks || 0).toLocaleString()}</td>
