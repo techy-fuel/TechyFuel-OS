@@ -155,7 +155,7 @@ function Sidebar({ active, onNavigate }) {
   );
 }
 
-function TopBar({ title, crumb, onOpenAI, onNavigate }) {
+function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut }) {
   const s0 = readTFSettings();
   const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
   const [notifOpen,  setNotifOpen]  = React.useState(false);
@@ -229,7 +229,8 @@ function TopBar({ title, crumb, onOpenAI, onNavigate }) {
     }
   }
 
-  const avatarName = agencyName || 'TF';
+  const avatarName = authUser?.user_metadata?.full_name || agencyName || 'TF';
+  const avatarEmail = authUser?.email || '';
 
   const dropStyle = {
     position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200,
@@ -341,14 +342,15 @@ function TopBar({ title, crumb, onOpenAI, onNavigate }) {
           <Avatar name={avatarName} status="online" />
         </div>
         {avatarOpen && (
-          <div style={{ ...dropStyle, minWidth: 200 }}>
+          <div style={{ ...dropStyle, minWidth: 220 }}>
             <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{agencyName || 'My Agency'}</div>
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>Agency account</div>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{avatarName}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>{avatarEmail || 'Agency account'}</div>
             </div>
             {[
               { label: 'Settings', icon: 'settings', screen: 'settings' },
               { label: 'Team', icon: 'users', screen: 'team' },
+              { label: 'Workspace', icon: 'briefcase', screen: 'workspace' },
             ].map(item => (
               <div key={item.screen} onClick={() => { setAvatarOpen(false); onNavigate && onNavigate(item.screen); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}
@@ -357,6 +359,15 @@ function TopBar({ title, crumb, onOpenAI, onNavigate }) {
                 <Icon name={item.icon} size={15} style={{ color: 'var(--text-muted)' }} /> {item.label}
               </div>
             ))}
+            {onSignOut && (
+              <div onClick={() => { setAvatarOpen(false); onSignOut(); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer',
+                  fontSize: 'var(--text-sm)', color: '#dc2626', borderTop: '1px solid var(--border-subtle)' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#fff1f2'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <Icon name="log-out" size={15} style={{ color: '#dc2626' }} /> Sign out
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -366,14 +377,14 @@ function TopBar({ title, crumb, onOpenAI, onNavigate }) {
 
 const FULL_HEIGHT_SCREENS = new Set(['chat', 'docs']);
 
-function AppShell({ active, onNavigate, title, crumb, onOpenAI, children }) {
+function AppShell({ active, onNavigate, title, crumb, onOpenAI, children, authUser, onSignOut }) {
   useLucide();
   const fullH = FULL_HEIGHT_SCREENS.has(active);
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%', background: 'var(--surface-page)' }}>
       <Sidebar active={active} onNavigate={onNavigate} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
-        <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onNavigate={onNavigate} />
+        <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onNavigate={onNavigate} authUser={authUser} onSignOut={onSignOut} />
         <main className={fullH ? '' : 'tf-scroll'} style={{ flex: 1, overflowY: fullH ? 'hidden' : 'auto', overflow: fullH ? 'hidden' : undefined }}>{children}</main>
       </div>
     </div>

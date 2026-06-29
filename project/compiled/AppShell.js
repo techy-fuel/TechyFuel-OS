@@ -323,7 +323,9 @@
     title,
     crumb,
     onOpenAI,
-    onNavigate
+    onNavigate,
+    authUser,
+    onSignOut
   }) {
     const s0 = readTFSettings();
     const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
@@ -401,7 +403,8 @@
         })();
       }
     }
-    const avatarName = agencyName || 'TF';
+    const avatarName = authUser?.user_metadata?.full_name || agencyName || 'TF';
+    const avatarEmail = authUser?.email || '';
     const dropStyle = {
       position: 'absolute',
       top: 'calc(100% + 8px)',
@@ -758,7 +761,7 @@
     })), avatarOpen && /*#__PURE__*/React.createElement("div", {
       style: {
         ...dropStyle,
-        minWidth: 200
+        minWidth: 220
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -771,13 +774,13 @@
         fontWeight: 'var(--fw-bold)',
         color: 'var(--text-strong)'
       }
-    }, agencyName || 'My Agency'), /*#__PURE__*/React.createElement("div", {
+    }, avatarName), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-xs)',
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, "Agency account")), [{
+    }, avatarEmail || 'Agency account')), [{
       label: 'Settings',
       icon: 'settings',
       screen: 'settings'
@@ -785,6 +788,10 @@
       label: 'Team',
       icon: 'users',
       screen: 'team'
+    }, {
+      label: 'Workspace',
+      icon: 'briefcase',
+      screen: 'workspace'
     }].map(item => /*#__PURE__*/React.createElement("div", {
       key: item.screen,
       onClick: () => {
@@ -808,7 +815,30 @@
       style: {
         color: 'var(--text-muted)'
       }
-    }), " ", item.label)))));
+    }), " ", item.label)), onSignOut && /*#__PURE__*/React.createElement("div", {
+      onClick: () => {
+        setAvatarOpen(false);
+        onSignOut();
+      },
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '9px 14px',
+        cursor: 'pointer',
+        fontSize: 'var(--text-sm)',
+        color: '#dc2626',
+        borderTop: '1px solid var(--border-subtle)'
+      },
+      onMouseEnter: e => e.currentTarget.style.background = '#fff1f2',
+      onMouseLeave: e => e.currentTarget.style.background = 'transparent'
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "log-out",
+      size: 15,
+      style: {
+        color: '#dc2626'
+      }
+    }), " Sign out"))));
   }
   const FULL_HEIGHT_SCREENS = new Set(['chat', 'docs']);
   function AppShell({
@@ -817,7 +847,9 @@
     title,
     crumb,
     onOpenAI,
-    children
+    children,
+    authUser,
+    onSignOut
   }) {
     useLucide();
     const fullH = FULL_HEIGHT_SCREENS.has(active);
@@ -843,7 +875,9 @@
       title: title,
       crumb: crumb,
       onOpenAI: onOpenAI,
-      onNavigate: onNavigate
+      onNavigate: onNavigate,
+      authUser: authUser,
+      onSignOut: onSignOut
     }), /*#__PURE__*/React.createElement("main", {
       className: fullH ? '' : 'tf-scroll',
       style: {

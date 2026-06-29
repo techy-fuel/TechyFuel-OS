@@ -20,6 +20,7 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../../_ds_bundle.js"></script>
 <script type="text/babel" src="helpers.jsx" data-presets="react"></script>
+<script type="text/babel" src="Auth.jsx" data-presets="react"></script>
 <script type="text/babel" src="charts.jsx" data-presets="react"></script>
 <script type="text/babel" src="AppShell.jsx" data-presets="react"></script>
 <script type="text/babel" src="Dashboard.jsx" data-presets="react"></script>
@@ -84,17 +85,55 @@ function Placeholder({ id }) {
   );
 }
 
+function LoadingScreen() {
+  return (
+    <div style={{ height:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
+      background:'linear-gradient(145deg,#0c1320 0%,#0f2044 45%,#1a3a6e 100%)' }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ width:56, height:56, border:'3px solid rgba(255,255,255,0.15)', borderTop:'3px solid #60a5fa',
+          borderRadius:'50%', animation:'tf-spin 0.8s linear infinite', margin:'0 auto 18px' }} />
+        <p style={{ color:'rgba(255,255,255,0.55)', fontSize:14, fontFamily:'var(--font-sans)' }}>Loading TechyFuel OS…</p>
+      </div>
+      <style>{`@keyframes tf-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
 function App() {
   const [active, setActive] = React.useState('dashboard');
   const [aiOpen, setAiOpen] = React.useState(false);
-  const route = ROUTES[active];
-  const meta = route || { crumb: 'TechyFuel OS', title: (PLACEHOLDER[active] || ['', 'Module'])[1] };
+  const [authUser, setAuthUser] = React.useState(null);
+  const [authLoading, setAuthLoading] = React.useState(true);
 
   React.useEffect(() => { window.TFNavigate = setActive; }, [setActive]);
 
+  React.useEffect(() => {
+    if (!window.db) { setAuthLoading(false); return; }
+    window.db.auth.getSession().then(({ data: { session } }) => {
+      setAuthUser(session?.user ?? null);
+      setAuthLoading(false);
+    }).catch(() => setAuthLoading(false));
+    const { data: { subscription } } = window.db.auth.onAuthStateChange((_event, session) => {
+      setAuthUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    if (window.db) await window.db.auth.signOut();
+    setAuthUser(null);
+  };
+
+  if (authLoading) return <LoadingScreen />;
+  if (!authUser && window.db) return <AuthScreen onAuth={setAuthUser} />;
+
+  const route = ROUTES[active];
+  const meta = route || { crumb: 'TechyFuel OS', title: (PLACEHOLDER[active] || ['', 'Module'])[1] };
+
   return (
     <>
-      <AppShell active={active} onNavigate={setActive} title={meta.title} crumb={meta.crumb} onOpenAI={() => setAiOpen(true)}>
+      <AppShell active={active} onNavigate={setActive} title={meta.title} crumb={meta.crumb}
+        onOpenAI={() => setAiOpen(true)} authUser={authUser} onSignOut={handleSignOut}>
         {route ? route.render() : <Placeholder id={active} />}
       </AppShell>
       <AIPanel open={aiOpen} onClose={() => setAiOpen(false)} />
