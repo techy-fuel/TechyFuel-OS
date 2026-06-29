@@ -26,6 +26,7 @@ const TF_NAV = [
     { id: 'chat', label: 'Team Chat', icon: 'message-square' },
     { id: 'automations', label: 'Automations', icon: 'zap' },
     { id: 'integrations', label: 'Integrations', icon: 'plug' },
+    { id: 'workspace', label: 'Workspace', icon: 'briefcase' },
     { id: 'settings', label: 'Settings', icon: 'settings' },
   ]},
 ];

@@ -248,6 +248,26 @@
       }
     },
 
+    // ── WORKSPACES ───────────────────────────────────────
+    getWorkspaces: () => client.from('workspaces').select('*').order('created_at'),
+    createWorkspace: (d) => client.from('workspaces').insert(d).select().single(),
+    updateWorkspace: (id, d) => client.from('workspaces').update(d).eq('id', id).select().single(),
+
+    getTeams: (workspaceId) => {
+      let q = client.from('teams').select('*, team_memberships(member_id, role, team_members(name, avatar_url, role))');
+      if (workspaceId) q = q.eq('workspace_id', workspaceId);
+      return q.order('name');
+    },
+    createTeam: (d) => client.from('teams').insert(d).select().single(),
+    updateTeam: (id, d) => client.from('teams').update(d).eq('id', id).select().single(),
+    deleteTeam: (id) => client.from('teams').delete().eq('id', id),
+    addTeamMembership: (d) => client.from('team_memberships').insert(d).select().single(),
+    removeTeamMembership: (teamId, memberId) => client.from('team_memberships').delete().eq('team_id', teamId).eq('member_id', memberId),
+
+    getWorkspaceInvites: (workspaceId) => client.from('workspace_invites').select('*, team_members!invited_by(name)').eq('workspace_id', workspaceId).order('created_at', { ascending: false }),
+    createWorkspaceInvite: (d) => client.from('workspace_invites').insert(d).select().single(),
+    revokeInvite: (id) => client.from('workspace_invites').delete().eq('id', id),
+
     // ── NOTIFICATIONS ─────────────────────────────────────
     getNotifications: (recipientId, limit = 30) => {
       let q = client.from('notifications').select('*');

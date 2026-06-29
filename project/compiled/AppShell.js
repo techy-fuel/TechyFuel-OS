@@ -81,6 +81,10 @@
       label: 'Integrations',
       icon: 'plug'
     }, {
+      id: 'workspace',
+      label: 'Workspace',
+      icon: 'briefcase'
+    }, {
       id: 'settings',
       label: 'Settings',
       icon: 'settings'

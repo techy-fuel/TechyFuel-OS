@@ -41,6 +41,7 @@
 <script type="text/babel" src="Automations.jsx" data-presets="react"></script>
 <script type="text/babel" src="Docs.jsx" data-presets="react"></script>
 <script type="text/babel" src="Integrations.jsx" data-presets="react"></script>
+<script type="text/babel" src="Workspace.jsx" data-presets="react"></script>
 <script type="text/babel" data-presets="react">
 const ROUTES = {
   dashboard: { crumb: 'Workspace', title: 'Executive dashboard', render: () => <Dashboard /> },
@@ -60,6 +61,7 @@ const ROUTES = {
   calendar:  { crumb: 'Workspace', title: 'Calendar', render: () => <Calendar /> },
   automations:  { crumb: 'Business', title: 'Automations', render: () => <Automations /> },
   integrations: { crumb: 'Business', title: 'Integrations', render: () => <Integrations /> },
+  workspace:    { crumb: 'Business', title: 'Workspace', render: () => <Workspace /> },
   settings:  { crumb: 'Workspace', title: 'Settings', render: () => <Settings /> },
 };
 const PLACEHOLDER = {};
