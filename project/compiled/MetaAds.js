@@ -6,8 +6,6 @@
     Avatar,
     ProgressBar
   } = window.TechyFuelOSDesignSystem_be0222;
-  const TF_SPEND = [3.2, 3.6, 4.1, 3.9, 4.8, 5.2, 4.9, 5.6, 6.1, 5.8, 6.4, 7.0];
-  const TF_ROAS = [2.8, 3.1, 3.4, 3.2, 3.9, 4.2, 4.6, 4.4, 5.1, 4.9, 5.4, 6.2];
   const CAMP_STATUS = {
     active: {
       tone: 'success',
@@ -30,71 +28,21 @@
       label: 'Draft'
     }
   };
-  const FALLBACK_CAMPAIGNS = [{
-    id: 'f1',
-    name: 'Nova — Lead Gen Q2',
-    clients: {
-      name: 'Nova Tech'
-    },
-    status: 'active',
-    spent: 2840,
-    impressions: 184200,
-    clicks: 3210,
-    conversions: 142,
-    budget_daily: 150
-  }, {
-    id: 'f2',
-    name: 'Apex — Property Listings',
-    clients: {
-      name: 'Apex Realty'
-    },
-    status: 'active',
-    spent: 4100,
-    impressions: 98500,
-    clicks: 1870,
-    conversions: 89,
-    budget_daily: 200
-  }, {
-    id: 'f3',
-    name: 'Bloom — Brand Awareness',
-    clients: {
-      name: 'Bloom Foods'
-    },
-    status: 'paused',
-    spent: 400,
-    impressions: 22000,
-    clicks: 310,
-    conversions: 8,
-    budget_daily: 50
-  }];
   function fmtSpend(n) {
     if (!n && n !== 0) return '$0';
     if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
     return '$' + Math.round(n);
   }
-  function calcCPL(spent, conversions) {
-    if (!conversions || conversions === 0) return '—';
-    return '$' + (spent / conversions).toFixed(2);
-  }
-  function calcROAS(conversions, spent) {
-    if (!spent || spent === 0) return '—';
-    const rev = conversions * 35;
-    return (rev / spent).toFixed(1) + '×';
-  }
   function budgetPace(spent, budgetDaily) {
-    if (!budgetDaily || budgetDaily === 0) return 50;
-    const monthlyBudget = budgetDaily * 30;
-    return Math.min(100, Math.round(spent / monthlyBudget * 100));
+    if (!budgetDaily || budgetDaily === 0) return 0;
+    return Math.min(100, Math.round(spent / (budgetDaily * 30) * 100));
   }
   function AdStat({
     label,
     value,
-    delta,
-    dir,
     sub,
     color
   }) {
-    const pos = dir !== 'down';
     return /*#__PURE__*/React.createElement(Card, {
       padding: "md",
       style: {
@@ -110,13 +58,7 @@
         textTransform: 'uppercase',
         color: 'var(--text-muted)'
       }
-    }, label), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 8
-      }
-    }, /*#__PURE__*/React.createElement("span", {
+    }, label), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 'var(--text-3xl)',
         fontWeight: 'var(--fw-extrabold)',
@@ -126,34 +68,87 @@
       }
     }, value), /*#__PURE__*/React.createElement("span", {
       style: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 2,
-        fontSize: 'var(--text-xs)',
-        fontWeight: 'var(--fw-bold)',
-        color: pos ? 'var(--green-600)' : 'var(--red-600)'
-      }
-    }, /*#__PURE__*/React.createElement(Icon, {
-      name: pos ? 'trending-up' : 'trending-down',
-      size: 13
-    }), " ", delta)), /*#__PURE__*/React.createElement("span", {
-      style: {
         fontSize: 'var(--text-xs)',
         color: 'var(--text-subtle)'
       }
     }, sub));
   }
   function MetaAds() {
-    const [campaigns, setCampaigns] = React.useState(FALLBACK_CAMPAIGNS);
+    const [campaigns, setCampaigns] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [clients, setClients] = React.useState([]);
+    const [modalOpen, setModalOpen] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [form, setForm] = React.useState({
+      name: '',
+      client_id: '',
+      platform: 'meta',
+      budget_daily: '',
+      status: 'draft'
+    });
+    function set(k, v) {
+      setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
     React.useEffect(() => {
-      if (!window.API) return;
+      if (!window.API) {
+        setLoading(false);
+        return;
+      }
       window.API.getAdCampaigns().then(r => {
-        if (r.data && r.data.length > 0) setCampaigns(r.data);
+        if (r.data) setCampaigns(r.data);
+      }).catch(() => {}).finally(() => setLoading(false));
+      window.API.getClients().then(r => {
+        if (r.data) setClients(r.data);
       }).catch(() => {});
     }, []);
+    async function handleNewCampaign() {
+      if (!form.name.trim()) return;
+      setSaving(true);
+      try {
+        const payload = {
+          name: form.name,
+          platform: form.platform,
+          status: form.status,
+          spent: 0,
+          impressions: 0,
+          clicks: 0,
+          conversions: 0
+        };
+        if (form.client_id) payload.client_id = form.client_id;
+        if (form.budget_daily) payload.budget_daily = Number(form.budget_daily);
+        if (window.API) {
+          const {
+            data
+          } = await window.API.createCampaign(payload);
+          if (data) {
+            const clientObj = clients.find(c => c.id === form.client_id);
+            setCampaigns(prev => [{
+              ...data,
+              clients: clientObj ? {
+                name: clientObj.company || clientObj.name
+              } : null
+            }, ...prev]);
+          }
+        }
+        setModalOpen(false);
+        setForm({
+          name: '',
+          client_id: '',
+          platform: 'meta',
+          budget_daily: '',
+          status: 'draft'
+        });
+      } finally {
+        setSaving(false);
+      }
+    }
     const totalSpend = campaigns.reduce((s, c) => s + (c.spent || 0), 0);
+    const totalImpr = campaigns.reduce((s, c) => s + (c.impressions || 0), 0);
     const totalLeads = campaigns.reduce((s, c) => s + (c.conversions || 0), 0);
-    const avgCPL = totalLeads > 0 ? (totalSpend / totalLeads).toFixed(2) : '—';
+    const avgCPL = totalLeads > 0 ? '$' + (totalSpend / totalLeads).toFixed(2) : '—';
     const activeCnt = campaigns.filter(c => c.status === 'active').length;
     return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -205,32 +200,8 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, campaigns.length, " campaigns · ", activeCnt, " active"))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        gap: 8
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        height: 36,
-        padding: '0 12px',
-        background: 'var(--slate-0)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-md)',
-        fontSize: 'var(--text-sm)',
-        fontWeight: 'var(--fw-semibold)',
-        color: 'var(--text-body)'
-      }
-    }, /*#__PURE__*/React.createElement(Icon, {
-      name: "calendar",
-      size: 16,
-      style: {
-        color: 'var(--text-muted)'
-      }
-    }), " All time"), /*#__PURE__*/React.createElement("button", {
+    }, campaigns.length, " campaign", campaigns.length !== 1 ? 's' : '', " · ", activeCnt, " active"))), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModalOpen(true),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -250,7 +221,7 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "plus",
       size: 16
-    }), " New campaign"))), /*#__PURE__*/React.createElement("div", {
+    }), " New campaign")), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
@@ -260,76 +231,22 @@
     }, /*#__PURE__*/React.createElement(AdStat, {
       label: "Total ad spend",
       value: fmtSpend(totalSpend),
-      delta: "18%",
-      sub: "All active campaigns"
+      sub: "All campaigns"
     }), /*#__PURE__*/React.createElement(AdStat, {
       label: "Total impressions",
-      value: campaigns.reduce((s, c) => s + (c.impressions || 0), 0).toLocaleString(),
-      delta: "12%",
+      value: totalImpr.toLocaleString(),
       sub: "Across all platforms",
       color: "var(--violet-600)"
     }), /*#__PURE__*/React.createElement(AdStat, {
       label: "Cost per lead",
-      value: avgCPL === '—' ? '—' : '$' + avgCPL,
-      delta: "9%",
-      dir: "down",
+      value: avgCPL,
       sub: "Avg across campaigns",
       color: "var(--blue-600)"
     }), /*#__PURE__*/React.createElement(AdStat, {
       label: "Conversions",
       value: String(totalLeads),
-      delta: "22%",
       sub: "Total leads generated"
-    })), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 16,
-        marginBottom: 16
-      }
-    }, /*#__PURE__*/React.createElement(Card, {
-      padding: "lg"
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 14
-      }
-    }, /*#__PURE__*/React.createElement("h3", {
-      style: {
-        fontSize: 'var(--text-lg)',
-        fontWeight: 'var(--fw-bold)'
-      }
-    }, "Ad spend trend"), /*#__PURE__*/React.createElement(Badge, {
-      tone: "brand"
-    }, "$ thousands")), /*#__PURE__*/React.createElement(Bars, {
-      data: TF_SPEND,
-      labels: ['', '', 'M', '', '', 'J', '', '', 'A', '', '', 'S'],
-      color: "var(--blue-400)",
-      highlight: "var(--blue-600)"
     })), /*#__PURE__*/React.createElement(Card, {
-      padding: "lg"
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 14
-      }
-    }, /*#__PURE__*/React.createElement("h3", {
-      style: {
-        fontSize: 'var(--text-lg)',
-        fontWeight: 'var(--fw-bold)'
-      }
-    }, "Performance trend"), /*#__PURE__*/React.createElement(Badge, {
-      tone: "success",
-      dot: true
-    }, "Improving")), /*#__PURE__*/React.createElement(AreaLine, {
-      data: TF_ROAS,
-      color: "var(--green-600)",
-      id: "roas"
-    }))), /*#__PURE__*/React.createElement(Card, {
       padding: "none"
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -344,7 +261,54 @@
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-bold)'
       }
-    }, "Campaigns by client"), window.TFLinkBtn ? React.createElement(window.TFLinkBtn, null, 'Export report') : null), /*#__PURE__*/React.createElement("table", {
+    }, "Campaigns by client")), loading && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: 32,
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "Loading…"), !loading && campaigns.length === 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '48px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 52,
+        height: 52,
+        borderRadius: 'var(--radius-xl)',
+        background: 'var(--slate-100)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "megaphone",
+      size: 24,
+      style: {
+        color: 'var(--text-subtle)'
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-strong)'
+      }
+    }, "No campaigns yet"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        marginTop: 4
+      }
+    }, "Create your first campaign using the button above"))), !loading && campaigns.length > 0 && /*#__PURE__*/React.createElement("table", {
       style: {
         width: '100%',
         borderCollapse: 'collapse'
@@ -444,6 +408,70 @@
         tone: pace > 85 ? 'warning' : 'brand',
         size: "sm"
       })));
+    })))), /*#__PURE__*/React.createElement(Modal, {
+      open: modalOpen,
+      onClose: () => setModalOpen(false),
+      title: "New campaign",
+      onSubmit: handleNewCampaign,
+      loading: saving,
+      submitLabel: "Create"
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Campaign name",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "e.g. Summer Lead Gen Q3",
+      value: form.name,
+      onChange: e => set('name', e.target.value)
+    })), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Platform"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.platform,
+      onChange: e => set('platform', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "meta"
+    }, "Meta (FB/IG)"), /*#__PURE__*/React.createElement("option", {
+      value: "google"
+    }, "Google"), /*#__PURE__*/React.createElement("option", {
+      value: "tiktok"
+    }, "TikTok"), /*#__PURE__*/React.createElement("option", {
+      value: "linkedin"
+    }, "LinkedIn"))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Status"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.status,
+      onChange: e => set('status', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "draft"
+    }, "Draft"), /*#__PURE__*/React.createElement("option", {
+      value: "active"
+    }, "Active"), /*#__PURE__*/React.createElement("option", {
+      value: "paused"
+    }, "Paused")))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Client"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.client_id,
+      onChange: e => set('client_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "No client"), clients.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.company || c.name)))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Daily budget ($)"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      placeholder: "0",
+      value: form.budget_daily,
+      onChange: e => set('budget_daily', e.target.value)
     })))));
   }
   Object.assign(window, {

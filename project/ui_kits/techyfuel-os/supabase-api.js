@@ -87,6 +87,7 @@
       if (clientId) q = q.eq('client_id', clientId);
       return q.order('created_at', { ascending: false });
     },
+    createCampaign: (d) => client.from('ad_campaigns').insert(d).select().single(),
     updateCampaign: (id, d) => client.from('ad_campaigns').update(d).eq('id', id).select().single(),
 
     // ── FINANCE ──────────────────────────────────────────
