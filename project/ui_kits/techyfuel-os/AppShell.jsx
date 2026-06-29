@@ -23,6 +23,7 @@ const TF_NAV = [
     { id: 'reports', label: 'Reports', icon: 'chart-line' },
     { id: 'files', label: 'Files', icon: 'folder' },
     { id: 'team', label: 'Team', icon: 'users' },
+    { id: 'chat', label: 'Team Chat', icon: 'message-square' },
     { id: 'settings', label: 'Settings', icon: 'settings' },
   ]},
 ];
@@ -318,14 +319,17 @@ function TopBar({ title, crumb, onOpenAI, onNavigate }) {
   );
 }
 
+const FULL_HEIGHT_SCREENS = new Set(['chat']);
+
 function AppShell({ active, onNavigate, title, crumb, onOpenAI, children }) {
   useLucide();
+  const fullH = FULL_HEIGHT_SCREENS.has(active);
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%', background: 'var(--surface-page)' }}>
       <Sidebar active={active} onNavigate={onNavigate} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
         <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onNavigate={onNavigate} />
-        <main className="tf-scroll" style={{ flex: 1, overflowY: 'auto' }}>{children}</main>
+        <main className={fullH ? '' : 'tf-scroll'} style={{ flex: 1, overflowY: fullH ? 'hidden' : 'auto', overflow: fullH ? 'hidden' : undefined }}>{children}</main>
       </div>
     </div>
   );

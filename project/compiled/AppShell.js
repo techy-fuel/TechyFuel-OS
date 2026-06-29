@@ -69,6 +69,10 @@
       label: 'Team',
       icon: 'users'
     }, {
+      id: 'chat',
+      label: 'Team Chat',
+      icon: 'message-square'
+    }, {
       id: 'settings',
       label: 'Settings',
       icon: 'settings'
@@ -643,6 +647,7 @@
       }
     }), " ", item.label)))));
   }
+  const FULL_HEIGHT_SCREENS = new Set(['chat']);
   function AppShell({
     active,
     onNavigate,
@@ -652,6 +657,7 @@
     children
   }) {
     useLucide();
+    const fullH = FULL_HEIGHT_SCREENS.has(active);
     return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
@@ -676,10 +682,11 @@
       onOpenAI: onOpenAI,
       onNavigate: onNavigate
     }), /*#__PURE__*/React.createElement("main", {
-      className: "tf-scroll",
+      className: fullH ? '' : 'tf-scroll',
       style: {
         flex: 1,
-        overflowY: 'auto'
+        overflowY: fullH ? 'hidden' : 'auto',
+        overflow: fullH ? 'hidden' : undefined
       }
     }, children)));
   }

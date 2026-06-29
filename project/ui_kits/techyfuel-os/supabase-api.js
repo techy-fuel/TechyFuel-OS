@@ -46,7 +46,15 @@
       client.from('projects')
         .select('*, clients(name)')
         .order('created_at', { ascending: false }),
-    createProject: (d) => client.from('projects').insert(d).select().single(),
+    createProject: async (d) => {
+      const result = await client.from('projects').insert(d).select().single();
+      if (result.data) {
+        try {
+          await client.from('channels').insert({ name: result.data.name.toLowerCase().replace(/\s+/g, '-'), type: 'project', project_id: result.data.id, description: `Channel for project: ${result.data.name}` });
+        } catch {}
+      }
+      return result;
+    },
     updateProject: (id, d) => client.from('projects').update(d).eq('id', id).select().single(),
 
     // ── TASKS ────────────────────────────────────────────
@@ -113,6 +121,59 @@
       return client.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
     },
     createFile: (d) => client.from('files').insert(d).select().single(),
+
+    // ── CHAT ─────────────────────────────────────────────
+    getChannels: () =>
+      client.from('channels').select('*').order('created_at', { ascending: true }),
+    createChannel: (d) => client.from('channels').insert(d).select().single(),
+    updateChannel: (id, d) => client.from('channels').update(d).eq('id', id).select().single(),
+    deleteChannel: (id) => client.from('channels').delete().eq('id', id),
+
+    getChannelMembers: (channelId) =>
+      client.from('channel_members')
+        .select('*, team_members(id, name, avatar_url, role)')
+        .eq('channel_id', channelId),
+    addChannelMember: (d) => client.from('channel_members').insert(d).select().single(),
+    removeChannelMember: (channelId, memberId) =>
+      client.from('channel_members').delete().eq('channel_id', channelId).eq('member_id', memberId),
+
+    getMessages: (channelId, { parentId = null } = {}) => {
+      let q = client.from('messages')
+        .select('*, team_members!sender_id(id, name, avatar_url)')
+        .eq('channel_id', channelId);
+      if (parentId) q = q.eq('thread_parent_id', parentId);
+      else q = q.is('thread_parent_id', null);
+      return q.order('created_at', { ascending: true });
+    },
+    sendMessage: (d) => client.from('messages').insert(d).select('*, team_members!sender_id(id, name, avatar_url)').single(),
+    updateMessage: (id, d) => client.from('messages').update(d).eq('id', id).select().single(),
+    deleteMessage: (id) => client.from('messages').delete().eq('id', id),
+    pinMessage: (id, pinned) => client.from('messages').update({ pinned }).eq('id', id).select().single(),
+    getPinnedMessages: (channelId) =>
+      client.from('messages')
+        .select('*, team_members!sender_id(id, name, avatar_url)')
+        .eq('channel_id', channelId).eq('pinned', true)
+        .order('created_at', { ascending: false }),
+    searchMessages: (query) =>
+      client.from('messages')
+        .select('*, team_members!sender_id(id, name, avatar_url), channels(name)')
+        .ilike('content', `%${query}%`)
+        .order('created_at', { ascending: false })
+        .limit(30),
+
+    getReactions: (messageId) =>
+      client.from('message_reactions')
+        .select('*, team_members(id, name)')
+        .eq('message_id', messageId),
+    addReaction: (d) => client.from('message_reactions').insert(d).select().single(),
+    removeReaction: (messageId, memberId, emoji) =>
+      client.from('message_reactions').delete()
+        .eq('message_id', messageId).eq('member_id', memberId).eq('emoji', emoji),
+
+    subscribeToMessages: (channelId, onNew) =>
+      client.channel(`chat:${channelId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` }, payload => onNew(payload.new))
+        .subscribe(),
   };
 
   console.log('[TechyFuel OS] Supabase connected:', window.__SUPABASE_URL);
