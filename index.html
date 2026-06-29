@@ -50,6 +50,7 @@
 <script src="project/compiled/Files.js"></script>
 <script src="project/compiled/Team.js"></script>
 <script src="project/compiled/Settings.js"></script>
+<script src="project/compiled/Calendar.js"></script>
 
 <!-- App router -->
 <script>
@@ -71,11 +72,10 @@
     files:     { crumb: 'Business',   title: 'Files',                comp: 'Files' },
     team:      { crumb: 'Business',   title: 'Team',                 comp: 'Team' },
     settings:  { crumb: 'Workspace',  title: 'Settings',             comp: 'Settings' },
+    calendar:  { crumb: 'Workspace',  title: 'Calendar',             comp: 'Calendar' },
   };
 
-  var PLACEHOLDER = {
-    calendar: ['calendar-days', 'Calendar'],
-  };
+  var PLACEHOLDER = {};
 
   var e = React.createElement;
 
