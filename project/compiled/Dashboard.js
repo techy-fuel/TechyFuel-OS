@@ -8,8 +8,6 @@
     AvatarGroup,
     ProgressBar
   } = window.TechyFuelOSDesignSystem_be0222;
-  const TF_REVENUE = [22, 26, 24, 31, 29, 35, 38, 36, 42, 40, 45, 48.2];
-  const TF_CLIENTS_CHART = [9, 11, 12, 14, 15, 18, 19, 22, 24, 26, 29, 32];
   function SectionHead({
     title,
     action
@@ -29,9 +27,11 @@
     }, title), action);
   }
   function LinkBtn({
-    children
+    children,
+    onClick
   }) {
     return /*#__PURE__*/React.createElement("button", {
+      onClick: onClick,
       style: {
         background: 'none',
         border: 'none',
@@ -44,52 +44,59 @@
       }
     }, children);
   }
-  const TF_ACTIVITY = [{
-    who: 'Sara Khan',
-    action: 'approved the homepage design for',
-    target: 'Nova Skincare',
-    time: '12m',
-    icon: 'check',
-    tone: 'success'
-  }, {
-    who: 'Ali Raza',
-    action: 'uploaded new creatives to',
-    target: 'Nova Tech',
-    time: '48m',
-    icon: 'upload',
-    tone: 'brand'
-  }, {
-    who: 'Hina Malik',
-    action: 'scheduled 3 posts for',
-    target: 'Bloom Foods',
-    time: '2h',
-    icon: 'calendar',
-    tone: 'violet'
-  }, {
-    who: 'AI Assistant',
-    action: 'flagged a deadline risk on',
-    target: 'Apex Lead Gen Ads',
-    time: '3h',
-    icon: 'sparkles',
-    tone: 'warning'
-  }, {
-    who: 'Omar Sheikh',
-    action: 'completed wireframes for',
-    target: 'Nova Website Revamp',
-    time: '5h',
-    icon: 'check',
-    tone: 'success'
-  }];
+  function fmtMoney(n) {
+    if (!n) return '$0';
+    if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
+    return '$' + Math.round(n);
+  }
+  function fmtDueDate(ds) {
+    if (!ds) return '—';
+    const d = new Date(ds);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((d - today) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    return d.toLocaleDateString('en', {
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+  function fmtWhen(ds) {
+    if (!ds) return '';
+    const diff = Math.round((Date.now() - new Date(ds)) / 60000);
+    if (diff < 60) return diff + 'm ago';
+    if (diff < 1440) return Math.round(diff / 60) + 'h ago';
+    return Math.round(diff / 1440) + 'd ago';
+  }
+  const STATUS_TONE = {
+    todo: 'brand',
+    in_progress: 'brand',
+    review: 'warning',
+    done: 'success',
+    backlog: 'neutral'
+  };
+  const STATUS_ICON = {
+    todo: 'circle',
+    in_progress: 'loader',
+    review: 'eye',
+    done: 'check',
+    backlog: 'inbox'
+  };
+  const STATUS_BG = {
+    todo: ['var(--blue-50)', 'var(--blue-600)'],
+    in_progress: ['var(--violet-50)', 'var(--violet-600)'],
+    review: ['var(--amber-50)', 'var(--amber-600)'],
+    done: ['var(--green-50)', 'var(--green-600)'],
+    backlog: ['var(--slate-100)', 'var(--slate-500)']
+  };
   function ActivityRow({
-    a
+    item
   }) {
-    const tones = {
-      success: ['var(--green-50)', 'var(--green-600)'],
-      brand: ['var(--blue-50)', 'var(--blue-600)'],
-      violet: ['var(--violet-50)', 'var(--violet-600)'],
-      warning: ['var(--amber-50)', 'var(--amber-600)']
-    };
-    const [bg, fg] = tones[a.tone] || tones.brand;
+    const [bg, fg] = STATUS_BG[item.status] || STATUS_BG.todo;
+    const icon = STATUS_ICON[item.status] || 'activity';
+    const label = item.status === 'in_progress' ? 'In progress' : item.status === 'done' ? 'Completed' : item.status === 'review' ? 'In review' : item.status || 'Task';
     return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
@@ -110,66 +117,38 @@
         justifyContent: 'center'
       }
     }, /*#__PURE__*/React.createElement(Icon, {
-      name: a.icon,
+      name: icon,
       size: 15
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         fontSize: 'var(--text-sm)',
         color: 'var(--text-body)',
-        lineHeight: 1.45
+        lineHeight: 1.45,
+        minWidth: 0
       }
     }, /*#__PURE__*/React.createElement("strong", {
       style: {
         color: 'var(--text-strong)',
         fontWeight: 'var(--fw-semibold)'
       }
-    }, a.who), " ", a.action, " ", /*#__PURE__*/React.createElement("strong", {
+    }, item.title), item.project && /*#__PURE__*/React.createElement("span", {
       style: {
-        color: 'var(--text-strong)',
-        fontWeight: 'var(--fw-semibold)'
+        color: 'var(--text-muted)'
       }
-    }, a.target)), /*#__PURE__*/React.createElement("span", {
+    }, " · ", item.project), item.assignee && /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: 'var(--text-subtle)',
+        fontSize: 'var(--text-xs)'
+      }
+    }, " — ", item.assignee)), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 'var(--text-xs)',
         color: 'var(--text-subtle)',
         whiteSpace: 'nowrap'
       }
-    }, a.time));
+    }, fmtWhen(item.created_at)));
   }
-  function fmtMoney(n) {
-    if (!n) return '$0';
-    if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
-    return '$' + n;
-  }
-  function fmtDueDate(dateStr) {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diff = Math.round((d - today) / 86400000);
-    if (diff === 0) return 'Today';
-    if (diff === 1) return 'Tomorrow';
-    return d.toLocaleDateString('en', {
-      month: 'short',
-      day: 'numeric'
-    });
-  }
-  const FALLBACK_DEADLINES = [{
-    project: 'Apex Lead Gen Ads',
-    client: 'Apex Realty',
-    due: 'Jun 28',
-    urgent: false,
-    pct: 82,
-    team: ['Sara Khan', 'Ali Raza']
-  }, {
-    project: 'Nova Launch Campaign',
-    client: 'Nova Tech',
-    due: 'Jul 15',
-    urgent: false,
-    pct: 65,
-    team: ['Zara Ahmed']
-  }];
   function Dashboard() {
     const [stats, setStats] = React.useState({
       activeClients: 0,
@@ -177,11 +156,19 @@
       openTasks: 0,
       revenue: 0
     });
-    const [deadlines, setDeadlines] = React.useState(FALLBACK_DEADLINES);
-    const [loaded, setLoaded] = React.useState(false);
+    const [deadlines, setDeadlines] = React.useState([]);
+    const [activity, setActivity] = React.useState([]);
+    const [tasksByStatus, setTasksByStatus] = React.useState({
+      todo: 0,
+      in_progress: 0,
+      review: 0,
+      done: 0
+    });
+    const [greeting, setGreeting] = React.useState('');
     const [clients, setClients] = React.useState([]);
     const [modalOpen, setModalOpen] = React.useState(false);
     const [saving, setSaving] = React.useState(false);
+    const [statsLoaded, setStatsLoaded] = React.useState(false);
     const [form, setForm] = React.useState({
       name: '',
       client_id: '',
@@ -201,20 +188,50 @@
       window.API.getDashboardStats().then(s => {
         if (s) {
           setStats(s);
-          setLoaded(true);
+          setStatsLoaded(true);
         }
       }).catch(() => {});
       window.API.getTasks().then(r => {
         if (!r.data) return;
+        // Upcoming deadlines
         const upcoming = r.data.filter(t => t.due_date && t.status !== 'done').sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 4).map(t => ({
           project: t.title,
           client: t.clients ? t.clients.name : t.projects ? t.projects.name : '',
           due: fmtDueDate(t.due_date),
           urgent: new Date(t.due_date) < new Date(),
-          pct: t.projects ? t.projects.progress || 50 : 50,
+          pct: 50,
           team: t.team_members ? [t.team_members.name] : []
         }));
-        if (upcoming.length > 0) setDeadlines(upcoming);
+        setDeadlines(upcoming);
+
+        // Task counts by status
+        const counts = {
+          todo: 0,
+          in_progress: 0,
+          review: 0,
+          done: 0
+        };
+        r.data.forEach(t => {
+          if (counts[t.status] !== undefined) counts[t.status]++;
+        });
+        setTasksByStatus(counts);
+
+        // Recent activity = last 5 tasks (any status)
+        const recent = [...r.data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5).map(t => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          project: t.projects?.name || '',
+          assignee: t.team_members?.name || '',
+          created_at: t.created_at
+        }));
+        setActivity(recent);
+      }).catch(() => {});
+      window.API.getTeam().then(r => {
+        if (r.data && r.data.length > 0) {
+          const first = r.data[0].name.split(' ')[0];
+          setGreeting(first);
+        }
       }).catch(() => {});
       window.API.getClients().then(r => {
         if (r.data) setClients(r.data);
@@ -247,10 +264,21 @@
         setSaving(false);
       }
     }
-    const revenueDisplay = loaded ? fmtMoney(stats.revenue) : '$12,400';
-    const projectsDisplay = loaded ? String(stats.activeProjects) : '5';
-    const tasksDisplay = loaded ? String(stats.openTasks) : '6';
-    const clientsDisplay = loaded ? String(stats.activeClients) : '4';
+    const revenueDisplay = fmtMoney(stats.revenue);
+    const totalTasks = Object.values(tasksByStatus).reduce((s, n) => s + n, 0);
+    const donutSegments = [{
+      value: tasksByStatus.in_progress || 0,
+      color: 'var(--blue-600)'
+    }, {
+      value: tasksByStatus.review || 0,
+      color: 'var(--sky-500)'
+    }, {
+      value: tasksByStatus.todo || 0,
+      color: 'var(--violet-500)'
+    }, {
+      value: tasksByStatus.done || 0,
+      color: 'var(--green-500)'
+    }];
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,
@@ -275,7 +303,7 @@
         color: 'var(--text-muted)',
         marginBottom: 4
       }
-    }, "Good morning, Sara"), /*#__PURE__*/React.createElement("h1", {
+    }, greeting ? `Good morning, ${greeting}` : 'Good morning'), /*#__PURE__*/React.createElement("h1", {
       style: {
         fontSize: 'var(--text-3xl)',
         fontWeight: 'var(--fw-extrabold)',
@@ -343,32 +371,27 @@
     }, /*#__PURE__*/React.createElement(StatCard, {
       label: "Revenue (paid)",
       value: revenueDisplay,
-      delta: "12.5%",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "dollar-sign"
       }),
       tone: "success"
     }), /*#__PURE__*/React.createElement(StatCard, {
       label: "Active projects",
-      value: projectsDisplay,
-      delta: "4.0%",
+      value: String(stats.activeProjects),
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "folder-kanban"
       }),
       tone: "brand"
     }), /*#__PURE__*/React.createElement(StatCard, {
       label: "Open tasks",
-      value: tasksDisplay,
-      delta: "-3.1%",
-      deltaDirection: "down",
+      value: String(stats.openTasks),
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "circle-check-big"
       }),
       tone: "warning"
     }), /*#__PURE__*/React.createElement(StatCard, {
       label: "Active clients",
-      value: clientsDisplay,
-      delta: "6.2%",
+      value: String(stats.activeClients),
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "users"
       }),
@@ -383,11 +406,7 @@
     }, /*#__PURE__*/React.createElement(Card, {
       padding: "lg"
     }, /*#__PURE__*/React.createElement(SectionHead, {
-      title: "Revenue growth",
-      action: /*#__PURE__*/React.createElement(Badge, {
-        tone: "success",
-        dot: true
-      }, "+24% YTD")
+      title: "Revenue (paid invoices)"
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
@@ -402,46 +421,41 @@
         letterSpacing: '-0.02em',
         fontVariantNumeric: 'tabular-nums'
       }
-    }, "$432.6K"), /*#__PURE__*/React.createElement("span", {
+    }, revenueDisplay), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 'var(--text-sm)',
         color: 'var(--text-muted)'
       }
-    }, "last 12 months")), /*#__PURE__*/React.createElement(AreaLine, {
-      data: TF_REVENUE,
-      id: "rev"
-    }), /*#__PURE__*/React.createElement("div", {
+    }, "total collected")), statsLoaded && stats.revenue === 0 ? /*#__PURE__*/React.createElement("div", {
       style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginTop: 8,
-        fontSize: 'var(--text-2xs)',
-        color: 'var(--text-subtle)'
+        padding: '32px 0',
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
       }
-    }, /*#__PURE__*/React.createElement("span", null, "Jul"), /*#__PURE__*/React.createElement("span", null, "Sep"), /*#__PURE__*/React.createElement("span", null, "Nov"), /*#__PURE__*/React.createElement("span", null, "Jan"), /*#__PURE__*/React.createElement("span", null, "Mar"), /*#__PURE__*/React.createElement("span", null, "May"))), /*#__PURE__*/React.createElement(Card, {
+    }, "No paid invoices yet") : /*#__PURE__*/React.createElement(AreaLine, {
+      data: [1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 8, stats.revenue ? Math.round(stats.revenue / 1000) : 10],
+      id: "rev"
+    })), /*#__PURE__*/React.createElement(Card, {
       padding: "lg"
     }, /*#__PURE__*/React.createElement(SectionHead, {
-      title: "Project status"
-    }), /*#__PURE__*/React.createElement("div", {
+      title: "Tasks by status"
+    }), totalTasks === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '32px 0',
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "No tasks yet") : /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
         gap: 14
       }
     }, /*#__PURE__*/React.createElement(Donut, {
-      segments: [{
-        value: 11,
-        color: 'var(--blue-600)'
-      }, {
-        value: 7,
-        color: 'var(--sky-500)'
-      }, {
-        value: 5,
-        color: 'var(--violet-500)'
-      }, {
-        value: 4,
-        color: 'var(--green-500)'
-      }]
+      segments: donutSegments,
+      label: totalTasks
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
@@ -449,7 +463,7 @@
         gap: 8,
         flex: 1
       }
-    }, [['In progress', 11, 'var(--blue-600)'], ['Review', 7, 'var(--sky-500)'], ['Client approval', 5, 'var(--violet-500)'], ['Completed', 4, 'var(--green-500)']].map(([l, n, c]) => /*#__PURE__*/React.createElement("div", {
+    }, [['In progress', tasksByStatus.in_progress, 'var(--blue-600)'], ['Review', tasksByStatus.review, 'var(--sky-500)'], ['Todo', tasksByStatus.todo, 'var(--violet-500)'], ['Done', tasksByStatus.done, 'var(--green-500)']].map(([l, n, c]) => /*#__PURE__*/React.createElement("div", {
       key: l,
       style: {
         display: 'flex',
@@ -485,17 +499,32 @@
     }, /*#__PURE__*/React.createElement(Card, {
       padding: "lg"
     }, /*#__PURE__*/React.createElement(SectionHead, {
-      title: "Recent activity",
-      action: /*#__PURE__*/React.createElement(LinkBtn, null, "View all")
-    }), /*#__PURE__*/React.createElement("div", null, TF_ACTIVITY.map((a, i) => /*#__PURE__*/React.createElement(ActivityRow, {
+      title: "Recent tasks"
+    }), activity.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '32px 0',
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "No tasks yet") : /*#__PURE__*/React.createElement("div", null, activity.map((a, i) => /*#__PURE__*/React.createElement(ActivityRow, {
       key: i,
-      a: a
+      item: a
     })))), /*#__PURE__*/React.createElement(Card, {
       padding: "lg"
     }, /*#__PURE__*/React.createElement(SectionHead, {
       title: "Upcoming deadlines",
-      action: /*#__PURE__*/React.createElement(LinkBtn, null, "Open calendar")
-    }), /*#__PURE__*/React.createElement("div", {
+      action: /*#__PURE__*/React.createElement(LinkBtn, {
+        onClick: () => window.TFNavigate && window.TFNavigate('calendar')
+      }, "Open calendar")
+    }), deadlines.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '32px 0',
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "No upcoming deadlines") : /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -523,18 +552,17 @@
       style: {
         fontSize: 'var(--text-sm)',
         fontWeight: 'var(--fw-semibold)',
-        color: 'var(--text-strong)'
+        color: 'var(--text-strong)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
       }
     }, d.project), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-xs)',
         color: 'var(--text-muted)'
       }
-    }, d.client)), /*#__PURE__*/React.createElement(AvatarGroup, {
-      people: d.team,
-      size: "xs",
-      max: 3
-    }), /*#__PURE__*/React.createElement(Badge, {
+    }, d.client)), /*#__PURE__*/React.createElement(Badge, {
       tone: d.urgent ? 'danger' : 'neutral',
       dot: d.urgent
     }, d.due)), /*#__PURE__*/React.createElement(ProgressBar, {
