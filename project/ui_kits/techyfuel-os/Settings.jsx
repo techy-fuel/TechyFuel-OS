@@ -15,7 +15,10 @@ function loadSaved() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
 }
 function saveSettings(obj) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); } catch {}
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+    window.dispatchEvent(new Event('tf-settings-saved'));
+  } catch {}
 }
 
 /* ── Notification row ─────────────────────────────────────────── */

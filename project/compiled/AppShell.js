@@ -14,8 +14,7 @@
     }, {
       id: 'tasks',
       label: 'Tasks',
-      icon: 'circle-check-big',
-      badge: '24'
+      icon: 'circle-check-big'
     }, {
       id: 'projects',
       label: 'Projects',
@@ -75,6 +74,13 @@
       icon: 'settings'
     }]
   }];
+  function readTFSettings() {
+    try {
+      return JSON.parse(localStorage.getItem('tf_settings') || '{}');
+    } catch {
+      return {};
+    }
+  }
   function SidebarItem({
     item,
     active,
@@ -128,6 +134,51 @@
     active,
     onNavigate
   }) {
+    const s0 = readTFSettings();
+    const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
+    const [logoUrl, setLogoUrl] = React.useState(s0.logoUrl || '');
+    const [teamCount, setTeamCount] = React.useState(null);
+    const [taskBadge, setTaskBadge] = React.useState(null);
+    React.useEffect(() => {
+      if (window.API) {
+        (async () => {
+          try {
+            const {
+              data: team
+            } = await window.API.getTeam();
+            if (Array.isArray(team)) setTeamCount(team.length);
+          } catch {}
+          try {
+            const {
+              data: tasks
+            } = await window.API.getTasks();
+            if (Array.isArray(tasks)) {
+              const open = tasks.filter(t => t.status !== 'done' && t.status !== 'completed').length;
+              setTaskBadge(open > 0 ? String(open) : null);
+            }
+          } catch {}
+        })();
+      }
+      function onSettingsChange() {
+        const s = readTFSettings();
+        setAgencyName(s.agencyName || '');
+        setLogoUrl(s.logoUrl || '');
+      }
+      window.addEventListener('tf-settings-saved', onSettingsChange);
+      window.addEventListener('storage', onSettingsChange);
+      return () => {
+        window.removeEventListener('tf-settings-saved', onSettingsChange);
+        window.removeEventListener('storage', onSettingsChange);
+      };
+    }, []);
+    const displayName = agencyName || 'My Agency';
+    const navWithBadge = TF_NAV.map(g => ({
+      ...g,
+      items: g.items.map(it => it.id === 'tasks' ? {
+        ...it,
+        badge: taskBadge || undefined
+      } : it)
+    }));
     return /*#__PURE__*/React.createElement("aside", {
       style: {
         width: 'var(--sidebar-width)',
@@ -173,7 +224,7 @@
         overflowY: 'auto',
         padding: '12px 12px 8px'
       }
-    }, TF_NAV.map(section => /*#__PURE__*/React.createElement("div", {
+    }, navWithBadge.map(section => /*#__PURE__*/React.createElement("div", {
       key: section.group,
       style: {
         marginBottom: 14
@@ -212,8 +263,18 @@
         borderRadius: 'var(--radius-md)',
         background: 'var(--slate-50)'
       }
-    }, /*#__PURE__*/React.createElement(Avatar, {
-      name: "Bright Pixel",
+    }, logoUrl ? /*#__PURE__*/React.createElement("img", {
+      src: logoUrl,
+      alt: "logo",
+      style: {
+        width: 28,
+        height: 28,
+        borderRadius: 'var(--radius-sm)',
+        objectFit: 'cover',
+        flexShrink: 0
+      }
+    }) : /*#__PURE__*/React.createElement(Avatar, {
+      name: displayName,
       size: "sm"
     }), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -229,12 +290,12 @@
         overflow: 'hidden',
         textOverflow: 'ellipsis'
       }
-    }, "Bright Pixel Co."), /*#__PURE__*/React.createElement("div", {
+    }, displayName), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-2xs)',
         color: 'var(--text-muted)'
       }
-    }, "Pro · 14 seats")), /*#__PURE__*/React.createElement(Icon, {
+    }, teamCount !== null ? `${teamCount} team member${teamCount !== 1 ? 's' : ''}` : 'Loading…')), /*#__PURE__*/React.createElement(Icon, {
       name: "chevrons-up-down",
       size: 16,
       style: {
@@ -247,6 +308,21 @@
     crumb,
     onOpenAI
   }) {
+    const s0 = readTFSettings();
+    const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
+    React.useEffect(() => {
+      function onSettingsChange() {
+        const s = readTFSettings();
+        setAgencyName(s.agencyName || '');
+      }
+      window.addEventListener('tf-settings-saved', onSettingsChange);
+      window.addEventListener('storage', onSettingsChange);
+      return () => {
+        window.removeEventListener('tf-settings-saved', onSettingsChange);
+        window.removeEventListener('storage', onSettingsChange);
+      };
+    }, []);
+    const avatarName = agencyName || 'TF';
     return /*#__PURE__*/React.createElement("header", {
       style: {
         height: 'var(--topbar-height)',
@@ -356,7 +432,7 @@
       name: "bell",
       size: 18
     })), /*#__PURE__*/React.createElement(Avatar, {
-      name: "Sara Khan",
+      name: avatarName,
       status: "online"
     }));
   }

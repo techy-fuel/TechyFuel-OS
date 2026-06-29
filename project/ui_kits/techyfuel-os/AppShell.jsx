@@ -5,7 +5,7 @@ const { IconButton, Avatar, Badge } = window.TechyFuelOSDesignSystem_be0222;
 const TF_NAV = [
   { group: 'Workspace', items: [
     { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
-    { id: 'tasks', label: 'Tasks', icon: 'circle-check-big', badge: '24' },
+    { id: 'tasks', label: 'Tasks', icon: 'circle-check-big' },
     { id: 'projects', label: 'Projects', icon: 'folder-kanban' },
     { id: 'calendar', label: 'Calendar', icon: 'calendar-days' },
   ]},
@@ -26,6 +26,10 @@ const TF_NAV = [
     { id: 'settings', label: 'Settings', icon: 'settings' },
   ]},
 ];
+
+function readTFSettings() {
+  try { return JSON.parse(localStorage.getItem('tf_settings') || '{}'); } catch { return {}; }
+}
 
 function SidebarItem({ item, active, onClick }) {
   const [hover, setHover] = React.useState(false);
@@ -55,6 +59,51 @@ function SidebarItem({ item, active, onClick }) {
 }
 
 function Sidebar({ active, onNavigate }) {
+  const s0 = readTFSettings();
+  const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
+  const [logoUrl,    setLogoUrl]    = React.useState(s0.logoUrl || '');
+  const [teamCount,  setTeamCount]  = React.useState(null);
+  const [taskBadge,  setTaskBadge]  = React.useState(null);
+
+  React.useEffect(() => {
+    if (window.API) {
+      (async () => {
+        try {
+          const { data: team } = await window.API.getTeam();
+          if (Array.isArray(team)) setTeamCount(team.length);
+        } catch {}
+        try {
+          const { data: tasks } = await window.API.getTasks();
+          if (Array.isArray(tasks)) {
+            const open = tasks.filter(t => t.status !== 'done' && t.status !== 'completed').length;
+            setTaskBadge(open > 0 ? String(open) : null);
+          }
+        } catch {}
+      })();
+    }
+
+    function onSettingsChange() {
+      const s = readTFSettings();
+      setAgencyName(s.agencyName || '');
+      setLogoUrl(s.logoUrl || '');
+    }
+    window.addEventListener('tf-settings-saved', onSettingsChange);
+    window.addEventListener('storage', onSettingsChange);
+    return () => {
+      window.removeEventListener('tf-settings-saved', onSettingsChange);
+      window.removeEventListener('storage', onSettingsChange);
+    };
+  }, []);
+
+  const displayName = agencyName || 'My Agency';
+
+  const navWithBadge = TF_NAV.map(g => ({
+    ...g,
+    items: g.items.map(it =>
+      it.id === 'tasks' ? { ...it, badge: taskBadge || undefined } : it
+    ),
+  }));
+
   return (
     <aside style={{
       width: 'var(--sidebar-width)', flex: 'none', height: '100%', boxSizing: 'border-box',
@@ -70,7 +119,7 @@ function Sidebar({ active, onNavigate }) {
       </div>
       {/* Nav */}
       <nav className="tf-scroll" style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 8px' }}>
-        {TF_NAV.map(section => (
+        {navWithBadge.map(section => (
           <div key={section.group} style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', color: 'var(--text-subtle)', padding: '0 10px 6px' }}>
               {section.group}
@@ -86,10 +135,14 @@ function Sidebar({ active, onNavigate }) {
       {/* Workspace footer */}
       <div style={{ padding: 12, borderTop: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 'var(--radius-md)', background: 'var(--slate-50)' }}>
-          <Avatar name="Bright Pixel" size="sm" />
+          {logoUrl
+            ? <img src={logoUrl} alt="logo" style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
+            : <Avatar name={displayName} size="sm" />}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Bright Pixel Co.</div>
-            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>Pro · 14 seats</div>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
+              {teamCount !== null ? `${teamCount} team member${teamCount !== 1 ? 's' : ''}` : 'Loading…'}
+            </div>
           </div>
           <Icon name="chevrons-up-down" size={16} style={{ color: 'var(--text-subtle)' }} />
         </div>
@@ -99,6 +152,24 @@ function Sidebar({ active, onNavigate }) {
 }
 
 function TopBar({ title, crumb, onOpenAI }) {
+  const s0 = readTFSettings();
+  const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
+
+  React.useEffect(() => {
+    function onSettingsChange() {
+      const s = readTFSettings();
+      setAgencyName(s.agencyName || '');
+    }
+    window.addEventListener('tf-settings-saved', onSettingsChange);
+    window.addEventListener('storage', onSettingsChange);
+    return () => {
+      window.removeEventListener('tf-settings-saved', onSettingsChange);
+      window.removeEventListener('storage', onSettingsChange);
+    };
+  }, []);
+
+  const avatarName = agencyName || 'TF';
+
   return (
     <header style={{
       height: 'var(--topbar-height)', flex: 'none', display: 'flex', alignItems: 'center', gap: 16,
@@ -126,7 +197,7 @@ function TopBar({ title, crumb, onOpenAI }) {
         <Icon name="sparkles" size={16} /> Ask AI
       </button>
       <IconButton label="Notifications" variant="ghost"><Icon name="bell" size={18} /></IconButton>
-      <Avatar name="Sara Khan" status="online" />
+      <Avatar name={avatarName} status="online" />
     </header>
   );
 }

@@ -18,6 +18,7 @@
   function saveSettings(obj) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+      window.dispatchEvent(new Event('tf-settings-saved'));
     } catch {}
   }
 
