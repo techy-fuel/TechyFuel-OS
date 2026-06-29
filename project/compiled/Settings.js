@@ -125,6 +125,7 @@
       if (!window.API) return;
       setSaving(true);
       try {
+        const savedSettings = loadSaved();
         const {
           data
         } = await window.API.addTeamMember({
@@ -135,10 +136,36 @@
         });
         if (data) setTeam(prev => [...prev, data]);
         setInviteOpen(false);
+
+        // Send invite email via API
+        try {
+          const res = await fetch('/api/invite', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              name: inviteName.trim(),
+              email: inviteEmail.trim(),
+              role: inviteRole,
+              agencyName: savedSettings.agencyName || '',
+              appUrl: window.location.origin
+            })
+          });
+          const json = await res.json();
+          if (json.skipped) {
+            showToast('Member added! (Set RESEND_API_KEY to send invite emails)');
+          } else if (json.ok) {
+            showToast('Member added & invite email sent!');
+          } else {
+            showToast('Member added (email failed — check RESEND_API_KEY)');
+          }
+        } catch {
+          showToast('Member added! (Email could not be sent)');
+        }
         setInviteName('');
         setInviteEmail('');
         setInviteRole('member');
-        showToast('Team member added!');
       } catch {
         showToast('Failed to add member');
       }
