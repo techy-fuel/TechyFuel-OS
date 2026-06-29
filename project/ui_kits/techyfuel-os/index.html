@@ -38,6 +38,7 @@
 <script type="text/babel" src="Calendar.jsx" data-presets="react"></script>
 <script type="text/babel" src="Settings.jsx" data-presets="react"></script>
 <script type="text/babel" src="TeamChat.jsx" data-presets="react"></script>
+<script type="text/babel" src="Automations.jsx" data-presets="react"></script>
 <script type="text/babel" data-presets="react">
 const ROUTES = {
   dashboard: { crumb: 'Workspace', title: 'Executive dashboard', render: () => <Dashboard /> },
@@ -54,6 +55,7 @@ const ROUTES = {
   team:      { crumb: 'Business', title: 'Team', render: () => <Team /> },
   chat:      { crumb: 'Business', title: 'Team Chat', render: () => <TeamChat /> },
   calendar:  { crumb: 'Workspace', title: 'Calendar', render: () => <Calendar /> },
+  automations: { crumb: 'Business', title: 'Automations', render: () => <Automations /> },
   settings:  { crumb: 'Workspace', title: 'Settings', render: () => <Settings /> },
 };
 const PLACEHOLDER = {};

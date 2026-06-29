@@ -73,6 +73,10 @@
       label: 'Team Chat',
       icon: 'message-square'
     }, {
+      id: 'automations',
+      label: 'Automations',
+      icon: 'zap'
+    }, {
       id: 'settings',
       label: 'Settings',
       icon: 'settings'

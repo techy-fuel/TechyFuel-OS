@@ -174,6 +174,62 @@
       client.channel(`chat:${channelId}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` }, payload => onNew(payload.new))
         .subscribe(),
+
+    // ── AUTOMATIONS ──────────────────────────────────────
+    getRules: () => client.from('automation_rules').select('*, team_members!created_by(name)').order('created_at', { ascending: false }),
+    createRule: (d) => client.from('automation_rules').insert(d).select().single(),
+    updateRule: (id, d) => client.from('automation_rules').update(d).eq('id', id).select().single(),
+    deleteRule: (id) => client.from('automation_rules').delete().eq('id', id),
+
+    getTemplates: () => client.from('task_templates').select('*').order('created_at', { ascending: false }),
+    createTemplate: (d) => client.from('task_templates').insert(d).select().single(),
+    updateTemplate: (id, d) => client.from('task_templates').update(d).eq('id', id).select().single(),
+    deleteTemplate: (id) => client.from('task_templates').delete().eq('id', id),
+    applyTemplate: async (templateId, projectId, assignMap = {}) => {
+      const { data: tmpl } = await client.from('task_templates').select('*').eq('id', templateId).single();
+      if (!tmpl || !tmpl.tasks) return { data: [] };
+      const tasks = tmpl.tasks;
+      const created = [];
+      for (const t of tasks) {
+        const due = t.due_offset_days != null ? new Date(Date.now() + t.due_offset_days * 86400000).toISOString().slice(0, 10) : null;
+        const assigned_to = assignMap[t.assigned_role] || null;
+        const payload = { title: t.title, status: t.status || 'todo', priority: t.priority || 'medium' };
+        if (projectId) payload.project_id = projectId;
+        if (due) payload.due_date = due;
+        if (assigned_to) payload.assigned_to = assigned_to;
+        const { data } = await client.from('tasks').insert(payload).select().single();
+        if (data) created.push(data);
+      }
+      return { data: created };
+    },
+
+    getWebhooks: () => client.from('webhooks').select('*').order('created_at', { ascending: false }),
+    createWebhook: (d) => client.from('webhooks').insert(d).select().single(),
+    updateWebhook: (id, d) => client.from('webhooks').update(d).eq('id', id).select().single(),
+    deleteWebhook: (id) => client.from('webhooks').delete().eq('id', id),
+    fireWebhook: async (webhook, payload) => {
+      try {
+        const res = await fetch(webhook.url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(webhook.secret ? { 'X-TF-Secret': webhook.secret } : {}) }, body: JSON.stringify(payload) });
+        await client.from('webhooks').update({ last_triggered_at: new Date().toISOString(), last_status: res.status }).eq('id', webhook.id);
+        return res.ok;
+      } catch { return false; }
+    },
+
+    getApprovals: (status) => {
+      let q = client.from('approval_requests').select('*, tasks(title, status), team_members!requested_by(name), team_members!approver_id(name)');
+      if (status) q = q.eq('status', status);
+      return q.order('created_at', { ascending: false });
+    },
+    createApproval: (d) => client.from('approval_requests').insert(d).select().single(),
+    resolveApproval: async (id, status, comment, taskId, newTaskStatus) => {
+      const now = new Date().toISOString();
+      await client.from('approval_requests').update({ status, comment, resolved_at: now }).eq('id', id);
+      if (taskId) {
+        const updates = { approval_status: status };
+        if (status === 'approved' && newTaskStatus) updates.status = newTaskStatus;
+        await client.from('tasks').update(updates).eq('id', taskId);
+      }
+    },
   };
 
   console.log('[TechyFuel OS] Supabase connected:', window.__SUPABASE_URL);

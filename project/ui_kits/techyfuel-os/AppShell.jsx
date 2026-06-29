@@ -24,6 +24,7 @@ const TF_NAV = [
     { id: 'files', label: 'Files', icon: 'folder' },
     { id: 'team', label: 'Team', icon: 'users' },
     { id: 'chat', label: 'Team Chat', icon: 'message-square' },
+    { id: 'automations', label: 'Automations', icon: 'zap' },
     { id: 'settings', label: 'Settings', icon: 'settings' },
   ]},
 ];
