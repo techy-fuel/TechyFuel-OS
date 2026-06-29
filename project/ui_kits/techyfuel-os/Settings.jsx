@@ -39,6 +39,141 @@ function NotifRow({ title, desc, field, notif, setNotif }) {
   );
 }
 
+/* ── Team Permissions Tab ─────────────────────────────────────── */
+function TeamPermissionsTab({ team, setTeam, inputStyle, showToast, ROLE_COLORS }) {
+  const ROLES = ['admin', 'manager', 'member', 'viewer'];
+  const [editingRole, setEditingRole] = React.useState(null);
+  const [inviteOpen,  setInviteOpen]  = React.useState(false);
+  const [inviteName,  setInviteName]  = React.useState('');
+  const [inviteEmail, setInviteEmail] = React.useState('');
+  const [inviteRole,  setInviteRole]  = React.useState('member');
+  const [saving,      setSaving]      = React.useState(false);
+
+  async function handleRoleChange(member, newRole) {
+    if (!window.API) return;
+    const prev = team;
+    setTeam(team.map(m => m.id === member.id ? { ...m, role: newRole } : m));
+    setEditingRole(null);
+    try {
+      await window.API.updateTeamMember(member.id, { role: newRole });
+      showToast('Role updated!');
+    } catch {
+      setTeam(prev);
+      showToast('Failed to update role');
+    }
+  }
+
+  async function handleRemove(member) {
+    if (!window.API) return;
+    if (!confirm(`Remove ${member.name} from the team?`)) return;
+    try {
+      await window.API.updateTeamMember(member.id, { status: 'inactive' });
+      setTeam(team.filter(m => m.id !== member.id));
+      showToast(`${member.name} removed`);
+    } catch { showToast('Failed to remove member'); }
+  }
+
+  async function handleInvite() {
+    if (!inviteName.trim() || !inviteEmail.trim()) { showToast('Name and email required'); return; }
+    if (!window.API) return;
+    setSaving(true);
+    try {
+      const { data } = await window.API.addTeamMember({ name: inviteName.trim(), email: inviteEmail.trim(), role: inviteRole, status: 'active' });
+      if (data) setTeam(prev => [...prev, data]);
+      setInviteOpen(false);
+      setInviteName(''); setInviteEmail(''); setInviteRole('member');
+      showToast('Team member added!');
+    } catch { showToast('Failed to add member'); }
+    setSaving(false);
+  }
+
+  const ROLE_BG = { admin: 'var(--violet-50)', manager: 'var(--blue-50)', member: 'var(--green-50)', viewer: 'var(--slate-100)' };
+
+  return (
+    <Card padding="lg">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)' }}>Team permissions</h3>
+        <button onClick={() => setInviteOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+          <Icon name="user-plus" size={15} /> Invite member
+        </button>
+      </div>
+      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 20 }}>Manage your team members and their access levels.</p>
+
+      {/* Invite modal */}
+      {inviteOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--slate-0)', borderRadius: 'var(--radius-xl)', padding: 28, width: 420, boxShadow: 'var(--shadow-xl)' }}>
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 20 }}>Add team member</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Full name</label>
+                <input style={inputStyle} value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="e.g. Ahmed Khan" />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Email</label>
+                <input style={inputStyle} value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="ahmed@agency.com" type="email" />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Role</label>
+                <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                  {ROLES.map(r => <option key={r} value={r} style={{ textTransform: 'capitalize' }}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+              <button onClick={handleInvite} disabled={saving} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 38, background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                <Icon name="user-plus" size={15} /> {saving ? 'Adding…' : 'Add member'}
+              </button>
+              <button onClick={() => setInviteOpen(false)} style={{ height: 38, padding: '0 16px', background: 'transparent', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--text-body)' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {team.length === 0 ? (
+        <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>No team members yet. Invite someone!</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {team.map((m, i) => (
+            <div key={m.id || i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+              <Avatar name={m.name} src={m.avatar_url} size="sm" />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{m.name}</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{m.email}</div>
+              </div>
+
+              {/* Role dropdown */}
+              <div style={{ position: 'relative' }}>
+                <button onClick={() => setEditingRole(editingRole === m.id ? null : m.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px', background: ROLE_BG[m.role] || 'var(--slate-100)', color: ROLE_COLORS[m.role] || 'var(--text-body)', border: 'none', borderRadius: 'var(--radius-full)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer', textTransform: 'capitalize' }}>
+                  {m.role || 'member'} <Icon name="chevron-down" size={11} />
+                </button>
+                {editingRole === m.id && (
+                  <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 100, background: 'var(--slate-0)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden', minWidth: 130 }}>
+                    {ROLES.map(r => (
+                      <div key={r} onClick={() => handleRoleChange(m, r)} style={{ padding: '8px 14px', fontSize: 'var(--text-sm)', cursor: 'pointer', color: ROLE_COLORS[r] || 'var(--text-body)', fontWeight: m.role === r ? 'var(--fw-bold)' : 'var(--fw-medium)', textTransform: 'capitalize', background: m.role === r ? 'var(--slate-50)' : 'transparent' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--slate-50)'}
+                        onMouseLeave={e => e.currentTarget.style.background = m.role === r ? 'var(--slate-50)' : 'transparent'}>
+                        {r.charAt(0).toUpperCase() + r.slice(1)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Remove button */}
+              <button onClick={() => handleRemove(m)} title="Remove member" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-subtle)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--red-50)'; e.currentTarget.style.color = 'var(--red-500)'; e.currentTarget.style.borderColor = 'var(--red-200)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-subtle)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}>
+                <Icon name="user-minus" size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /* ── Settings ─────────────────────────────────────────────────── */
 function Settings() {
   const saved = loadSaved();
@@ -208,28 +343,11 @@ function Settings() {
 
           {/* ── Team permissions ── */}
           {tab === 'Team permissions' && (
-            <Card padding="lg">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4 }}>Team permissions</h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 20 }}>Manage your team members and their access levels.</p>
-              {team.length === 0 ? (
-                <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>No team members found.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  {team.map((m, i) => (
-                    <div key={m.id || i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                      <Avatar name={m.name} src={m.avatar_url} size="sm" />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{m.name}</div>
-                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{m.email || m.role}</div>
-                      </div>
-                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', padding: '3px 10px', borderRadius: 'var(--radius-full)', background: 'var(--slate-100)', color: ROLE_COLORS[m.role] || 'var(--text-body)', textTransform: 'capitalize' }}>
-                        {m.role || 'member'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
+            <TeamPermissionsTab
+              team={team} setTeam={setTeam}
+              inputStyle={inputStyle} showToast={showToast}
+              ROLE_COLORS={ROLE_COLORS}
+            />
           )}
 
           {/* ── Email notifications ── */}
