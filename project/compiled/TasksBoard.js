@@ -59,63 +59,13 @@
     dot: 'var(--green-500)',
     dbStatus: 'done'
   }];
-  const FALLBACK_TASKS = {
+  const EMPTY_TASKS = {
     backlog: [],
-    todo: [{
-      id: 'f1',
-      title: 'Write 30 captions',
-      priority: 'medium',
-      status: 'todo',
-      assigned_to_name: 'Zara Ahmed',
-      due_date: '2025-07-01',
-      project_name: 'Bloom Social Relaunch'
-    }, {
-      id: 'f2',
-      title: 'Set up CMS',
-      priority: 'low',
-      status: 'todo',
-      assigned_to_name: 'Omar Sheikh',
-      due_date: '2025-07-10',
-      project_name: 'Nova Website Revamp'
-    }],
-    in_progress: [{
-      id: 'f3',
-      title: 'Finalise ad creatives',
-      priority: 'high',
-      status: 'in_progress',
-      assigned_to_name: 'Zara Ahmed',
-      due_date: '2025-06-25',
-      project_name: 'Nova Launch Campaign'
-    }, {
-      id: 'f4',
-      title: 'Wireframes for homepage',
-      priority: 'medium',
-      status: 'in_progress',
-      assigned_to_name: 'Ali Raza',
-      due_date: '2025-06-30',
-      project_name: 'Nova Website Revamp'
-    }],
-    review: [{
-      id: 'f5',
-      title: 'Client approval round 2',
-      priority: 'high',
-      status: 'review',
-      assigned_to_name: 'Ali Raza',
-      due_date: '2025-06-24',
-      project_name: 'Nova Launch Campaign'
-    }],
-    done: [{
-      id: 'f6',
-      title: 'Launch Meta campaign',
-      priority: 'high',
-      status: 'done',
-      assigned_to_name: 'Omar Sheikh',
-      due_date: '2025-06-20',
-      project_name: 'Apex Lead Gen Ads',
-      done: true
-    }]
+    todo: [],
+    in_progress: [],
+    review: [],
+    done: []
   };
-  const FALLBACK_FLAT = Object.values(FALLBACK_TASKS).flat();
   function fmtDue(ds) {
     if (!ds) return '—';
     const d = new Date(ds);
@@ -164,7 +114,8 @@
         display: 'flex',
         alignItems: 'center',
         gap: 6,
-        marginBottom: 8
+        marginBottom: 8,
+        flexWrap: 'wrap'
       }
     }, task.project_name && /*#__PURE__*/React.createElement(Badge, {
       tone: "neutral",
@@ -184,7 +135,23 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: p.icon,
       size: 12
-    }), " ", p.label), hover && /*#__PURE__*/React.createElement("span", {
+    }), " ", p.label), task.client_id && /*#__PURE__*/React.createElement("span", {
+      title: "Visible in client portal",
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 2,
+        fontSize: 'var(--text-2xs)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--violet-600)',
+        background: 'var(--violet-50)',
+        borderRadius: 'var(--radius-full)',
+        padding: '2px 7px'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "user",
+      size: 10
+    }), " Client"), hover && /*#__PURE__*/React.createElement("span", {
       style: {
         marginLeft: 'auto',
         color: 'var(--text-subtle)'
@@ -828,20 +795,23 @@
   }
   function TasksBoard() {
     const [activeTab, setActiveTab] = React.useState('kanban');
-    const [taskMap, setTaskMap] = React.useState(FALLBACK_TASKS);
-    const [allTasks, setAllTasks] = React.useState(FALLBACK_FLAT);
-    const [totalOpen, setTotalOpen] = React.useState(5);
+    const [taskMap, setTaskMap] = React.useState(EMPTY_TASKS);
+    const [allTasks, setAllTasks] = React.useState([]);
+    const [totalOpen, setTotalOpen] = React.useState(0);
+    const [loading, setLoading] = React.useState(true);
     const [modalOpen, setModalOpen] = React.useState(false);
     const [saving, setSaving] = React.useState(false);
     const [team, setTeam] = React.useState([]);
     const [projects, setProjects] = React.useState([]);
+    const [clients, setClients] = React.useState([]);
     const [form, setForm] = React.useState({
       title: '',
       priority: 'medium',
       status: 'todo',
       due_date: '',
       assigned_to: '',
-      project_id: ''
+      project_id: '',
+      client_id: ''
     });
     const [attachments, setAttachments] = React.useState([]);
 
@@ -857,7 +827,8 @@
         priority: task.priority || 'medium',
         status: task.status || 'todo',
         due_date: task.due_date || '',
-        assigned_to: task.assigned_to || ''
+        assigned_to: task.assigned_to || '',
+        client_id: task.client_id || ''
       });
       setEditAttachments([]);
     }
@@ -876,7 +847,8 @@
           priority: editForm.priority,
           status: editForm.status,
           due_date: editForm.due_date || null,
-          assigned_to: editForm.assigned_to || null
+          assigned_to: editForm.assigned_to || null,
+          client_id: editForm.client_id || null
         };
         if (window.API && editTask.id && !editTask.id.startsWith('f')) {
           const {
@@ -927,43 +899,73 @@
       }));
     }
     React.useEffect(() => {
-      if (!window.API) return;
-      window.API.getTasks().then(r => {
-        if (!r.data) return;
-        const map = {
-          backlog: [],
-          todo: [],
-          in_progress: [],
-          review: [],
-          done: []
-        };
-        const flat = [];
-        r.data.forEach(t => {
-          const key = t.status || 'todo';
-          if (!map[key]) map[key] = [];
-          const task = {
-            id: t.id,
-            title: t.title,
-            priority: t.priority,
-            due_date: t.due_date,
-            status: t.status || 'todo',
-            done: t.status === 'done',
-            assigned_to_name: t.team_members ? t.team_members.name : null,
-            project_name: t.projects ? t.projects.name : null
-          };
-          map[key].push(task);
-          flat.push(task);
-        });
-        setTaskMap(map);
-        setAllTasks(flat);
-        setTotalOpen(map.todo.length + map.in_progress.length + map.review.length + map.backlog.length);
-      }).catch(() => {});
-      window.API.getTeam().then(r => {
-        if (r.data) setTeam(r.data);
-      }).catch(() => {});
-      window.API.getProjects().then(r => {
-        if (r.data) setProjects(r.data);
-      }).catch(() => {});
+      if (!window.API) {
+        setLoading(false);
+        return;
+      }
+      (async () => {
+        try {
+          const {
+            data
+          } = await window.API.getTasks();
+          if (data) {
+            const map = {
+              backlog: [],
+              todo: [],
+              in_progress: [],
+              review: [],
+              done: []
+            };
+            const flat = [];
+            data.forEach(t => {
+              const key = t.status || 'todo';
+              if (!map[key]) map[key] = [];
+              const task = {
+                id: t.id,
+                title: t.title,
+                priority: t.priority,
+                due_date: t.due_date,
+                status: t.status || 'todo',
+                done: t.status === 'done',
+                assigned_to: t.assigned_to,
+                client_id: t.client_id || null,
+                assigned_to_name: t.team_members ? t.team_members.name : null,
+                project_name: t.projects ? t.projects.name : null
+              };
+              map[key].push(task);
+              flat.push(task);
+            });
+            setTaskMap(map);
+            setAllTasks(flat);
+            setTotalOpen(map.todo.length + map.in_progress.length + map.review.length + map.backlog.length);
+          }
+        } catch {}
+        setLoading(false);
+      })();
+      (async () => {
+        try {
+          const {
+            data
+          } = await window.API.getTeam();
+          if (data) setTeam(data);
+        } catch {}
+      })();
+      (async () => {
+        try {
+          const {
+            data
+          } = await window.API.getProjects();
+          if (data) setProjects(data);
+        } catch {}
+      })();
+      (async () => {
+        try {
+          const {
+            data
+          } = await window.API.getClients();
+          if (data) setClients(data);
+        } catch {}
+      })();
     }, []);
     async function handleAddTask() {
       if (!form.title.trim()) return;
@@ -977,6 +979,7 @@
         if (form.due_date) payload.due_date = form.due_date;
         if (form.assigned_to) payload.assigned_to = form.assigned_to;
         if (form.project_id) payload.project_id = form.project_id;
+        if (form.client_id) payload.client_id = form.client_id;
         if (window.API) {
           const {
             data,
@@ -985,6 +988,7 @@
           if (!error && data) {
             const assigneeName = team.find(m => m.id === form.assigned_to)?.name || null;
             const projectName = projects.find(p => p.id === form.project_id)?.name || null;
+            const clientName = clients.find(c => c.id === form.client_id)?.company || clients.find(c => c.id === form.client_id)?.name || null;
             const newTask = {
               id: data.id,
               title: data.title,
@@ -992,6 +996,9 @@
               due_date: data.due_date,
               status: data.status || 'todo',
               done: false,
+              assigned_to: form.assigned_to || null,
+              client_id: form.client_id || null,
+              client_name: clientName,
               assigned_to_name: assigneeName,
               project_name: projectName,
               attachment_count: attachments.length
@@ -1012,7 +1019,8 @@
           status: 'todo',
           due_date: '',
           assigned_to: '',
-          project_id: ''
+          project_id: '',
+          client_id: ''
         });
         setAttachments([]);
       } finally {
@@ -1099,7 +1107,16 @@
           size: 16
         })
       }]
-    })), activeTab === 'kanban' && /*#__PURE__*/React.createElement("div", {
+    })), loading && /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "Loading…"), !loading && activeTab === 'kanban' && /*#__PURE__*/React.createElement("div", {
       className: "tf-scroll",
       style: {
         flex: 1,
@@ -1199,11 +1216,11 @@
         name: "plus",
         size: 14
       }), " Add task")));
-    })), activeTab === 'list' && /*#__PURE__*/React.createElement(TaskListView, {
+    })), !loading && activeTab === 'list' && /*#__PURE__*/React.createElement(TaskListView, {
       allTasks: allTasks,
       onAdd: () => setModalOpen(true),
       onEdit: openEdit
-    }), activeTab === 'calendar' && /*#__PURE__*/React.createElement(TaskCalView, {
+    }), !loading && activeTab === 'calendar' && /*#__PURE__*/React.createElement(TaskCalView, {
       allTasks: allTasks,
       onAdd: () => setModalOpen(true),
       onEdit: openEdit
@@ -1275,6 +1292,17 @@
       key: m.id,
       value: m.id
     }, m.name))))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Visible to client"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: editForm.client_id || '',
+      onChange: e => setEF('client_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "Agency only"), clients.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.company || c.name)))), /*#__PURE__*/React.createElement(FormRow, {
       label: "Attachments"
     }, /*#__PURE__*/React.createElement(AttachArea, {
       files: editAttachments,
@@ -1344,7 +1372,9 @@
     }, "Unassigned"), team.map(m => /*#__PURE__*/React.createElement("option", {
       key: m.id,
       value: m.id
-    }, m.name))))), /*#__PURE__*/React.createElement(FormRow, {
+    }, m.name))))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
       label: "Project"
     }, /*#__PURE__*/React.createElement("select", {
       style: FF.select,
@@ -1356,6 +1386,17 @@
       key: p.id,
       value: p.id
     }, p.name)))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Visible to client"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: form.client_id,
+      onChange: e => set('client_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "Agency only"), clients.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.company || c.name))))), /*#__PURE__*/React.createElement(FormRow, {
       label: "Attachments"
     }, /*#__PURE__*/React.createElement(AttachArea, {
       files: attachments,

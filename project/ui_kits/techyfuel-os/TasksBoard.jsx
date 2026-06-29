@@ -17,25 +17,7 @@ const COLUMN_CONFIG = [
   { id: 'done',        label: 'Completed',   dot: 'var(--green-500)',  dbStatus: 'done' },
 ];
 
-const FALLBACK_TASKS = {
-  backlog:     [],
-  todo:        [
-    { id: 'f1', title: 'Write 30 captions',       priority: 'medium', status: 'todo',        assigned_to_name: 'Zara Ahmed',  due_date: '2025-07-01', project_name: 'Bloom Social Relaunch' },
-    { id: 'f2', title: 'Set up CMS',              priority: 'low',    status: 'todo',        assigned_to_name: 'Omar Sheikh', due_date: '2025-07-10', project_name: 'Nova Website Revamp' },
-  ],
-  in_progress: [
-    { id: 'f3', title: 'Finalise ad creatives',   priority: 'high',   status: 'in_progress', assigned_to_name: 'Zara Ahmed',  due_date: '2025-06-25', project_name: 'Nova Launch Campaign' },
-    { id: 'f4', title: 'Wireframes for homepage', priority: 'medium', status: 'in_progress', assigned_to_name: 'Ali Raza',    due_date: '2025-06-30', project_name: 'Nova Website Revamp' },
-  ],
-  review:      [
-    { id: 'f5', title: 'Client approval round 2', priority: 'high',   status: 'review',      assigned_to_name: 'Ali Raza',    due_date: '2025-06-24', project_name: 'Nova Launch Campaign' },
-  ],
-  done:        [
-    { id: 'f6', title: 'Launch Meta campaign',    priority: 'high',   status: 'done',        assigned_to_name: 'Omar Sheikh', due_date: '2025-06-20', project_name: 'Apex Lead Gen Ads', done: true },
-  ],
-};
-
-const FALLBACK_FLAT = Object.values(FALLBACK_TASKS).flat();
+const EMPTY_TASKS = { backlog: [], todo: [], in_progress: [], review: [], done: [] };
 
 function fmtDue(ds) {
   if (!ds) return '—';
@@ -62,11 +44,12 @@ function TaskCard({ task, onEdit }) {
       style={{ background: 'var(--slate-0)', border: `1px solid ${hover ? 'var(--slate-200)' : 'var(--border-subtle)'}`,
         borderRadius: 'var(--radius-lg)', padding: 12, boxShadow: hover ? 'var(--shadow-md)' : 'var(--shadow-xs)',
         cursor: 'pointer', transform: hover ? 'translateY(-1px)' : 'none', transition: 'all var(--dur-fast) var(--ease-out)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
         {task.project_name && <Badge tone="neutral" size="sm">{task.project_name}</Badge>}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: p.color, background: p.bg, borderRadius: 'var(--radius-full)', padding: '2px 7px' }}>
           <Icon name={p.icon} size={12} /> {p.label}
         </span>
+        {task.client_id && <span title="Visible in client portal" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: 'var(--violet-600)', background: 'var(--violet-50)', borderRadius: 'var(--radius-full)', padding: '2px 7px' }}><Icon name="user" size={10} /> Client</span>}
         {hover && <span style={{ marginLeft: 'auto', color: 'var(--text-subtle)' }}><Icon name="pencil" size={12} /></span>}
       </div>
       <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', lineHeight: 1.4, marginBottom: 10, textDecoration: task.done ? 'line-through' : 'none', opacity: task.done ? 0.6 : 1 }}>{task.title}</div>
@@ -312,14 +295,16 @@ async function uploadTaskFiles(taskId, files) {
 
 function TasksBoard() {
   const [activeTab, setActiveTab] = React.useState('kanban');
-  const [taskMap, setTaskMap]     = React.useState(FALLBACK_TASKS);
-  const [allTasks, setAllTasks]   = React.useState(FALLBACK_FLAT);
-  const [totalOpen, setTotalOpen] = React.useState(5);
+  const [taskMap, setTaskMap]     = React.useState(EMPTY_TASKS);
+  const [allTasks, setAllTasks]   = React.useState([]);
+  const [totalOpen, setTotalOpen] = React.useState(0);
+  const [loading,   setLoading]   = React.useState(true);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [saving, setSaving]       = React.useState(false);
   const [team, setTeam]           = React.useState([]);
   const [projects, setProjects]   = React.useState([]);
-  const [form, setForm] = React.useState({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '' });
+  const [clients,  setClients]    = React.useState([]);
+  const [form, setForm] = React.useState({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '', client_id: '' });
   const [attachments, setAttachments] = React.useState([]);
 
   // Edit task state
@@ -330,7 +315,7 @@ function TasksBoard() {
 
   function openEdit(task) {
     setEditTask(task);
-    setEditForm({ title: task.title, priority: task.priority || 'medium', status: task.status || 'todo', due_date: task.due_date || '', assigned_to: task.assigned_to || '' });
+    setEditForm({ title: task.title, priority: task.priority || 'medium', status: task.status || 'todo', due_date: task.due_date || '', assigned_to: task.assigned_to || '', client_id: task.client_id || '' });
     setEditAttachments([]);
   }
   function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
@@ -339,7 +324,7 @@ function TasksBoard() {
     if (!editTask || !editForm.title?.trim()) return;
     setEditSaving(true);
     try {
-      const changes = { title: editForm.title, priority: editForm.priority, status: editForm.status, due_date: editForm.due_date || null, assigned_to: editForm.assigned_to || null };
+      const changes = { title: editForm.title, priority: editForm.priority, status: editForm.status, due_date: editForm.due_date || null, assigned_to: editForm.assigned_to || null, client_id: editForm.client_id || null };
       if (window.API && editTask.id && !editTask.id.startsWith('f')) {
         const { error } = await window.API.updateTask(editTask.id, changes);
         if (error) { setEditSaving(false); return; }
@@ -372,27 +357,34 @@ function TasksBoard() {
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
-    if (!window.API) return;
-    window.API.getTasks().then(r => {
-      if (!r.data) return;
-      const map  = { backlog: [], todo: [], in_progress: [], review: [], done: [] };
-      const flat = [];
-      r.data.forEach(t => {
-        const key = t.status || 'todo';
-        if (!map[key]) map[key] = [];
-        const task = { id: t.id, title: t.title, priority: t.priority, due_date: t.due_date,
-          status: t.status || 'todo', done: t.status === 'done',
-          assigned_to_name: t.team_members ? t.team_members.name : null,
-          project_name: t.projects ? t.projects.name : null };
-        map[key].push(task);
-        flat.push(task);
-      });
-      setTaskMap(map);
-      setAllTasks(flat);
-      setTotalOpen(map.todo.length + map.in_progress.length + map.review.length + map.backlog.length);
-    }).catch(() => {});
-    window.API.getTeam().then(r => { if (r.data) setTeam(r.data); }).catch(() => {});
-    window.API.getProjects().then(r => { if (r.data) setProjects(r.data); }).catch(() => {});
+    if (!window.API) { setLoading(false); return; }
+    (async () => {
+      try {
+        const { data } = await window.API.getTasks();
+        if (data) {
+          const map  = { backlog: [], todo: [], in_progress: [], review: [], done: [] };
+          const flat = [];
+          data.forEach(t => {
+            const key = t.status || 'todo';
+            if (!map[key]) map[key] = [];
+            const task = { id: t.id, title: t.title, priority: t.priority, due_date: t.due_date,
+              status: t.status || 'todo', done: t.status === 'done', assigned_to: t.assigned_to,
+              client_id: t.client_id || null,
+              assigned_to_name: t.team_members ? t.team_members.name : null,
+              project_name: t.projects ? t.projects.name : null };
+            map[key].push(task);
+            flat.push(task);
+          });
+          setTaskMap(map);
+          setAllTasks(flat);
+          setTotalOpen(map.todo.length + map.in_progress.length + map.review.length + map.backlog.length);
+        }
+      } catch {}
+      setLoading(false);
+    })();
+    (async () => { try { const { data } = await window.API.getTeam();     if (data) setTeam(data); } catch {} })();
+    (async () => { try { const { data } = await window.API.getProjects(); if (data) setProjects(data); } catch {} })();
+    (async () => { try { const { data } = await window.API.getClients();  if (data) setClients(data); } catch {} })();
   }, []);
 
   async function handleAddTask() {
@@ -403,14 +395,18 @@ function TasksBoard() {
       if (form.due_date)    payload.due_date    = form.due_date;
       if (form.assigned_to) payload.assigned_to = form.assigned_to;
       if (form.project_id)  payload.project_id  = form.project_id;
+      if (form.client_id)   payload.client_id   = form.client_id;
 
       if (window.API) {
         const { data, error } = await window.API.createTask(payload);
         if (!error && data) {
           const assigneeName = team.find(m => m.id === form.assigned_to)?.name || null;
           const projectName  = projects.find(p => p.id === form.project_id)?.name || null;
+          const clientName = clients.find(c => c.id === form.client_id)?.company || clients.find(c => c.id === form.client_id)?.name || null;
           const newTask = { id: data.id, title: data.title, priority: data.priority, due_date: data.due_date,
-            status: data.status || 'todo', done: false, assigned_to_name: assigneeName, project_name: projectName,
+            status: data.status || 'todo', done: false, assigned_to: form.assigned_to || null,
+            client_id: form.client_id || null, client_name: clientName,
+            assigned_to_name: assigneeName, project_name: projectName,
             attachment_count: attachments.length };
           setTaskMap(prev => ({ ...prev, [newTask.status]: [...(prev[newTask.status] || []), newTask] }));
           setAllTasks(prev => [...prev, newTask]);
@@ -419,7 +415,7 @@ function TasksBoard() {
         }
       }
       setModalOpen(false);
-      setForm({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '' });
+      setForm({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '', client_id: '' });
       setAttachments([]);
     } finally { setSaving(false); }
   }
@@ -444,7 +440,9 @@ function TasksBoard() {
         ]} />
       </div>
 
-      {activeTab === 'kanban' && (
+      {loading && <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading…</div>}
+
+      {!loading && activeTab === 'kanban' && (
         <div className="tf-scroll" style={{ flex: 1, display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start' }}>
           {COLUMN_CONFIG.map(col => {
             const colTasks = taskMap[col.id] || [];
@@ -469,11 +467,11 @@ function TasksBoard() {
         </div>
       )}
 
-      {activeTab === 'list' && (
+      {!loading && activeTab === 'list' && (
         <TaskListView allTasks={allTasks} onAdd={() => setModalOpen(true)} onEdit={openEdit} />
       )}
 
-      {activeTab === 'calendar' && (
+      {!loading && activeTab === 'calendar' && (
         <TaskCalView allTasks={allTasks} onAdd={() => setModalOpen(true)} onEdit={openEdit} />
       )}
 
@@ -511,6 +509,12 @@ function TasksBoard() {
             </select>
           </FormRow>
         </div>
+        <FormRow label="Visible to client">
+          <select style={FF.select} value={editForm.client_id || ''} onChange={e => setEF('client_id', e.target.value)}>
+            <option value="">Agency only</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
+          </select>
+        </FormRow>
         <FormRow label="Attachments">
           <AttachArea files={editAttachments} onChange={setEditAttachments} />
         </FormRow>
@@ -549,12 +553,20 @@ function TasksBoard() {
             </select>
           </FormRow>
         </div>
-        <FormRow label="Project">
-          <select style={FF.select} value={form.project_id} onChange={e => set('project_id', e.target.value)}>
-            <option value="">No project</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </FormRow>
+        <div style={FF.row2}>
+          <FormRow label="Project">
+            <select style={FF.select} value={form.project_id} onChange={e => set('project_id', e.target.value)}>
+              <option value="">No project</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Visible to client">
+            <select style={FF.select} value={form.client_id} onChange={e => set('client_id', e.target.value)}>
+              <option value="">Agency only</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
+            </select>
+          </FormRow>
+        </div>
         <FormRow label="Attachments">
           <AttachArea files={attachments} onChange={setAttachments} />
         </FormRow>
