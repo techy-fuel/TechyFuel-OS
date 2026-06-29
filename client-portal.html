@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Client Portal — TechyFuel OS</title>
+  <script src="vendor/supabase.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #0f172a; min-height: 100vh; }
+
+    /* ── Login page ── */
+    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%); }
+    .login-card { background: #fff; border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.10); padding: 44px 40px; width: 100%; max-width: 420px; }
+    .brand { display: flex; align-items: center; gap: 8px; margin-bottom: 32px; }
+    .brand-name { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+    .brand-name span { color: #2563eb; }
+    .login-title { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .login-sub { font-size: 14px; color: #64748b; margin-bottom: 28px; line-height: 1.5; }
+    label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 6px; }
+    input[type=email] { width: 100%; height: 42px; padding: 0 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-family: inherit; color: #0f172a; outline: none; transition: border 0.15s; }
+    input[type=email]:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .btn-primary { width: 100%; height: 44px; background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; transition: opacity 0.15s; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .msg { margin-top: 16px; padding: 12px 14px; border-radius: 10px; font-size: 14px; line-height: 1.5; }
+    .msg.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .msg.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .msg.info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+    /* ── Portal dashboard ── */
+    .portal-header { background: linear-gradient(135deg, #2563eb, #7c3aed); padding: 24px 32px; color: #fff; }
+    .portal-header-inner { max-width: 1000px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .portal-brand { font-size: 18px; font-weight: 800; color: #fff; }
+    .portal-brand span { color: #a5b4fc; }
+    .portal-client-name { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .portal-meta { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+    .logout-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .logout-btn:hover { background: rgba(255,255,255,0.25); }
+
+    .portal-body { max-width: 1000px; margin: 0 auto; padding: 28px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media(max-width: 700px) { .portal-body { grid-template-columns: 1fr; } }
+
+    .card { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 22px; }
+    .card-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+    .badge-warn { background: #fef9c3; color: #92400e; }
+    .badge-ok { background: #dcfce7; color: #15803d; }
+    .badge-blue { background: #dbeafe; color: #1d4ed8; }
+    .badge-gray { background: #f1f5f9; color: #475569; }
+
+    .task-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+    .task-row:last-child { border-bottom: none; }
+    .task-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .task-title { font-size: 14px; font-weight: 600; color: #0f172a; }
+    .task-meta { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+    .approval-row { display: flex; align-items: center; gap: 12px; padding: 10px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 8px; }
+    .approval-icon { width: 36px; height: 36px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .approval-title { font-size: 13px; font-weight: 600; color: #0f172a; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .approval-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-approve { width: 32px; height: 32px; background: #16a34a; color: #fff; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .btn-reject { width: 32px; height: 32px; background: #fff; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+
+    .file-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-radius: 8px; }
+    .file-row:hover { background: #f8fafc; }
+    .file-name { font-size: 13px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-size { font-size: 12px; color: #94a3b8; }
+    .dl-btn { background: none; border: none; cursor: pointer; color: #2563eb; font-size: 16px; padding: 4px; }
+
+    .inv-card { background: #0f172a; border-radius: 14px; padding: 22px; color: #fff; }
+    .inv-amount { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin: 8px 0 4px; }
+    .inv-meta { font-size: 13px; color: #94a3b8; }
+    .inv-dl { background: #fff; color: #0f172a; border: none; border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 16px; }
+
+    .empty { text-align: center; padding: 32px 0; color: #94a3b8; font-size: 14px; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .progress-bar { height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 10px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #2563eb, #7c3aed); border-radius: 99px; transition: width 0.5s ease; }
+  </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script>
+const SUPABASE_URL = 'https://nvgzzhqfibhtbauinmwu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52Z3p6aHFmaWJodGJhdWlubXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMjMyODYsImV4cCI6MjA5NzY5OTI4Nn0.eBz7eQ7JT8hewdMIqV_I-lfZH84rskIHAsyJusAa5hA';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const root = document.getElementById('root');
+let currentClient = null;
+
+function fmtDate(ds) {
+  if (!ds) return '—';
+  return new Date(ds).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function fmtAmt(n, currency) {
+  const syms = { USD: '$', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ', PKR: '₨', CAD: 'CA$', AUD: 'A$' };
+  return (syms[currency] || '$') + Number(n || 0).toLocaleString();
+}
+function platEmoji(platform) {
+  const map = { instagram: '📸', facebook: '👥', linkedin: '💼', youtube: '▶️', twitter: '🐦', tiktok: '🎵' };
+  return map[platform] || '📄';
+}
+function taskColor(status) {
+  if (status === 'done' || status === 'completed') return '#16a34a';
+  if (status === 'in_progress') return '#2563eb';
+  if (status === 'overdue') return '#dc2626';
+  return '#94a3b8';
+}
+
+// ── Login Screen ───────────────────────────────────────────────
+function showLogin(msg = '') {
+  root.innerHTML = `
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="brand">
+          <div class="brand-name">TechyFuel <span>OS</span></div>
+        </div>
+        <div class="login-title">Client Portal</div>
+        <div class="login-sub">Enter your email to receive a secure login link. Your email must be registered by your agency.</div>
+        <label for="em">Email address</label>
+        <input type="email" id="em" placeholder="you@company.com" autocomplete="email" />
+        ${msg ? `<div class="msg info">${msg}</div>` : ''}
+        <div id="feedback"></div>
+        <button class="btn-primary" id="loginBtn">Send login link</button>
+      </div>
+    </div>`;
+
+  const btn = document.getElementById('loginBtn');
+  const em  = document.getElementById('em');
+  const fb  = document.getElementById('feedback');
+
+  em.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+  btn.addEventListener('click', async () => {
+    const email = em.value.trim();
+    if (!email || !email.includes('@')) {
+      fb.innerHTML = '<div class="msg error">Please enter a valid email address.</div>';
+      return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Sending…';
+    fb.innerHTML = '';
+
+    // Check if email exists in clients table
+    const { data: clients } = await db.from('clients').select('id, name, company, email').eq('email', email).limit(1);
+    if (!clients || clients.length === 0) {
+      fb.innerHTML = '<div class="msg error">This email is not registered. Please contact your agency to get access.</div>';
+      btn.disabled = false;
+      btn.innerHTML = 'Send login link';
+      return;
+    }
+
+    const redirectTo = window.location.origin + '/client-portal.html';
+    const { error } = await db.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+    if (error) {
+      fb.innerHTML = `<div class="msg error">Error: ${error.message}</div>`;
+      btn.disabled = false;
+      btn.innerHTML = 'Send login link';
+    } else {
+      fb.innerHTML = `<div class="msg success">✅ Login link sent to <strong>${email}</strong>. Check your inbox and click the link to sign in.</div>`;
+      btn.innerHTML = 'Link sent!';
+    }
+  });
+}
+
+// ── Portal Dashboard ───────────────────────────────────────────
+async function showPortal(email) {
+  root.innerHTML = `<div style="text-align:center;padding:80px 24px;color:#64748b;">Loading your portal…</div>`;
+
+  try {
+    // Look up client by email
+    const { data: clients } = await db.from('clients').select('*').eq('email', email).limit(1);
+    if (!clients || clients.length === 0) {
+      root.innerHTML = `<div style="text-align:center;padding:80px 24px;color:#dc2626;">Your account is not yet set up. Please contact your agency.</div>`;
+      return;
+    }
+    currentClient = clients[0];
+    const c = currentClient;
+    const displayName = c.company || c.name;
+
+    // Parallel data load
+    const [pRes, iRes, fRes, cRes, tRes] = await Promise.all([
+      db.from('projects').select('*').eq('client_id', c.id).order('created_at', { ascending: false }),
+      db.from('invoices').select('*').eq('client_id', c.id).order('created_at', { ascending: false }),
+      db.from('files').select('*').eq('client_id', c.id).order('created_at', { ascending: false }),
+      db.from('content_posts').select('*').eq('client_id', c.id).order('scheduled_at', { ascending: true }),
+      db.from('tasks').select('*, projects(name)').eq('client_id', c.id).order('due_date', { ascending: true }),
+    ]);
+
+    const project   = pRes.data?.[0] || null;
+    const invoices  = iRes.data || [];
+    const files     = fRes.data || [];
+    const posts     = (cRes.data || []).filter(p => ['draft', 'approval', 'scheduled'].includes(p.status));
+    const tasks     = tRes.data || [];
+
+    const invoice      = invoices.find(i => i.status !== 'paid') || invoices[0] || null;
+    const doneTasks    = tasks.filter(t => t.status === 'done' || t.status === 'completed').length;
+    const progressPct  = tasks.length > 0 ? Math.round((doneTasks / tasks.length) * 100) : (project?.progress || 0);
+    const overdueTasks = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done' && t.status !== 'completed');
+    const health       = overdueTasks.length > 0 ? '⚠️ At risk' : progressPct >= 80 ? '✅ On track' : '🔄 In progress';
+
+    root.innerHTML = `
+      <div class="portal-header">
+        <div class="portal-header-inner">
+          <div>
+            <div class="portal-brand">TechyFuel <span>OS</span> · Client Portal</div>
+            <div class="portal-client-name">${displayName}</div>
+            <div class="portal-meta">Project health: ${health} &nbsp;·&nbsp; ${progressPct}% complete</div>
+          </div>
+          <button class="logout-btn" id="logoutBtn">Sign out</button>
+        </div>
+      </div>
+
+      <div class="portal-body">
+
+        <!-- Tasks -->
+        <div class="card" style="grid-column: 1 / -1">
+          <div class="card-title">
+            Your tasks
+            <span class="badge badge-blue">${tasks.length} total</span>
+          </div>
+          ${tasks.length === 0
+            ? '<div class="empty">No tasks assigned yet.</div>'
+            : tasks.slice(0, 8).map(t => {
+                const isOverdue = t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done' && t.status !== 'completed';
+                return `<div class="task-row">
+                  <div class="task-dot" style="background:${isOverdue ? '#dc2626' : taskColor(t.status)}"></div>
+                  <div>
+                    <div class="task-title">${t.title}</div>
+                    <div class="task-meta">${t.projects?.name ? t.projects.name + ' · ' : ''}${t.due_date ? 'Due ' + fmtDate(t.due_date) : 'No deadline'}${isOverdue ? ' <span style="color:#dc2626;font-weight:700;">· Overdue</span>' : ''}</div>
+                  </div>
+                  <span class="badge ${t.status === 'done' || t.status === 'completed' ? 'badge-ok' : isOverdue ? 'badge-warn' : 'badge-gray'}" style="margin-left:auto;flex-shrink:0">${t.status || 'todo'}</span>
+                </div>`;
+              }).join('')}
+          ${tasks.length > 8 ? `<div style="text-align:center;padding-top:10px;font-size:13px;color:#64748b;">+${tasks.length - 8} more tasks</div>` : ''}
+          ${tasks.length > 0 ? `
+          <div class="progress-bar" style="margin-top:16px">
+            <div class="progress-fill" style="width:${progressPct}%"></div>
+          </div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:6px">${progressPct}% complete · ${doneTasks} of ${tasks.length} tasks done</div>` : ''}
+        </div>
+
+        <!-- Content Approvals -->
+        <div class="card">
+          <div class="card-title">
+            Awaiting your approval
+            ${posts.length > 0 ? `<span class="badge badge-warn">${posts.length} pending</span>` : ''}
+          </div>
+          ${posts.length === 0
+            ? '<div class="empty">Nothing to approve right now.</div>'
+            : posts.map(p => `
+              <div class="approval-row" id="approval-${p.id}">
+                <div class="approval-icon">${platEmoji(p.platform)}</div>
+                <div class="approval-title">${p.title || 'Untitled post'}</div>
+                <div class="approval-actions">
+                  <button class="btn-approve" onclick="approvePost('${p.id}')" title="Approve">✓</button>
+                  <button class="btn-reject" onclick="rejectPost('${p.id}')" title="Request changes">↩</button>
+                </div>
+              </div>`).join('')}
+        </div>
+
+        <!-- Files & Invoice column -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- Files -->
+          <div class="card">
+            <div class="card-title">Shared files <span style="font-size:13px;color:#94a3b8;font-weight:500">${files.length} files</span></div>
+            ${files.length === 0
+              ? '<div class="empty">No files shared yet.</div>'
+              : files.slice(0, 5).map(f => `
+                <div class="file-row">
+                  <span style="font-size:20px">${f.mime_type?.includes('pdf') ? '📄' : f.mime_type?.includes('image') ? '🖼️' : f.mime_type?.includes('video') ? '🎬' : '📁'}</span>
+                  <span class="file-name">${f.name}</span>
+                  <span class="file-size">${f.file_size ? Math.round(f.file_size / 1024) + ' KB' : ''}</span>
+                  ${f.url ? `<button class="dl-btn" onclick="window.open('${f.url}','_blank')" title="Download">⬇</button>` : ''}
+                </div>`).join('')}
+        </div>
+
+          <!-- Invoice -->
+          ${invoice ? `
+          <div class="inv-card">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">${invoice.status === 'paid' ? 'Latest invoice (paid)' : 'Invoice due'}</div>
+            <div class="inv-amount">${fmtAmt(invoice.amount, invoice.currency)}</div>
+            <div class="inv-meta">${invoice.invoice_no} · Due ${fmtDate(invoice.due_date)}</div>
+            <button class="inv-dl" onclick="downloadInvoice()">⬇ Download PDF</button>
+          </div>` : ''}
+        </div>
+
+      </div>`;
+
+    // Store data for actions
+    window._portalData = { invoice, c, displayName };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await db.auth.signOut();
+      showLogin();
+    });
+
+  } catch (err) {
+    root.innerHTML = `<div style="text-align:center;padding:80px 24px;color:#dc2626;">Error loading portal: ${err.message}</div>`;
+  }
+}
+
+// ── Actions ────────────────────────────────────────────────────
+window.approvePost = async (id) => {
+  await db.from('content_posts').update({ status: 'published' }).eq('id', id);
+  const el = document.getElementById('approval-' + id);
+  if (el) { el.style.opacity = '0.5'; el.querySelector('.approval-actions').innerHTML = '<span class="badge badge-ok">Approved ✓</span>'; }
+};
+
+window.rejectPost = async (id) => {
+  await db.from('content_posts').update({ status: 'draft' }).eq('id', id);
+  const el = document.getElementById('approval-' + id);
+  if (el) el.remove();
+};
+
+window.downloadInvoice = () => {
+  const { invoice, c, displayName } = window._portalData || {};
+  if (!invoice) return;
+  const syms = { USD: '$', EUR: '€', GBP: '£', AED: 'AED ', SAR: 'SAR ', PKR: '₨', CAD: 'CA$', AUD: 'A$' };
+  const sym = syms[invoice.currency] || '$';
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Invoice ${invoice.invoice_no}</title>
+<style>body{font-family:-apple-system,sans-serif;padding:40px;color:#0f172a}h1{font-size:22px;font-weight:800;color:#2563eb}table{width:100%;border-collapse:collapse;margin:24px 0}th{background:#f8fafc;padding:10px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b}td{padding:12px;border-bottom:1px solid #e2e8f0;font-size:14px}.total{font-weight:800;font-size:16px;border-top:2px solid #0f172a;border-bottom:none}</style>
+</head><body>
+<h1>TechyFuel OS</h1>
+<div style="display:flex;justify-content:space-between;margin:24px 0">
+  <div><strong>${displayName}</strong><br/>${c?.email || ''}</div>
+  <div style="text-align:right"><div style="font-size:22px;font-weight:800">${invoice.invoice_no}</div><div style="background:${invoice.status==='paid'?'#dcfce7':'#fef9c3'};color:${invoice.status==='paid'?'#15803d':'#92400e'};padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;display:inline-block;margin-top:6px">${invoice.status||'pending'}</div></div>
+</div>
+<table><thead><tr><th>Description</th><th>Due Date</th><th style="text-align:right">Amount</th></tr></thead>
+<tbody>
+<tr><td>Agency services</td><td>${fmtDate(invoice.due_date)}</td><td style="text-align:right">${sym}${Number(invoice.amount).toLocaleString()}</td></tr>
+<tr class="total"><td colspan="2">Total</td><td style="text-align:right">${sym}${Number(invoice.amount).toLocaleString()}</td></tr>
+</tbody></table>
+</body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 500);
+};
+
+// ── Init ───────────────────────────────────────────────────────
+(async () => {
+  // Handle magic link callback (hash contains access_token)
+  if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
+    const { data, error } = await db.auth.getSession();
+    if (data?.session?.user?.email) {
+      window.history.replaceState({}, '', window.location.pathname);
+      showPortal(data.session.user.email);
+      return;
+    }
+  }
+
+  // Check existing session
+  const { data: { session } } = await db.auth.getSession();
+  if (session?.user?.email) {
+    showPortal(session.user.email);
+  } else {
+    showLogin();
+  }
+
+  // Listen for auth changes
+  db.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session?.user?.email) {
+      showPortal(session.user.email);
+    } else if (event === 'SIGNED_OUT') {
+      showLogin();
+    }
+  });
+})();
+</script>
+</body>
+</html>

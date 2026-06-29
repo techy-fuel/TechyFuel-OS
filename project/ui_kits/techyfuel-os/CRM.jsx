@@ -8,20 +8,7 @@ const TF_STATUS = {
   lead:     { tone: 'brand',   label: 'Lead' },
 };
 
-const TF_TIMELINE = [
-  { icon: 'phone',          tone: 'brand',   text: 'Discovery call completed',          time: 'Jun 18 · 32 min' },
-  { icon: 'file-text',      tone: 'violet',  text: 'Proposal sent',                     time: 'Jun 15' },
-  { icon: 'mail',           tone: 'success', text: 'Replied to onboarding email',        time: 'Jun 12' },
-  { icon: 'calendar-check', tone: 'warning', text: 'Kickoff meeting scheduled',          time: 'Jun 10' },
-];
 
-const FALLBACK_CLIENTS = [
-  { id: 'aaaa0001-0000-0000-0000-000000000001', name: 'Nova Tech',       company: 'Nova Technology Ltd',  email: 'contact@novatech.io',    status: 'active', industry: 'SaaS',        monthly_value: 4500, website: 'novatech.io' },
-  { id: 'aaaa0002-0000-0000-0000-000000000002', name: 'Bloom Foods',     company: 'Bloom Foods Co',       email: 'hi@bloomfoods.com',       status: 'active', industry: 'F&B',         monthly_value: 2800, website: 'bloomfoods.com' },
-  { id: 'aaaa0003-0000-0000-0000-000000000003', name: 'Apex Realty',     company: 'Apex Realty Group',    email: 'info@apexrealty.com',     status: 'active', industry: 'Real Estate', monthly_value: 3200, website: 'apexrealty.com' },
-  { id: 'aaaa0004-0000-0000-0000-000000000004', name: 'Spark Academy',   company: 'Spark Online Academy', email: 'hello@sparkacademy.co',   status: 'active', industry: 'EdTech',      monthly_value: 1900, website: 'sparkacademy.co' },
-  { id: 'aaaa0005-0000-0000-0000-000000000005', name: 'Swift Logistics', company: 'Swift Logistics LLC',  email: 'ops@swiftlogistics.com',  status: 'lead',   industry: 'Logistics',   monthly_value: 0,    website: 'swiftlogistics.com' },
-];
 
 function fmtValue(n) {
   if (!n) return '$0/mo';
@@ -68,25 +55,30 @@ function ProfileField({ icon, label, value }) {
 }
 
 function CRM() {
-  const [clients, setClients] = React.useState(FALLBACK_CLIENTS);
-  const [selId, setSelId] = React.useState(FALLBACK_CLIENTS[0].id);
-  const [search, setSearch] = React.useState('');
-  const [modalOpen, setModalOpen] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
-  const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [clients, setClients] = React.useState([]);
+  const [selId,   setSelId]   = React.useState(null);
+  const [search,  setSearch]  = React.useState('');
+  const [loading, setLoading] = React.useState(true);
+  const [modalOpen,      setModalOpen]      = React.useState(false);
+  const [saving,         setSaving]         = React.useState(false);
+  const [deleting,       setDeleting]       = React.useState(false);
+  const [confirmDelete,  setConfirmDelete]  = React.useState(false);
   const [form, setForm] = React.useState({ name: '', company: '', email: '', website: '', industry: '', monthly_value: '', status: 'active' });
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
-    if (!window.API) return;
-    window.API.getClients().then(r => {
-      if (r.data && r.data.length > 0) {
-        setClients(r.data);
-        setSelId(r.data[0].id);
-      }
-    }).catch(() => {});
+    if (!window.API) { setLoading(false); return; }
+    (async () => {
+      try {
+        const { data } = await window.API.getClients();
+        if (Array.isArray(data) && data.length > 0) {
+          setClients(data);
+          setSelId(data[0].id);
+        }
+      } catch {}
+      setLoading(false);
+    })();
   }, []);
 
   async function handleDeleteClient(id) {
@@ -128,8 +120,11 @@ function CRM() {
     return !q || (c.company || c.name || '').toLowerCase().includes(q) || (c.name || '').toLowerCase().includes(q);
   });
 
+  if (loading) {
+    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading…</div>;
+  }
+
   const sel = clients.find(c => c.id === selId) || clients[0];
-  if (!sel) return null;
   const s = TF_STATUS[sel.status] || TF_STATUS.lead;
   const displayName = sel.company || sel.name;
   const activeCount = clients.filter(c => c.status === 'active').length;
@@ -185,11 +180,25 @@ function CRM() {
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               {[['mail', 'Email'], ['message-circle', 'WhatsApp'], ['calendar-plus', 'Meeting']].map(([ic, l]) => (
-                <button key={l} style={{ flex: 1, display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 0', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)' }}>
+                <button key={l} onClick={() => {
+                  if (ic === 'mail' && sel.email) window.open(`mailto:${sel.email}`, '_blank');
+                  else if (ic === 'message-circle' && sel.phone) window.open(`https://wa.me/${sel.phone.replace(/\D/g,'')}`, '_blank');
+                }} style={{ flex: 1, display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 0', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)' }}>
                   <Icon name={ic} size={17} style={{ color: 'var(--blue-600)' }} /> {l}
                 </button>
               ))}
             </div>
+            {/* Portal link */}
+            {sel.email && (
+              <button onClick={() => {
+                const url = window.location.origin + '/client-portal.html';
+                try { navigator.clipboard.writeText(url); } catch {}
+                const el = document.activeElement;
+                if (el) { const t = el.textContent; el.textContent = 'Copied!'; setTimeout(() => el.textContent = t, 1800); }
+              }} style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 34, marginTop: 8, background: 'var(--blue-50)', color: 'var(--blue-700)', border: '1px solid var(--blue-200)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+                <Icon name="external-link" size={14} /> Copy client portal link
+              </button>
+            )}
           </div>
           <div style={{ padding: '6px 18px 14px' }}>
             <ProfileField icon="user" label="Contact" value={sel.name} />
@@ -199,22 +208,10 @@ function CRM() {
             <ProfileField icon="banknote" label="Value" value={fmtValue(sel.monthly_value)} />
           </div>
           <div style={{ padding: '0 18px 18px' }}>
-            <div style={{ fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', color: 'var(--text-subtle)', marginBottom: 10 }}>Communication timeline</div>
-            <div>{TF_TIMELINE.map((t, i) => {
-              const tones = { brand: 'var(--blue-600)', violet: 'var(--violet-500)', success: 'var(--green-500)', warning: 'var(--amber-500)' };
-              return (
-                <div key={i} style={{ display: 'flex', gap: 10, paddingBottom: i < TF_TIMELINE.length - 1 ? 12 : 0 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--slate-50)', border: '1px solid var(--border-default)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: tones[t.tone] }}><Icon name={t.icon} size={13} /></span>
-                    {i < TF_TIMELINE.length - 1 && <span style={{ width: 1.5, flex: 1, background: 'var(--border-default)', marginTop: 3 }} />}
-                  </div>
-                  <div style={{ paddingBottom: 2 }}>
-                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-body)', lineHeight: 1.4 }}>{t.text}</div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-subtle)', marginTop: 1 }}>{t.time}</div>
-                  </div>
-                </div>
-              );
-            })}</div>
+            <div style={{ fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', color: 'var(--text-subtle)', marginBottom: 10 }}>Portal access</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              Client can log in at the portal link using <strong>{sel.email || 'their email'}</strong>. They will receive a magic link to sign in securely.
+            </div>
           </div>
         </Card>
       </div>
