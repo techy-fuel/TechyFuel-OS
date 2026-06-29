@@ -901,7 +901,13 @@
       inputStyle: inputStyle,
       showToast: showToast,
       ROLE_COLORS: ROLE_COLORS
-    }), tab === 'Email notifications' && /*#__PURE__*/React.createElement(Card, {
+    }), tab === 'Email notifications' && /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14
+      }
+    }, /*#__PURE__*/React.createElement(Card, {
       padding: "lg"
     }, /*#__PURE__*/React.createElement("h3", {
       style: {
@@ -909,22 +915,96 @@
         fontWeight: 'var(--fw-bold)',
         marginBottom: 4
       }
-    }, "Email notifications"), /*#__PURE__*/React.createElement("p", {
+    }, "In-App Notifications"), /*#__PURE__*/React.createElement("p", {
       style: {
         fontSize: 'var(--text-sm)',
         color: 'var(--text-muted)',
         marginBottom: 8
       }
-    }, "Choose which emails you receive. Changes save automatically."), /*#__PURE__*/React.createElement(NotifRow, {
-      title: "New client approvals",
-      desc: "When a client approves or requests a revision",
-      field: "approvals",
+    }, "Bell icon notifications inside TechyFuel OS."), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "Task assigned to you",
+      desc: "When someone assigns a task to you",
+      field: "inapp_assigned",
       notif: notif,
       setNotif: setNotif
     }), /*#__PURE__*/React.createElement(NotifRow, {
-      title: "Deadline reminders",
-      desc: "Daily digest of tasks due within 48 hours",
-      field: "deadlines",
+      title: "Task due tomorrow",
+      desc: "Reminder when your task deadline is approaching",
+      field: "inapp_due",
+      notif: notif,
+      setNotif: setNotif
+    }), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "Task marked complete",
+      desc: "When a task you created or follow is marked done",
+      field: "inapp_done",
+      notif: notif,
+      setNotif: setNotif
+    }), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "@mention in chat",
+      desc: "When someone @mentions you in Team Chat",
+      field: "inapp_mention",
+      notif: notif,
+      setNotif: setNotif
+    }), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "New project created",
+      desc: "When a new project is created in the workspace",
+      field: "inapp_project",
+      notif: notif,
+      setNotif: setNotif
+    }), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "Client approves / rejects",
+      desc: "When a client takes action on a deliverable",
+      field: "inapp_client",
+      notif: notif,
+      setNotif: setNotif
+    })), /*#__PURE__*/React.createElement(Card, {
+      padding: "lg"
+    }, /*#__PURE__*/React.createElement("h3", {
+      style: {
+        fontSize: 'var(--text-lg)',
+        fontWeight: 'var(--fw-bold)',
+        marginBottom: 4
+      }
+    }, "Email Notifications"), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        marginBottom: 8
+      }
+    }, "Emails sent to your registered address. Changes save automatically."), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "Task assigned to you",
+      desc: "Immediate email when a task is assigned to you",
+      field: "email_assigned",
+      notif: notif,
+      setNotif: setNotif
+    }), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "Task due tomorrow",
+      desc: "Email reminder the day before a deadline",
+      field: "email_due",
+      notif: notif,
+      setNotif: setNotif
+    }), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "Comment on your task",
+      desc: "When someone comments on a task you own",
+      field: "email_comment",
+      notif: notif,
+      setNotif: setNotif
+    }), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "Client approves / rejects",
+      desc: "When a client takes action — sent to project manager",
+      field: "email_client",
+      notif: notif,
+      setNotif: setNotif
+    }), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "Overdue task digest",
+      desc: "Daily email listing all overdue tasks (assignee + manager)",
+      field: "email_overdue",
+      notif: notif,
+      setNotif: setNotif
+    }), /*#__PURE__*/React.createElement(NotifRow, {
+      title: "New client approvals",
+      desc: "When a client approves or requests a revision",
+      field: "approvals",
       notif: notif,
       setNotif: setNotif
     }), /*#__PURE__*/React.createElement(NotifRow, {
@@ -939,7 +1019,7 @@
       field: "weekly",
       notif: notif,
       setNotif: setNotif
-    })), tab === 'Integrations' && /*#__PURE__*/React.createElement(Card, {
+    }))), tab === 'Integrations' && /*#__PURE__*/React.createElement(Card, {
       padding: "lg"
     }, /*#__PURE__*/React.createElement("h3", {
       style: {

@@ -247,6 +247,37 @@
         await client.from('tasks').update(updates).eq('id', taskId);
       }
     },
+
+    // ── NOTIFICATIONS ─────────────────────────────────────
+    getNotifications: (recipientId, limit = 30) => {
+      let q = client.from('notifications').select('*');
+      if (recipientId) q = q.eq('recipient_id', recipientId);
+      return q.order('created_at', { ascending: false }).limit(limit);
+    },
+    createNotification: (d) => client.from('notifications').insert(d).select().single(),
+    markNotificationRead: (id) => client.from('notifications').update({ read: true }).eq('id', id),
+    markAllRead: (recipientId) => {
+      let q = client.from('notifications').update({ read: true }).eq('read', false);
+      if (recipientId) q = q.eq('recipient_id', recipientId);
+      return q;
+    },
+    getUnreadCount: async (recipientId) => {
+      let q = client.from('notifications').select('*', { count: 'exact', head: true }).eq('read', false);
+      if (recipientId) q = q.eq('recipient_id', recipientId);
+      const { count } = await q;
+      return count ?? 0;
+    },
+
+    // ── CLIENT PORTAL ─────────────────────────────────────
+    getClientNotes: (clientId, projectId) => {
+      let q = client.from('client_notes').select('*, team_members!created_by(name, avatar_url)').eq('client_id', clientId);
+      if (projectId) q = q.eq('project_id', projectId);
+      return q.order('created_at', { ascending: false });
+    },
+    createClientNote: (d) => client.from('client_notes').insert(d).select().single(),
+    deleteClientNote: (id) => client.from('client_notes').delete().eq('id', id),
+    createClientInvite: (d) => client.from('client_invites').insert(d).select().single(),
+    getClientInvite: (clientId) => client.from('client_invites').select('*').eq('client_id', clientId).order('created_at', { ascending: false }).limit(1).single(),
   };
 
   console.log('[TechyFuel OS] Supabase connected:', window.__SUPABASE_URL);

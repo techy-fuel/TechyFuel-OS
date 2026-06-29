@@ -116,10 +116,15 @@ function ClientPortal() {
   const [tasks,      setTasks]      = React.useState([]);
   const [invoice,    setInvoice]    = React.useState(null);
   const [files,      setFiles]      = React.useState([]);
-  const [approvals,  setApprovals]  = React.useState([]);
-  const [manager,    setManager]    = React.useState('');
-  const [loading,    setLoading]    = React.useState(true);
-  const [clientDrop, setClientDrop] = React.useState(false);
+  const [approvals,   setApprovals]   = React.useState([]);
+  const [manager,     setManager]     = React.useState('');
+  const [loading,     setLoading]     = React.useState(true);
+  const [clientDrop,  setClientDrop]  = React.useState(false);
+  const [notes,       setNotes]       = React.useState([]);
+  const [noteText,    setNoteText]    = React.useState('');
+  const [inviteLink,  setInviteLink]  = React.useState('');
+  const [inviteCopied, setInviteCopied] = React.useState(false);
+  const [showNotes,   setShowNotes]   = React.useState(false);
 
   // Load clients list
   React.useEffect(() => {
@@ -187,10 +192,60 @@ function ClientPortal() {
           const m = tRes.data[0];
           setManager(m.name);
         }
+
+        // Load private notes
+        if (window.API.getClientNotes) {
+          try { const { data: notesData } = await window.API.getClientNotes(clientId); setNotes(notesData || []); } catch {}
+        }
+
+        // Load or generate invite link
+        if (window.API.getClientInvite) {
+          try {
+            const { data: inv } = await window.API.getClientInvite(clientId);
+            if (inv?.token) setInviteLink(`${window.location.origin}/portal?token=${inv.token}`);
+          } catch {}
+        }
       } catch (_) {}
       setLoading(false);
     })();
   }, [clientId, clients]);
+
+  async function addNote() {
+    if (!noteText.trim() || !clientId || !window.API?.createClientNote) return;
+    try {
+      const myId = localStorage.getItem('tf_chat_member');
+      const { data } = await window.API.createClientNote({ client_id: clientId, project_id: project?.id, content: noteText.trim(), created_by: myId || undefined });
+      if (data) setNotes(prev => [data, ...prev]);
+      setNoteText('');
+    } catch {}
+  }
+
+  async function deleteNote(id) {
+    if (!window.API?.deleteClientNote) return;
+    try { await window.API.deleteClientNote(id); setNotes(prev => prev.filter(n => n.id !== id)); } catch {}
+  }
+
+  async function generateInvite() {
+    if (!clientId || !window.API?.createClientInvite) return;
+    try {
+      const { data } = await window.API.createClientInvite({ client_id: clientId });
+      if (data?.token) {
+        const link = `${window.location.origin}/portal?token=${data.token}`;
+        setInviteLink(link);
+        navigator.clipboard.writeText(link).catch(() => {});
+        setInviteCopied(true);
+        setTimeout(() => setInviteCopied(false), 2000);
+      }
+    } catch {
+      // Demo fallback
+      const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      const link = `${window.location.origin}/portal?token=${token}`;
+      setInviteLink(link);
+      navigator.clipboard.writeText(link).catch(() => {});
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 2000);
+    }
+  }
 
   async function handleApprove(post) {
     if (!window.API) return;
@@ -281,17 +336,30 @@ function ClientPortal() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 28 }}>
-            {[
-              ['Project health', health.label],
-              ['Next deadline', nextMilestone],
-              manager ? ['Account manager', manager.split(' ')[0]] : null,
-            ].filter(Boolean).map(([k, v]) => (
-              <div key={k}>
-                <div style={{ fontSize: 'var(--text-2xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', opacity: 0.8 }}>{k}</div>
-                <div style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--fw-bold)' }}>{v}</div>
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 28 }}>
+              {[
+                ['Project health', health.label],
+                ['Next deadline', nextMilestone],
+                manager ? ['Account manager', manager.split(' ')[0]] : null,
+              ].filter(Boolean).map(([k, v]) => (
+                <div key={k}>
+                  <div style={{ fontSize: 'var(--text-2xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', opacity: 0.8 }}>{k}</div>
+                  <div style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--fw-bold)' }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowNotes(n => !n)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-sans)' }}>
+                <Icon name="lock" size={13} /> Private Notes {notes.length > 0 && `(${notes.length})`}
+              </button>
+              <button onClick={inviteLink ? () => { navigator.clipboard.writeText(inviteLink).catch(() => {}); setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); } : generateInvite}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-sans)' }}>
+                <Icon name={inviteCopied ? 'check' : 'link'} size={13} />
+                {inviteCopied ? 'Link copied!' : inviteLink ? 'Copy invite link' : 'Invite client'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -441,6 +509,44 @@ function ClientPortal() {
           )}
         </div>
       </div>
+
+      {/* Private Notes Panel — team only, never shown to client */}
+      {showNotes && (
+        <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 380, background: 'white', borderLeft: '1px solid var(--slate-200)', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 500, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--slate-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fffbeb' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 15, fontWeight: 700 }}>
+                <Icon name="lock" size={15} style={{ color: '#92400e' }} />
+                Private Notes
+              </div>
+              <p style={{ fontSize: 12, color: '#92400e', margin: '2px 0 0', fontWeight: 500 }}>Hidden from client · visible to team only</p>
+            </div>
+            <button onClick={() => setShowNotes(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><Icon name="x" size={18} /></button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+            {notes.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', marginTop: 32 }}>No private notes yet.<br/>Add internal context, warnings, or strategy notes here.</p>}
+            {notes.map(n => (
+              <div key={n.id} style={{ padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <p style={{ fontSize: 14, margin: 0, lineHeight: 1.6, color: '#1c1917', flex: 1 }}>{n.content}</p>
+                  <button onClick={() => deleteNote(n.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0 2px', flexShrink: 0 }}><Icon name="trash-2" size={13} /></button>
+                </div>
+                <p style={{ fontSize: 11, color: '#92400e', margin: '6px 0 0', fontWeight: 500 }}>
+                  {n.team_members?.name || 'Team'} · {new Date(n.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div style={{ padding: '14px 16px', borderTop: '1px solid var(--slate-200)' }}>
+            <textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Write a private note for your team..."
+              rows={3} style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--slate-200)', borderRadius: 9, fontSize: 14, fontFamily: 'var(--font-sans)', outline: 'none', resize: 'none', boxSizing: 'border-box', marginBottom: 8 }}
+              onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNote(); }} />
+            <button onClick={addNote} style={{ width: '100%', padding: '9px 0', background: '#d97706', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-sans)' }}>
+              Add Note
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

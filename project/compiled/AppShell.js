@@ -77,6 +77,10 @@
       label: 'Automations',
       icon: 'zap'
     }, {
+      id: 'integrations',
+      label: 'Integrations',
+      icon: 'plug'
+    }, {
       id: 'settings',
       label: 'Settings',
       icon: 'settings'
@@ -322,6 +326,7 @@
     const [notifOpen, setNotifOpen] = React.useState(false);
     const [avatarOpen, setAvatarOpen] = React.useState(false);
     const [notifs, setNotifs] = React.useState([]);
+    const [unreadCount, setUnreadCount] = React.useState(0);
     const notifRef = React.useRef(null);
     const avatarRef = React.useRef(null);
     React.useEffect(() => {
@@ -344,22 +349,50 @@
       document.addEventListener('mousedown', onClickOutside);
       return () => document.removeEventListener('mousedown', onClickOutside);
     }, []);
+
+    // Poll unread count every 60s
+    React.useEffect(() => {
+      async function checkUnread() {
+        if (!window.API) return;
+        try {
+          const myId = localStorage.getItem('tf_chat_member');
+          const count = await window.API.getUnreadCount(myId || undefined);
+          setUnreadCount(count);
+        } catch {}
+      }
+      checkUnread();
+      const t = setInterval(checkUnread, 60000);
+      return () => clearInterval(t);
+    }, []);
     function openNotifs() {
       setNotifOpen(o => !o);
       setAvatarOpen(false);
       if (!notifOpen && window.API) {
         (async () => {
           try {
+            const myId = localStorage.getItem('tf_chat_member');
+            // Real notifications from DB
+            const {
+              data: dbNotifs
+            } = await window.API.getNotifications(myId || undefined, 20);
+            // Also grab overdue/upcoming tasks as smart notifications
             const {
               data: tasks
             } = await window.API.getTasks();
-            if (!Array.isArray(tasks)) return;
             const now = new Date();
-            const items = tasks.filter(t => t.status !== 'done' && t.due_date).map(t => ({
-              ...t,
-              _overdue: new Date(t.due_date) < now
-            })).filter(t => t._overdue || new Date(t.due_date) - now < 48 * 3600 * 1000).sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 8);
-            setNotifs(items);
+            const taskNotifs = (Array.isArray(tasks) ? tasks : []).filter(t => t.status !== 'done' && t.due_date).map(t => ({
+              id: 'task-' + t.id,
+              type: new Date(t.due_date) < now ? 'task_overdue' : 'task_due',
+              title: t.title,
+              body: new Date(t.due_date) < now ? 'Overdue' : 'Due soon',
+              _date: t.due_date,
+              read: false,
+              link_screen: 'tasks'
+            })).filter(t => t.type === 'task_overdue' || new Date(t._date) - now < 48 * 3600 * 1000).sort((a, b) => new Date(a._date) - new Date(b._date)).slice(0, 5);
+            const combined = [...(dbNotifs || []), ...taskNotifs].slice(0, 15);
+            setNotifs(combined);
+            if (myId) await window.API.markAllRead(myId);
+            setUnreadCount(0);
           } catch {}
         })();
       }
@@ -504,70 +537,192 @@
         border: '1px solid var(--border-subtle)',
         background: notifOpen ? 'var(--slate-100)' : 'transparent',
         cursor: 'pointer',
-        color: 'var(--text-body)'
+        color: 'var(--text-body)',
+        position: 'relative'
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "bell",
       size: 18
+    }), unreadCount > 0 && /*#__PURE__*/React.createElement("span", {
+      style: {
+        position: 'absolute',
+        top: 5,
+        right: 5,
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        background: 'var(--red-500)',
+        border: '2px solid white'
+      }
     })), notifOpen && /*#__PURE__*/React.createElement("div", {
-      style: dropStyle
+      style: {
+        ...dropStyle,
+        minWidth: 320
+      }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        padding: '12px 14px 8px',
+        padding: '12px 16px 10px',
         borderBottom: '1px solid var(--border-subtle)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
         fontSize: 'var(--text-sm)',
         fontWeight: 'var(--fw-bold)',
         color: 'var(--text-strong)'
       }
-    }, "Notifications"), notifs.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    }, "Notifications"), notifs.length > 0 && /*#__PURE__*/React.createElement("span", {
       style: {
-        padding: '20px 14px',
+        fontSize: 'var(--text-xs)',
+        color: 'var(--blue-600)',
+        cursor: 'pointer',
+        fontWeight: 600
+      },
+      onClick: () => setNotifs(prev => prev.map(n => ({
+        ...n,
+        read: true
+      })))
+    }, "Mark all read")), notifs.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '28px 14px',
         fontSize: 'var(--text-sm)',
         color: 'var(--text-muted)',
         textAlign: 'center'
       }
-    }, "No upcoming deadlines") : notifs.map(t => /*#__PURE__*/React.createElement("div", {
-      key: t.id,
-      onClick: () => {
-        setNotifOpen(false);
-        onNavigate && onNavigate('tasks');
-      },
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "bell",
+      size: 24,
       style: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 10,
-        padding: '10px 14px',
-        borderBottom: '1px solid var(--border-subtle)',
-        cursor: 'pointer',
-        background: 'transparent'
-      },
-      onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
-      onMouseLeave: e => e.currentTarget.style.background = 'transparent'
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        marginTop: 2,
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        background: t._overdue ? 'var(--red-500)' : 'var(--amber-400)',
-        flexShrink: 0
+        color: 'var(--slate-300)',
+        display: 'block',
+        margin: '0 auto 8px'
       }
-    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 'var(--text-sm)',
-        fontWeight: 'var(--fw-medium)',
-        color: 'var(--text-strong)'
-      }
-    }, t.title), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 'var(--text-xs)',
-        color: t._overdue ? 'var(--red-500)' : 'var(--text-muted)',
-        marginTop: 2
-      }
-    }, t._overdue ? 'Overdue · ' : 'Due · ', new Date(t.due_date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    }))))), /*#__PURE__*/React.createElement("div", {
+    }), "All caught up!") : notifs.map(n => {
+      const typeConfig = {
+        task_assigned: {
+          icon: 'user-check',
+          color: 'var(--blue-500)',
+          screen: 'tasks'
+        },
+        task_overdue: {
+          icon: 'alert-circle',
+          color: 'var(--red-500)',
+          screen: 'tasks'
+        },
+        task_due: {
+          icon: 'clock',
+          color: 'var(--amber-500)',
+          screen: 'tasks'
+        },
+        task_done: {
+          icon: 'check-circle',
+          color: 'var(--green-500)',
+          screen: 'tasks'
+        },
+        mention: {
+          icon: 'at-sign',
+          color: 'var(--purple-500)',
+          screen: 'chat'
+        },
+        approval: {
+          icon: 'clipboard-check',
+          color: 'var(--blue-600)',
+          screen: 'automations'
+        },
+        project_created: {
+          icon: 'folder-plus',
+          color: 'var(--green-600)',
+          screen: 'projects'
+        },
+        client_action: {
+          icon: 'user',
+          color: 'var(--orange-500)',
+          screen: 'portal'
+        }
+      }[n.type] || {
+        icon: 'bell',
+        color: 'var(--slate-400)',
+        screen: 'dashboard'
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        key: n.id,
+        onClick: () => {
+          setNotifOpen(false);
+          onNavigate && onNavigate(n.link_screen || typeConfig.screen);
+        },
+        style: {
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 10,
+          padding: '10px 16px',
+          borderBottom: '1px solid var(--border-subtle)',
+          cursor: 'pointer',
+          background: n.read ? 'transparent' : 'var(--blue-50)'
+        },
+        onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
+        onMouseLeave: e => e.currentTarget.style.background = n.read ? 'transparent' : 'var(--blue-50)'
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          marginTop: 2,
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          background: typeConfig.color + '18',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: typeConfig.icon,
+        size: 14,
+        style: {
+          color: typeConfig.color
+        }
+      })), /*#__PURE__*/React.createElement("div", {
+        style: {
+          flex: 1,
+          minWidth: 0
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-sm)',
+          fontWeight: n.read ? 'var(--fw-medium)' : 'var(--fw-semibold)',
+          color: 'var(--text-strong)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }
+      }, n.title), n.body && /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-muted)',
+          marginTop: 1
+        }
+      }, n.body), /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-subtle)',
+          marginTop: 2
+        }
+      }, n.created_at ? new Date(n.created_at).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      }) : '')), !n.read && /*#__PURE__*/React.createElement("span", {
+        style: {
+          width: 7,
+          height: 7,
+          borderRadius: '50%',
+          background: 'var(--blue-500)',
+          flexShrink: 0,
+          marginTop: 6
+        }
+      }));
+    }), /*#__PURE__*/React.createElement("div", {
       onClick: () => {
         setNotifOpen(false);
         onNavigate && onNavigate('tasks');

@@ -376,16 +376,32 @@ function Settings() {
             />
           )}
 
-          {/* ── Email notifications ── */}
+          {/* ── Notifications ── */}
           {tab === 'Email notifications' && (
-            <Card padding="lg">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4 }}>Email notifications</h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 8 }}>Choose which emails you receive. Changes save automatically.</p>
-              <NotifRow title="New client approvals"  desc="When a client approves or requests a revision"           field="approvals" notif={notif} setNotif={setNotif} />
-              <NotifRow title="Deadline reminders"    desc="Daily digest of tasks due within 48 hours"               field="deadlines" notif={notif} setNotif={setNotif} />
-              <NotifRow title="AI risk alerts"        desc="When the assistant detects a deadline or budget risk"     field="ai_alerts" notif={notif} setNotif={setNotif} />
-              <NotifRow title="Weekly summary"        desc="Monday recap of revenue, tasks and pipeline"             field="weekly"    notif={notif} setNotif={setNotif} />
-            </Card>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <Card padding="lg">
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4 }}>In-App Notifications</h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 8 }}>Bell icon notifications inside TechyFuel OS.</p>
+                <NotifRow title="Task assigned to you"       desc="When someone assigns a task to you"                          field="inapp_assigned"     notif={notif} setNotif={setNotif} />
+                <NotifRow title="Task due tomorrow"          desc="Reminder when your task deadline is approaching"             field="inapp_due"          notif={notif} setNotif={setNotif} />
+                <NotifRow title="Task marked complete"       desc="When a task you created or follow is marked done"           field="inapp_done"         notif={notif} setNotif={setNotif} />
+                <NotifRow title="@mention in chat"           desc="When someone @mentions you in Team Chat"                    field="inapp_mention"      notif={notif} setNotif={setNotif} />
+                <NotifRow title="New project created"        desc="When a new project is created in the workspace"            field="inapp_project"      notif={notif} setNotif={setNotif} />
+                <NotifRow title="Client approves / rejects"  desc="When a client takes action on a deliverable"               field="inapp_client"       notif={notif} setNotif={setNotif} />
+              </Card>
+              <Card padding="lg">
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4 }}>Email Notifications</h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 8 }}>Emails sent to your registered address. Changes save automatically.</p>
+                <NotifRow title="Task assigned to you"       desc="Immediate email when a task is assigned to you"            field="email_assigned"     notif={notif} setNotif={setNotif} />
+                <NotifRow title="Task due tomorrow"          desc="Email reminder the day before a deadline"                  field="email_due"          notif={notif} setNotif={setNotif} />
+                <NotifRow title="Comment on your task"       desc="When someone comments on a task you own"                  field="email_comment"      notif={notif} setNotif={setNotif} />
+                <NotifRow title="Client approves / rejects"  desc="When a client takes action — sent to project manager"     field="email_client"       notif={notif} setNotif={setNotif} />
+                <NotifRow title="Overdue task digest"        desc="Daily email listing all overdue tasks (assignee + manager)" field="email_overdue"     notif={notif} setNotif={setNotif} />
+                <NotifRow title="New client approvals"       desc="When a client approves or requests a revision"            field="approvals"          notif={notif} setNotif={setNotif} />
+                <NotifRow title="AI risk alerts"             desc="When the assistant detects a deadline or budget risk"      field="ai_alerts"          notif={notif} setNotif={setNotif} />
+                <NotifRow title="Weekly summary"             desc="Monday recap of revenue, tasks and pipeline"              field="weekly"             notif={notif} setNotif={setNotif} />
+              </Card>
+            </div>
           )}
 
           {/* ── Integrations ── */}
