@@ -452,6 +452,7 @@ function TeamChat() {
   const [unread, setUnread] = React.useState({});
   const [membersOpen, setMembersOpen] = React.useState(false);
   const [channelMembers, setChannelMembers] = React.useState([]);
+  const [call, setCall] = React.useState(null); // { channelId, channelName, type: 'audio'|'video' }
   const subRef = React.useRef(null);
   const bottomRef = React.useRef(null);
   const savedMyId = React.useRef(null);
@@ -749,6 +750,16 @@ function TeamChat() {
               <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{activeChannel.displayName || activeChannel.name}</div>
               {activeChannel.description && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{activeChannel.description}</div>}
             </div>
+            <button onClick={() => setCall({ channelId: activeChannel.id, channelName: activeChannel.displayName || activeChannel.name, type: 'audio' })}
+              title="Voice call"
+              style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <Icon name="phone" size={15} />
+            </button>
+            <button onClick={() => setCall({ channelId: activeChannel.id, channelName: activeChannel.displayName || activeChannel.name, type: 'video' })}
+              title="Video call"
+              style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <Icon name="video" size={15} />
+            </button>
             <button onClick={() => setSearchOpen(true)} style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-muted)' }}>
               <Icon name="search" size={15} />
             </button>
@@ -900,6 +911,111 @@ function TeamChat() {
 
       {/* ── New channel/DM modal ── */}
       <NewChannelModal open={!!newModal} type={newModal} onClose={() => setNewModal(null)} team={team} myId={myId} onCreate={handleCreateChannel} />
+
+      {/* ── Call modal ── */}
+      {call && <CallModal call={call} onClose={() => setCall(null)} />}
+    </div>
+  );
+}
+
+// ── Call Modal (Jitsi Meet embed) ─────────────────────────────────────────────
+function CallModal({ call, onClose }) {
+  const containerRef = React.useRef(null);
+  const apiRef = React.useRef(null);
+  const [ready, setReady] = React.useState(false);
+  const [duration, setDuration] = React.useState(0);
+  const [participants, setParticipants] = React.useState(1);
+
+  const roomName = 'techyfuel-os-' + call.channelId.replace(/-/g, '').slice(0, 12);
+
+  React.useEffect(() => {
+    let loaded = false;
+    function initJitsi() {
+      if (loaded || !containerRef.current || !window.JitsiMeetExternalAPI) return;
+      loaded = true;
+      try {
+        const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
+          roomName,
+          parentNode: containerRef.current,
+          width: '100%',
+          height: '100%',
+          configOverwrite: {
+            startWithAudioMuted: false,
+            startWithVideoMuted: call.type === 'audio',
+            prejoinPageEnabled: false,
+            disableDeepLinking: true,
+            enableNoisyMicDetection: true,
+          },
+          interfaceConfigOverwrite: {
+            TOOLBAR_BUTTONS: call.type === 'audio'
+              ? ['microphone', 'hangup']
+              : ['microphone', 'camera', 'desktop', 'recording', 'fullscreen', 'hangup'],
+            SHOW_JITSI_WATERMARK: false,
+            SHOW_WATERMARK_FOR_GUESTS: false,
+            DEFAULT_REMOTE_DISPLAY_NAME: 'Team member',
+            APP_NAME: 'TechyFuel OS',
+          },
+          userInfo: { displayName: (localStorage.getItem('tf_my_name') || 'Team Member') },
+        });
+        apiRef.current = api;
+        api.addEventListener('videoConferenceJoined', () => setReady(true));
+        api.addEventListener('participantJoined', () => setParticipants(p => p + 1));
+        api.addEventListener('participantLeft', () => setParticipants(p => Math.max(1, p - 1)));
+        api.addEventListener('readyToClose', onClose);
+      } catch(e) { console.error('Jitsi init error', e); }
+    }
+
+    if (window.JitsiMeetExternalAPI) {
+      initJitsi();
+    } else {
+      const s = document.createElement('script');
+      s.src = 'https://meet.jit.si/external_api.js';
+      s.onload = initJitsi;
+      document.head.appendChild(s);
+    }
+    return () => { if (apiRef.current) { try { apiRef.current.dispose(); } catch {} } };
+  }, []);
+
+  // Duration timer
+  React.useEffect(() => {
+    const t = setInterval(() => setDuration(d => d + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  function fmt(s) { const m = Math.floor(s/60); return `${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 5000, background: '#0d1117', display: 'flex', flexDirection: 'column' }}>
+      {/* Top bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', background: '#161b22', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />
+          <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>
+            {call.type === 'audio' ? '🎙️' : '🎥'} {call.channelName}
+          </span>
+        </div>
+        <span style={{ color: '#8b949e', fontSize: 14 }}>{fmt(duration)}</span>
+        <span style={{ color: '#8b949e', fontSize: 13 }}>· {participants} participant{participants !== 1 ? 's' : ''}</span>
+        <div style={{ flex: 1 }} />
+        <div style={{ fontSize: 13, color: '#8b949e' }}>
+          {call.type === 'video' ? 'Screen share & recording available in toolbar below' : 'Voice call'}
+        </div>
+        <button onClick={onClose}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-sans)' }}>
+          <Icon name="phone-off" size={15} /> End Call
+        </button>
+      </div>
+
+      {/* Jitsi container */}
+      <div ref={containerRef} style={{ flex: 1, position: 'relative' }}>
+        {!ready && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: '#8b949e' }}>
+            <div style={{ width: 48, height: 48, border: '3px solid #30363d', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <p style={{ fontSize: 15 }}>Connecting to call…</p>
+          </div>
+        )}
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
