@@ -40,11 +40,19 @@ function NotifRow({ title, desc, field, notif, setNotif }) {
 function Settings() {
   const saved = loadSaved();
 
-  const [tab,       setTab]       = React.useState('Agency branding');
-  const [team,      setTeam]      = React.useState([]);
+  const [tab,        setTab]        = React.useState('Agency branding');
+  const [team,       setTeam]       = React.useState([]);
   const [agencyName, setAgencyName] = React.useState(saved.agencyName || '');
-  const [agencyEmail, setAgencyEmail] = React.useState(saved.agencyEmail || '');
-  const [saved2,    setSaved2]    = React.useState(false);
+  const [agencyEmail,setAgencyEmail]= React.useState(saved.agencyEmail || '');
+  const [logoUrl,    setLogoUrl]    = React.useState(saved.logoUrl || '');
+  const [saved2,     setSaved2]     = React.useState(false);
+  const [toast,      setToast]      = React.useState('');
+  const logoInputRef = React.useRef(null);
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  }
 
   const defaultNotif = { approvals: true, deadlines: true, ai_alerts: true, weekly: false };
   const [notif, setNotif] = React.useState({ ...defaultNotif, ...(saved.notifications || {}) });
@@ -69,9 +77,22 @@ function Settings() {
 
   function handleSaveBranding() {
     const sk = loadSaved();
-    saveSettings({ ...sk, agencyName, agencyEmail });
+    saveSettings({ ...sk, agencyName, agencyEmail, logoUrl });
     setSaved2(true);
-    setTimeout(() => setSaved2(false), 2000);
+    showToast('Branding saved!');
+    setTimeout(() => setSaved2(false), 2500);
+  }
+
+  function handleLogoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { showToast('Image must be under 2MB'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      setLogoUrl(ev.target.result);
+      showToast('Logo ready — click Save changes to apply');
+    };
+    reader.readAsDataURL(file);
   }
 
   function toggleInteg(key) {
@@ -100,6 +121,13 @@ function Settings() {
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
       <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em', marginBottom: 18 }}>Settings</h1>
 
+      {/* Toast notification */}
+      {toast && (
+        <div style={{ position: 'fixed', top: 20, right: 24, zIndex: 9999, background: 'var(--green-600)', color: '#fff', padding: '10px 18px', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', boxShadow: 'var(--shadow-xl)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Icon name="check" size={16} /> {toast}
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 20, alignItems: 'start' }}>
 
         {/* Sidebar nav */}
@@ -125,12 +153,20 @@ function Settings() {
               <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4 }}>Agency branding</h3>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 20 }}>Appears across the client portal and reports.</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-                <span style={{ width: 56, height: 56, borderRadius: 'var(--radius-xl)', background: 'var(--grad-brand)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-brand)' }}>
-                  <img src="../../assets/techyfuel-mark.png" alt="" style={{ height: 32, filter: 'brightness(0) invert(1)' }} />
+                <span style={{ width: 56, height: 56, borderRadius: 'var(--radius-xl)', background: logoUrl ? 'var(--slate-100)' : 'var(--grad-brand)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-brand)', overflow: 'hidden' }}>
+                  {logoUrl
+                    ? <img src={logoUrl} alt="Logo" style={{ width: 56, height: 56, objectFit: 'cover' }} />
+                    : <img src="../../assets/techyfuel-mark.png" alt="" style={{ height: 32, filter: 'brightness(0) invert(1)' }} />}
                 </span>
-                <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
-                  <Icon name="upload" size={15} /> Upload logo
-                </button>
+                <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <button onClick={() => logoInputRef.current && logoInputRef.current.click()} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
+                    <Icon name="upload" size={15} /> Upload logo
+                  </button>
+                  {logoUrl && <button onClick={() => { setLogoUrl(''); showToast('Logo removed'); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 10px', background: 'transparent', border: 'none', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--red-500)', cursor: 'pointer' }}>
+                    <Icon name="x" size={12} /> Remove
+                  </button>}
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                 <div>

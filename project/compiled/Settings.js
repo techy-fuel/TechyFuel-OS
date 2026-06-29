@@ -77,7 +77,14 @@
     const [team, setTeam] = React.useState([]);
     const [agencyName, setAgencyName] = React.useState(saved.agencyName || '');
     const [agencyEmail, setAgencyEmail] = React.useState(saved.agencyEmail || '');
+    const [logoUrl, setLogoUrl] = React.useState(saved.logoUrl || '');
     const [saved2, setSaved2] = React.useState(false);
+    const [toast, setToast] = React.useState('');
+    const logoInputRef = React.useRef(null);
+    function showToast(msg) {
+      setToast(msg);
+      setTimeout(() => setToast(''), 3000);
+    }
     const defaultNotif = {
       approvals: true,
       deadlines: true,
@@ -116,10 +123,26 @@
       saveSettings({
         ...sk,
         agencyName,
-        agencyEmail
+        agencyEmail,
+        logoUrl
       });
       setSaved2(true);
-      setTimeout(() => setSaved2(false), 2000);
+      showToast('Branding saved!');
+      setTimeout(() => setSaved2(false), 2500);
+    }
+    function handleLogoUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('Image must be under 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        setLogoUrl(ev.target.result);
+        showToast('Logo ready — click Save changes to apply');
+      };
+      reader.readAsDataURL(file);
     }
     function toggleInteg(key) {
       const next = {
@@ -186,7 +209,27 @@
         letterSpacing: '-0.02em',
         marginBottom: 18
       }
-    }, "Settings"), /*#__PURE__*/React.createElement("div", {
+    }, "Settings"), toast && /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'fixed',
+        top: 20,
+        right: 24,
+        zIndex: 9999,
+        background: 'var(--green-600)',
+        color: '#fff',
+        padding: '10px 18px',
+        borderRadius: 'var(--radius-md)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        boxShadow: 'var(--shadow-xl)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "check",
+      size: 16
+    }), " ", toast), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
         gridTemplateColumns: '220px 1fr',
@@ -262,20 +305,44 @@
         width: 56,
         height: 56,
         borderRadius: 'var(--radius-xl)',
-        background: 'var(--grad-brand)',
+        background: logoUrl ? 'var(--slate-100)' : 'var(--grad-brand)',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: 'var(--shadow-brand)'
+        boxShadow: 'var(--shadow-brand)',
+        overflow: 'hidden'
       }
-    }, /*#__PURE__*/React.createElement("img", {
+    }, logoUrl ? /*#__PURE__*/React.createElement("img", {
+      src: logoUrl,
+      alt: "Logo",
+      style: {
+        width: 56,
+        height: 56,
+        objectFit: 'cover'
+      }
+    }) : /*#__PURE__*/React.createElement("img", {
       src: "../../assets/techyfuel-mark.png",
       alt: "",
       style: {
         height: 32,
         filter: 'brightness(0) invert(1)'
       }
-    })), /*#__PURE__*/React.createElement("button", {
+    })), /*#__PURE__*/React.createElement("input", {
+      ref: logoInputRef,
+      type: "file",
+      accept: "image/*",
+      style: {
+        display: 'none'
+      },
+      onChange: handleLogoUpload
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => logoInputRef.current && logoInputRef.current.click(),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -294,7 +361,29 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "upload",
       size: 15
-    }), " Upload logo")), /*#__PURE__*/React.createElement("div", {
+    }), " Upload logo"), logoUrl && /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setLogoUrl('');
+        showToast('Logo removed');
+      },
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        height: 26,
+        padding: '0 10px',
+        background: 'transparent',
+        border: 'none',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--red-500)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "x",
+      size: 12
+    }), " Remove"))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
