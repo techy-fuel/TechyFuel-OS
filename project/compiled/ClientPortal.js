@@ -3,9 +3,7 @@
   const {
     Card,
     Badge,
-    Avatar,
-    AvatarGroup,
-    ProgressBar
+    Avatar
   } = window.TechyFuelOSDesignSystem_be0222;
   const TF_MILESTONES = [{
     label: 'Discovery & strategy',
@@ -22,25 +20,6 @@
   }, {
     label: 'Reporting & handover',
     state: 'todo'
-  }];
-  const TF_APPROVALS = [{
-    name: 'Homepage hero — v3',
-    type: 'Design',
-    who: 'Ali Raza',
-    time: '2h ago',
-    status: 'pending'
-  }, {
-    name: 'Launch reel — 30s cut',
-    type: 'Video',
-    who: 'Hina Malik',
-    time: 'Yesterday',
-    status: 'pending'
-  }, {
-    name: 'Instagram carousel set',
-    type: 'Social',
-    who: 'Zara Ahmed',
-    time: 'Jun 18',
-    status: 'approved'
   }];
   function mimeIcon(mime) {
     if (!mime) return {
@@ -86,75 +65,106 @@
       day: 'numeric'
     });
   }
-  const FALLBACK_FILES = [{
-    id: 'f1',
-    name: 'Brand guidelines.pdf',
-    mime_type: 'pdf',
-    file_size: 4300000
-  }, {
-    id: 'f2',
-    name: 'Launch hero.png',
-    mime_type: 'image',
-    file_size: 1887436
-  }, {
-    id: 'f3',
-    name: 'Campaign reel.mp4',
-    mime_type: 'video',
-    file_size: 39845888
-  }, {
-    id: 'f4',
-    name: 'Service agreement.pdf',
-    mime_type: 'pdf',
-    file_size: 327680
-  }];
+  function fmtWhen(ds) {
+    if (!ds) return '';
+    const diff = Math.round((Date.now() - new Date(ds)) / 3600000);
+    if (diff < 1) return 'Just now';
+    if (diff < 24) return diff + 'h ago';
+    if (diff < 48) return 'Yesterday';
+    return fmtDate(ds);
+  }
   function ClientPortal() {
-    const [client, setClient] = React.useState({
-      name: 'Nova Tech',
-      company: 'Nova Technology Ltd'
-    });
-    const [project, setProject] = React.useState({
-      name: 'Nova Launch Campaign',
-      progress: 65,
-      due_date: '2025-07-15'
-    });
-    const [invoice, setInvoice] = React.useState({
-      invoice_no: 'INV-2025-001',
-      amount: 4500,
-      due_date: '2025-06-01',
-      status: 'paid'
-    });
-    const [files, setFiles] = React.useState(FALLBACK_FILES);
+    const [client, setClient] = React.useState(null);
+    const [project, setProject] = React.useState(null);
+    const [invoice, setInvoice] = React.useState(null);
+    const [files, setFiles] = React.useState([]);
+    const [approvals, setApprovals] = React.useState([]);
+    const [manager, setManager] = React.useState('');
+    const [loading, setLoading] = React.useState(true);
     React.useEffect(() => {
-      if (!window.API) return;
-      window.API.getClients().then(r => {
-        if (r.data && r.data.length > 0) {
-          const first = r.data.find(c => c.status === 'active') || r.data[0];
-          setClient(first);
-          return first.id;
-        }
-      }).then(clientId => {
-        if (!clientId) return;
-        Promise.all([window.API.getProjects(), window.API.getInvoices(), window.API.getFiles({
-          clientId
-        })]).then(([pRes, iRes, fRes]) => {
+      if (!window.API) {
+        setLoading(false);
+        return;
+      }
+      (async () => {
+        try {
+          // Load client
+          const {
+            data: clients
+          } = await window.API.getClients();
+          const c = (clients || []).find(x => x.status === 'active') || (clients || [])[0];
+          if (!c) {
+            setLoading(false);
+            return;
+          }
+          setClient(c);
+
+          // Parallel: project, invoice, files, content posts, team
+          const [pRes, iRes, fRes, cRes, tRes] = await Promise.all([window.API.getProjects().catch(() => ({})), window.API.getInvoices().catch(() => ({})), window.API.getFiles({
+            clientId: c.id
+          }).catch(() => ({})), window.API.getContent({
+            clientId: c.id
+          }).catch(() => ({})), window.API.getTeam().catch(() => ({}))]);
           if (pRes.data) {
-            const p = pRes.data.find(p => p.client_id === clientId) || pRes.data[0];
+            const p = pRes.data.find(x => x.client_id === c.id) || pRes.data[0];
             if (p) setProject(p);
           }
           if (iRes.data) {
-            const inv = iRes.data.find(i => i.client_id === clientId) || iRes.data[0];
+            const inv = iRes.data.find(x => x.client_id === c.id) || iRes.data[0];
             if (inv) setInvoice(inv);
           }
           if (fRes.data && fRes.data.length > 0) setFiles(fRes.data);
-        }).catch(() => {});
-      }).catch(() => {});
+
+          // Approvals = content posts that need attention (not yet published)
+          if (cRes.data) {
+            const pending = cRes.data.filter(p => ['draft', 'approval', 'scheduled'].includes(p.status));
+            setApprovals(pending.slice(0, 5));
+          }
+          if (tRes.data && tRes.data.length > 0) {
+            setManager(tRes.data[0].name.split(' ')[0] + ' ' + (tRes.data[0].name.split(' ')[1]?.[0] || '') + '.');
+          }
+        } catch (_) {}
+        setLoading(false);
+      })();
     }, []);
-    const pendingApprovals = TF_APPROVALS.filter(a => a.status === 'pending').length;
-    const displayName = client.company || client.name;
+    async function handleApprove(post) {
+      if (!window.API) return;
+      try {
+        await window.API.updatePost(post.id, {
+          status: 'published'
+        });
+      } catch (_) {}
+      setApprovals(prev => prev.map(p => p.id === post.id ? {
+        ...p,
+        status: 'published'
+      } : p));
+    }
+    async function handleReject(post) {
+      if (!window.API) return;
+      try {
+        await window.API.updatePost(post.id, {
+          status: 'draft'
+        });
+      } catch (_) {}
+      setApprovals(prev => prev.filter(p => p.id !== post.id));
+    }
+    const displayName = client ? client.company || client.name : '—';
     const completedMilestones = TF_MILESTONES.filter(m => m.state === 'done').length;
-    const progressPct = project.progress || Math.round(completedMilestones / TF_MILESTONES.length * 100);
-    const nextMilestone = project.due_date ? fmtDate(project.due_date) : 'On track';
-    const manager = 'Sara K.';
+    const progressPct = project?.progress || Math.round(completedMilestones / TF_MILESTONES.length * 100);
+    const nextMilestone = project?.due_date ? fmtDate(project.due_date) : 'On track';
+    const pendingCount = approvals.filter(a => a.status !== 'published').length;
+    if (loading) {
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--text-muted)',
+          fontSize: 'var(--text-sm)'
+        }
+      }, "Loading…");
+    }
     return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       style: {
         background: 'var(--grad-brand)',
@@ -214,7 +224,7 @@
         display: 'flex',
         gap: 22
       }
-    }, [['Project health', 'On track'], ['Next milestone', nextMilestone], ['Your manager', manager]].map(([k, v]) => /*#__PURE__*/React.createElement("div", {
+    }, [['Project health', 'On track'], ['Next milestone', nextMilestone], manager ? ['Your manager', manager] : null].filter(Boolean).map(([k, v]) => /*#__PURE__*/React.createElement("div", {
       key: k
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -254,7 +264,7 @@
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-bold)'
       }
-    }, "Project progress · ", project.name), /*#__PURE__*/React.createElement(Badge, {
+    }, "Project progress", project?.name ? ` · ${project.name}` : ''), /*#__PURE__*/React.createElement(Badge, {
       tone: progressPct >= 80 ? 'success' : 'brand',
       dot: true
     }, progressPct, "% complete")), /*#__PURE__*/React.createElement("div", {
@@ -334,98 +344,124 @@
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-bold)'
       }
-    }, "Awaiting your approval"), /*#__PURE__*/React.createElement(Badge, {
+    }, "Awaiting your approval"), pendingCount > 0 && /*#__PURE__*/React.createElement(Badge, {
       tone: "warning"
-    }, pendingApprovals, " pending")), /*#__PURE__*/React.createElement("div", {
+    }, pendingCount, " pending")), approvals.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '32px 0',
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "No content awaiting approval") : /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
         gap: 10
       }
-    }, TF_APPROVALS.map((a, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: 12,
-        background: 'var(--slate-50)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-subtle)'
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        width: 38,
-        height: 38,
-        flex: 'none',
-        borderRadius: 'var(--radius-md)',
-        background: 'var(--slate-0)',
-        border: '1px solid var(--border-subtle)',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--text-muted)'
-      }
-    }, /*#__PURE__*/React.createElement(Icon, {
-      name: a.type === 'Video' ? 'video' : a.type === 'Social' ? 'instagram' : 'image',
-      size: 18
-    })), /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        minWidth: 0
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 'var(--text-sm)',
-        fontWeight: 'var(--fw-semibold)',
-        color: 'var(--text-strong)'
-      }
-    }, a.name), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 'var(--text-xs)',
-        color: 'var(--text-muted)'
-      }
-    }, a.who, " · ", a.time)), a.status === 'approved' ? /*#__PURE__*/React.createElement(Badge, {
-      tone: "success",
-      dot: true
-    }, "Approved") : /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        gap: 6
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      style: {
-        width: 32,
-        height: 32,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--green-600)',
-        color: '#fff',
-        border: 'none',
-        borderRadius: 'var(--radius-md)',
-        cursor: 'pointer'
-      }
-    }, /*#__PURE__*/React.createElement(Icon, {
-      name: "check",
-      size: 16
-    })), /*#__PURE__*/React.createElement("button", {
-      style: {
-        width: 32,
-        height: 32,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--slate-0)',
-        color: 'var(--text-muted)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-md)',
-        cursor: 'pointer'
-      }
-    }, /*#__PURE__*/React.createElement(Icon, {
-      name: "rotate-ccw",
-      size: 15
-    }))))))), /*#__PURE__*/React.createElement("div", {
+    }, approvals.map((a, i) => {
+      const isPlatIcon = {
+        instagram: 'instagram',
+        facebook: 'facebook',
+        linkedin: 'linkedin',
+        youtube: 'youtube',
+        twitter: 'twitter'
+      };
+      const icon = isPlatIcon[a.platform] || 'file-text';
+      const isPublished = a.status === 'published';
+      const assigneeName = a.team_members?.name || '';
+      return /*#__PURE__*/React.createElement("div", {
+        key: a.id || i,
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: 12,
+          background: 'var(--slate-50)',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border-subtle)'
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          width: 38,
+          height: 38,
+          flex: 'none',
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--slate-0)',
+          border: '1px solid var(--border-subtle)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--text-muted)'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: icon,
+        size: 18
+      })), /*#__PURE__*/React.createElement("div", {
+        style: {
+          flex: 1,
+          minWidth: 0
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-sm)',
+          fontWeight: 'var(--fw-semibold)',
+          color: 'var(--text-strong)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }
+      }, a.title), /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-muted)'
+        }
+      }, assigneeName ? assigneeName + ' · ' : '', fmtWhen(a.created_at))), isPublished ? /*#__PURE__*/React.createElement(Badge, {
+        tone: "success",
+        dot: true
+      }, "Approved") : /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          gap: 6
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => handleApprove(a),
+        title: "Approve",
+        style: {
+          width: 32,
+          height: 32,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--green-600)',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 'var(--radius-md)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "check",
+        size: 16
+      })), /*#__PURE__*/React.createElement("button", {
+        onClick: () => handleReject(a),
+        title: "Send back",
+        style: {
+          width: 32,
+          height: 32,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--slate-0)',
+          color: 'var(--text-muted)',
+          border: '1px solid var(--border-default)',
+          borderRadius: 'var(--radius-md)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "rotate-ccw",
+        size: 15
+      }))));
+    }))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -445,7 +481,19 @@
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-bold)'
       }
-    }, "Shared files"), window.TFLinkBtn ? React.createElement(window.TFLinkBtn, null, 'All files') : null), /*#__PURE__*/React.createElement("div", {
+    }, "Shared files"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)'
+      }
+    }, files.length, " files")), files.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '20px 0',
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "No files shared yet") : /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -495,7 +543,7 @@
           cursor: 'pointer'
         }
       }));
-    }))), /*#__PURE__*/React.createElement(Card, {
+    }))), invoice && /*#__PURE__*/React.createElement(Card, {
       padding: "lg",
       style: {
         background: 'var(--slate-900)'
