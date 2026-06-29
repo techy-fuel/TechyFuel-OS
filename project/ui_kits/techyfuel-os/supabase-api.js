@@ -113,6 +113,10 @@
         .select('*, projects(name), clients(name), team_members!uploaded_by(name)');
       if (filters.projectId) q = q.eq('project_id', filters.projectId);
       if (filters.clientId)  q = q.eq('client_id', filters.clientId);
+      if (filters.folderId !== undefined) {
+        if (filters.folderId === null) q = q.is('folder_id', null);
+        else q = q.eq('folder_id', filters.folderId);
+      }
       return q.order('created_at', { ascending: false });
     },
     uploadFile: async (bucket, path, file) => {
@@ -121,6 +125,19 @@
       return client.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
     },
     createFile: (d) => client.from('files').insert(d).select().single(),
+
+    // ── FOLDERS ──────────────────────────────────────────
+    getFolders: (projectId) => client.from('folders').select('*').eq('project_id', projectId).order('name'),
+    createFolder: (d) => client.from('folders').insert(d).select().single(),
+    deleteFolder: (id) => client.from('folders').delete().eq('id', id),
+
+    // ── DOCUMENTS ────────────────────────────────────────
+    getDocs: (projectId) => client.from('documents').select('*').eq('project_id', projectId).order('updated_at', { ascending: false }),
+    createDoc: (d) => client.from('documents').insert(d).select().single(),
+    updateDoc: (id, d) => client.from('documents').update(d).eq('id', id).select().single(),
+    deleteDoc: (id) => client.from('documents').delete().eq('id', id),
+    getDocVersions: (docId) => client.from('document_versions').select('*').eq('document_id', docId).order('created_at', { ascending: false }),
+    createDocVersion: (d) => client.from('document_versions').insert(d).select().single(),
 
     // ── CHAT ─────────────────────────────────────────────
     getChannels: () =>

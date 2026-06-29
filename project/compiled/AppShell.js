@@ -61,9 +61,9 @@
       label: 'Reports',
       icon: 'chart-line'
     }, {
-      id: 'files',
-      label: 'Files',
-      icon: 'folder'
+      id: 'docs',
+      label: 'Docs & Files',
+      icon: 'file-text'
     }, {
       id: 'team',
       label: 'Team',
@@ -651,7 +651,7 @@
       }
     }), " ", item.label)))));
   }
-  const FULL_HEIGHT_SCREENS = new Set(['chat']);
+  const FULL_HEIGHT_SCREENS = new Set(['chat', 'docs']);
   function AppShell({
     active,
     onNavigate,

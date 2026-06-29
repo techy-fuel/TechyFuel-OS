@@ -21,7 +21,7 @@ const TF_NAV = [
   { group: 'Business', items: [
     { id: 'finance', label: 'Finance', icon: 'wallet' },
     { id: 'reports', label: 'Reports', icon: 'chart-line' },
-    { id: 'files', label: 'Files', icon: 'folder' },
+    { id: 'docs', label: 'Docs & Files', icon: 'file-text' },
     { id: 'team', label: 'Team', icon: 'users' },
     { id: 'chat', label: 'Team Chat', icon: 'message-square' },
     { id: 'automations', label: 'Automations', icon: 'zap' },
@@ -320,7 +320,7 @@ function TopBar({ title, crumb, onOpenAI, onNavigate }) {
   );
 }
 
-const FULL_HEIGHT_SCREENS = new Set(['chat']);
+const FULL_HEIGHT_SCREENS = new Set(['chat', 'docs']);
 
 function AppShell({ active, onNavigate, title, crumb, onOpenAI, children }) {
   useLucide();

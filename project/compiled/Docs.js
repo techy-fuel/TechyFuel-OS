@@ -1,0 +1,2129 @@
+// Docs.jsx — Rich Documents & File Storage
+(() => {
+  const {
+    Card,
+    Badge,
+    Avatar
+  } = window.TechyFuelOSDesignSystem_be0222;
+  const BLOCK_TYPES = [{
+    type: 'paragraph',
+    label: 'Text',
+    icon: 'type'
+  }, {
+    type: 'h1',
+    label: 'Heading 1',
+    icon: 'heading-1'
+  }, {
+    type: 'h2',
+    label: 'Heading 2',
+    icon: 'heading-2'
+  }, {
+    type: 'h3',
+    label: 'Heading 3',
+    icon: 'heading-3'
+  }, {
+    type: 'bullet',
+    label: 'Bullet list',
+    icon: 'list'
+  }, {
+    type: 'numbered',
+    label: 'Numbered list',
+    icon: 'list-ordered'
+  }, {
+    type: 'checklist',
+    label: 'To-do',
+    icon: 'check-square'
+  }, {
+    type: 'code',
+    label: 'Code block',
+    icon: 'code'
+  }, {
+    type: 'quote',
+    label: 'Quote',
+    icon: 'quote'
+  }, {
+    type: 'image',
+    label: 'Image',
+    icon: 'image'
+  }, {
+    type: 'table',
+    label: 'Table',
+    icon: 'table'
+  }, {
+    type: 'divider',
+    label: 'Divider',
+    icon: 'minus'
+  }];
+  function uid() {
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+  function mkBlock(type = 'paragraph') {
+    const id = uid();
+    if (type === 'table') return {
+      id,
+      type,
+      rows: [['', ''], ['', '']]
+    };
+    if (type === 'checklist') return {
+      id,
+      type,
+      text: '',
+      checked: false
+    };
+    if (type === 'code') return {
+      id,
+      type,
+      code: '',
+      language: 'javascript'
+    };
+    if (type === 'image') return {
+      id,
+      type,
+      url: '',
+      caption: ''
+    };
+    if (type === 'divider') return {
+      id,
+      type
+    };
+    return {
+      id,
+      type,
+      text: ''
+    };
+  }
+
+  // ── Single Block ──────────────────────────────────────────────────────────────
+  function Block({
+    block,
+    index,
+    onChange,
+    onKeyDown,
+    elRef
+  }) {
+    const base = {
+      outline: 'none',
+      width: '100%',
+      border: 'none',
+      background: 'transparent',
+      fontFamily: 'var(--font-sans)',
+      resize: 'none',
+      padding: 0
+    };
+    function detectMarkdown(val) {
+      if (val === '# ') return onChange({
+        ...block,
+        type: 'h1',
+        text: ''
+      });
+      if (val === '## ') return onChange({
+        ...block,
+        type: 'h2',
+        text: ''
+      });
+      if (val === '### ') return onChange({
+        ...block,
+        type: 'h3',
+        text: ''
+      });
+      if (val === '- ' || val === '* ') return onChange({
+        ...block,
+        type: 'bullet',
+        text: ''
+      });
+      if (val === '1. ') return onChange({
+        ...block,
+        type: 'numbered',
+        text: ''
+      });
+      if (val === '[] ' || val === '[ ] ') return onChange({
+        ...block,
+        type: 'checklist',
+        text: '',
+        checked: false
+      });
+      if (val === '```') return onChange({
+        ...block,
+        type: 'code',
+        code: '',
+        language: 'javascript'
+      });
+      if (val === '> ') return onChange({
+        ...block,
+        type: 'quote',
+        text: ''
+      });
+      if (val === '---') return onChange({
+        ...block,
+        type: 'divider'
+      });
+      onChange({
+        ...block,
+        text: val
+      });
+    }
+    if (block.type === 'divider') return /*#__PURE__*/React.createElement("hr", {
+      style: {
+        border: 'none',
+        borderTop: '2px solid var(--slate-200)',
+        margin: '12px 0'
+      }
+    });
+    if (block.type === 'image') {
+      if (block.url) return /*#__PURE__*/React.createElement("div", {
+        style: {
+          textAlign: 'center',
+          margin: '8px 0'
+        }
+      }, /*#__PURE__*/React.createElement("img", {
+        src: block.url,
+        alt: block.caption,
+        style: {
+          maxWidth: '100%',
+          borderRadius: 8,
+          maxHeight: 400
+        }
+      }), /*#__PURE__*/React.createElement("input", {
+        value: block.caption || '',
+        onChange: e => onChange({
+          ...block,
+          caption: e.target.value
+        }),
+        placeholder: "Caption...",
+        style: {
+          ...base,
+          textAlign: 'center',
+          fontSize: 13,
+          color: 'var(--text-muted)',
+          marginTop: 6,
+          display: 'block'
+        }
+      }));
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          border: '2px dashed var(--slate-300)',
+          borderRadius: 10,
+          padding: 32,
+          textAlign: 'center',
+          cursor: 'pointer',
+          background: 'var(--slate-50)'
+        },
+        onClick: () => {
+          const u = prompt('Paste image URL:');
+          if (u) onChange({
+            ...block,
+            url: u
+          });
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "image",
+        size: 28,
+        style: {
+          color: 'var(--slate-400)'
+        }
+      }), /*#__PURE__*/React.createElement("p", {
+        style: {
+          fontSize: 14,
+          color: 'var(--text-muted)',
+          margin: '8px 0 0'
+        }
+      }, "Click to embed image URL"));
+    }
+    if (block.type === 'code') return /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: '#1e2530',
+        borderRadius: 10,
+        overflow: 'hidden',
+        margin: '4px 0'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '8px 16px',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 5
+      }
+    }, ['#ff5f57', '#febc2e', '#28c840'].map(c => /*#__PURE__*/React.createElement("div", {
+      key: c,
+      style: {
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        background: c
+      }
+    }))), /*#__PURE__*/React.createElement("select", {
+      value: block.language || 'javascript',
+      onChange: e => onChange({
+        ...block,
+        language: e.target.value
+      }),
+      style: {
+        background: 'transparent',
+        border: 'none',
+        color: '#8899aa',
+        fontSize: 12,
+        cursor: 'pointer',
+        marginLeft: 8
+      }
+    }, ['javascript', 'typescript', 'python', 'html', 'css', 'sql', 'bash', 'json', 'go', 'rust'].map(l => /*#__PURE__*/React.createElement("option", {
+      key: l,
+      value: l
+    }, l)))), /*#__PURE__*/React.createElement("textarea", {
+      ref: elRef,
+      value: block.code || '',
+      onChange: e => onChange({
+        ...block,
+        code: e.target.value
+      }),
+      onKeyDown: e => onKeyDown(e, block, index),
+      rows: Math.max(3, (block.code || '').split('\n').length + 1),
+      style: {
+        ...base,
+        color: '#a8d8ea',
+        fontSize: 13.5,
+        fontFamily: 'monospace',
+        lineHeight: 1.65,
+        padding: '14px 18px',
+        display: 'block'
+      },
+      placeholder: "// write code here..."
+    }));
+    if (block.type === 'table') return /*#__PURE__*/React.createElement("div", {
+      style: {
+        overflowX: 'auto',
+        margin: '4px 0'
+      }
+    }, /*#__PURE__*/React.createElement("table", {
+      style: {
+        borderCollapse: 'collapse',
+        width: '100%',
+        fontSize: 14
+      }
+    }, /*#__PURE__*/React.createElement("tbody", null, (block.rows || []).map((row, ri) => /*#__PURE__*/React.createElement("tr", {
+      key: ri,
+      style: {
+        background: ri === 0 ? 'var(--slate-50)' : 'white'
+      }
+    }, row.map((cell, ci) => /*#__PURE__*/React.createElement("td", {
+      key: ci,
+      style: {
+        border: '1px solid var(--slate-200)',
+        padding: 0,
+        minWidth: 120
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      value: cell,
+      onChange: e => {
+        const rows = block.rows.map((r, rr) => rr === ri ? r.map((c, cc) => cc === ci ? e.target.value : c) : r);
+        onChange({
+          ...block,
+          rows
+        });
+      },
+      style: {
+        ...base,
+        fontSize: 14,
+        padding: '7px 11px',
+        fontWeight: ri === 0 ? 600 : 400
+      }
+    }))), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: '0 4px',
+        border: '1px solid var(--slate-200)'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => onChange({
+        ...block,
+        rows: block.rows.filter((_, i) => i !== ri)
+      }),
+      style: {
+        background: 'none',
+        border: 'none',
+        color: 'var(--text-muted)',
+        cursor: 'pointer',
+        padding: '2px 5px',
+        fontSize: 14
+      }
+    }, "×")))))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 10,
+        marginTop: 8
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => onChange({
+        ...block,
+        rows: [...block.rows, block.rows[0]?.map(() => '') || ['', '']]
+      }),
+      style: {
+        fontSize: 12,
+        color: 'var(--blue-600)',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 0
+      }
+    }, "+ Add row"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => onChange({
+        ...block,
+        rows: block.rows.map(r => [...r, ''])
+      }),
+      style: {
+        fontSize: 12,
+        color: 'var(--blue-600)',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 0
+      }
+    }, "+ Add column")));
+    if (block.type === 'checklist') return /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 10,
+        padding: '2px 0'
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "checkbox",
+      checked: !!block.checked,
+      onChange: e => onChange({
+        ...block,
+        checked: e.target.checked
+      }),
+      style: {
+        marginTop: 4,
+        accentColor: 'var(--blue-600)',
+        cursor: 'pointer',
+        width: 16,
+        height: 16,
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("textarea", {
+      ref: elRef,
+      value: block.text || '',
+      onChange: e => detectMarkdown(e.target.value),
+      onKeyDown: e => onKeyDown(e, block, index),
+      rows: 1,
+      style: {
+        ...base,
+        fontSize: 15,
+        lineHeight: 1.65,
+        flex: 1,
+        textDecoration: block.checked ? 'line-through' : 'none',
+        color: block.checked ? 'var(--text-muted)' : 'inherit'
+      },
+      placeholder: "To-do...",
+      onInput: e => {
+        e.target.style.height = 'auto';
+        e.target.style.height = e.target.scrollHeight + 'px';
+      }
+    }));
+    const styles = {
+      paragraph: {
+        fontSize: 15,
+        lineHeight: 1.75,
+        color: 'var(--text-body)'
+      },
+      h1: {
+        fontSize: 33,
+        fontWeight: 800,
+        lineHeight: 1.2,
+        letterSpacing: '-0.025em',
+        marginTop: 8
+      },
+      h2: {
+        fontSize: 25,
+        fontWeight: 700,
+        lineHeight: 1.3,
+        letterSpacing: '-0.015em',
+        marginTop: 6
+      },
+      h3: {
+        fontSize: 19,
+        fontWeight: 600,
+        lineHeight: 1.4,
+        marginTop: 4
+      },
+      bullet: {
+        fontSize: 15,
+        lineHeight: 1.75,
+        paddingLeft: 18
+      },
+      numbered: {
+        fontSize: 15,
+        lineHeight: 1.75,
+        paddingLeft: 22
+      },
+      quote: {
+        fontSize: 15,
+        lineHeight: 1.75,
+        borderLeft: '3px solid var(--blue-400)',
+        paddingLeft: 18,
+        color: 'var(--text-muted)',
+        fontStyle: 'italic'
+      }
+    };
+    const ph = {
+      paragraph: "Type '/' for commands...",
+      h1: 'Heading 1',
+      h2: 'Heading 2',
+      h3: 'Heading 3',
+      bullet: 'List item',
+      numbered: 'List item',
+      quote: 'Blockquote'
+    };
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'relative'
+      }
+    }, block.type === 'bullet' && /*#__PURE__*/React.createElement("span", {
+      style: {
+        position: 'absolute',
+        left: 5,
+        top: 9,
+        width: 5,
+        height: 5,
+        borderRadius: '50%',
+        background: 'var(--text-muted)'
+      }
+    }), block.type === 'numbered' && /*#__PURE__*/React.createElement("span", {
+      style: {
+        position: 'absolute',
+        left: 0,
+        top: 2,
+        fontSize: 14,
+        color: 'var(--text-muted)',
+        lineHeight: 1.75,
+        minWidth: 18
+      }
+    }, index + 1, "."), /*#__PURE__*/React.createElement("textarea", {
+      ref: elRef,
+      value: block.text || '',
+      onChange: e => detectMarkdown(e.target.value),
+      onKeyDown: e => onKeyDown(e, block, index),
+      rows: 1,
+      style: {
+        ...base,
+        ...(styles[block.type] || styles.paragraph)
+      },
+      placeholder: ph[block.type] || '',
+      onInput: e => {
+        e.target.style.height = 'auto';
+        e.target.style.height = e.target.scrollHeight + 'px';
+      }
+    }));
+  }
+
+  // ── Slash Command Menu ─────────────────────────────────────────────────────────
+  function SlashMenu({
+    pos,
+    query,
+    onSelect,
+    onClose
+  }) {
+    const filtered = BLOCK_TYPES.filter(b => b.label.toLowerCase().includes((query || '').toLowerCase()) || b.type.includes(query || ''));
+    const [sel, setSel] = React.useState(0);
+    React.useEffect(() => {
+      setSel(0);
+    }, [query]);
+    React.useEffect(() => {
+      function kd(e) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSel(s => Math.min(s + 1, filtered.length - 1));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSel(s => Math.max(s - 1, 0));
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (filtered[sel]) onSelect(filtered[sel].type);
+        } else if (e.key === 'Escape') onClose();
+      }
+      window.addEventListener('keydown', kd, true);
+      return () => window.removeEventListener('keydown', kd, true);
+    }, [sel, filtered]);
+    if (!filtered.length) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'fixed',
+        top: pos.y,
+        left: pos.x,
+        zIndex: 9000,
+        background: 'white',
+        border: '1px solid var(--slate-200)',
+        borderRadius: 10,
+        boxShadow: 'var(--shadow-xl)',
+        padding: 6,
+        minWidth: 200,
+        maxHeight: 320,
+        overflowY: 'auto'
+      }
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 11,
+        color: 'var(--text-muted)',
+        fontWeight: 700,
+        padding: '4px 10px 6px',
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+        margin: 0
+      }
+    }, "Insert block"), filtered.map((b, i) => /*#__PURE__*/React.createElement("button", {
+      key: b.type,
+      onClick: () => onSelect(b.type),
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        width: '100%',
+        textAlign: 'left',
+        padding: '8px 10px',
+        borderRadius: 7,
+        border: 'none',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 14,
+        background: i === sel ? 'var(--blue-50)' : 'transparent',
+        color: i === sel ? 'var(--blue-700)' : 'var(--text-body)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: b.icon,
+      size: 15
+    }), " ", b.label)));
+  }
+
+  // ── Block Editor ──────────────────────────────────────────────────────────────
+  function BlockEditor({
+    blocks,
+    onChange
+  }) {
+    const [slash, setSlash] = React.useState(null);
+    const refs = React.useRef({});
+    function update(updated) {
+      onChange(blocks.map(b => b.id === updated.id ? updated : b));
+    }
+    function handleKD(e, block, idx) {
+      const val = block.code !== undefined ? block.code || '' : block.text || '';
+      if (e.key === '/' && !val) {
+        const rect = e.target.getBoundingClientRect();
+        setSlash({
+          blockId: block.id,
+          pos: {
+            x: rect.left,
+            y: rect.bottom + 6
+          },
+          query: ''
+        });
+        e.preventDefault();
+        return;
+      }
+      if (slash?.blockId === block.id) {
+        if (e.key === 'Backspace' && !slash.query) {
+          setSlash(null);
+          return;
+        }
+        if (e.key.length === 1 && e.key !== '/') {
+          setSlash(s => ({
+            ...s,
+            query: s.query + e.key
+          }));
+        }
+      }
+      if (e.key === 'Enter' && !e.shiftKey && block.type !== 'code') {
+        e.preventDefault();
+        const nb = mkBlock('paragraph');
+        const nb2 = [...blocks];
+        nb2.splice(idx + 1, 0, nb);
+        onChange(nb2);
+        setTimeout(() => refs.current[nb.id]?.focus(), 20);
+      }
+      if (e.key === 'Backspace' && !val && blocks.length > 1) {
+        e.preventDefault();
+        onChange(blocks.filter(b => b.id !== block.id));
+        setTimeout(() => refs.current[blocks[idx - 1]?.id]?.focus(), 20);
+      }
+      if (e.key === 'ArrowUp' && idx > 0) refs.current[blocks[idx - 1].id]?.focus();
+      if (e.key === 'ArrowDown' && idx < blocks.length - 1) refs.current[blocks[idx + 1].id]?.focus();
+    }
+    function insertBlock(type, afterId) {
+      const idx = blocks.findIndex(b => b.id === afterId);
+      const cur = blocks[idx];
+      const isEmpty = cur && cur.type === 'paragraph' && !cur.text;
+      if (isEmpty) {
+        const nb = mkBlock(type);
+        onChange(blocks.map(b => b.id === afterId ? {
+          ...nb,
+          id: b.id
+        } : b));
+        setTimeout(() => refs.current[afterId]?.focus(), 20);
+      } else {
+        const nb = mkBlock(type);
+        const arr = [...blocks];
+        arr.splice(idx + 1, 0, nb);
+        onChange(arr);
+        setTimeout(() => refs.current[nb.id]?.focus(), 20);
+      }
+      setSlash(null);
+    }
+    return /*#__PURE__*/React.createElement("div", {
+      onClick: () => slash && setSlash(null)
+    }, blocks.map((b, i) => /*#__PURE__*/React.createElement("div", {
+      key: b.id,
+      style: {
+        padding: '1px 0'
+      }
+    }, /*#__PURE__*/React.createElement(Block, {
+      block: b,
+      index: i,
+      onChange: update,
+      onKeyDown: handleKD,
+      elRef: el => refs.current[b.id] = el
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '16px 0 120px',
+        color: 'var(--slate-300)',
+        fontSize: 14,
+        cursor: 'text'
+      },
+      onClick: () => {
+        const nb = mkBlock();
+        onChange([...blocks, nb]);
+        setTimeout(() => refs.current[nb.id]?.focus(), 20);
+      }
+    }, "Click to keep writing..."), slash && /*#__PURE__*/React.createElement(SlashMenu, {
+      pos: slash.pos,
+      query: slash.query,
+      onSelect: t => insertBlock(t, slash.blockId),
+      onClose: () => setSlash(null)
+    }));
+  }
+
+  // ── Version History ────────────────────────────────────────────────────────────
+  function VersionHistory({
+    docId,
+    onRestore,
+    onClose
+  }) {
+    const [versions, setVersions] = React.useState([]);
+    const [sel, setSel] = React.useState(null);
+    React.useEffect(() => {
+      if (!window.API || !docId) return;
+      (async () => {
+        try {
+          const {
+            data
+          } = await window.API.getDocVersions(docId);
+          setVersions(data || []);
+        } catch {}
+      })();
+    }, [docId]);
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 300,
+        borderLeft: '1px solid var(--slate-200)',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0,
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '14px 18px',
+        borderBottom: '1px solid var(--slate-200)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("h3", {
+      style: {
+        fontSize: 15,
+        fontWeight: 700,
+        margin: 0
+      }
+    }, "Version History"), /*#__PURE__*/React.createElement("button", {
+      onClick: onClose,
+      style: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'var(--text-muted)',
+        padding: 4
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "x",
+      size: 16
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        overflowY: 'auto',
+        padding: 12
+      }
+    }, !versions.length && /*#__PURE__*/React.createElement("p", {
+      style: {
+        color: 'var(--text-muted)',
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 32
+      }
+    }, "No versions saved yet.", /*#__PURE__*/React.createElement("br", null), "Versions are created auto-saved periodically."), versions.map((v, i) => /*#__PURE__*/React.createElement("div", {
+      key: v.id,
+      onClick: () => setSel(sel?.id === v.id ? null : v),
+      style: {
+        padding: '10px 12px',
+        borderRadius: 8,
+        border: `1px solid ${sel?.id === v.id ? 'var(--blue-400)' : 'var(--slate-200)'}`,
+        marginBottom: 8,
+        cursor: 'pointer',
+        background: sel?.id === v.id ? 'var(--blue-50)' : 'white'
+      }
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 13,
+        fontWeight: 600,
+        margin: '0 0 2px'
+      }
+    }, "Version ", versions.length - i), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 12,
+        color: 'var(--text-muted)',
+        margin: 0
+      }
+    }, new Date(v.created_at).toLocaleString()), sel?.id === v.id && /*#__PURE__*/React.createElement("button", {
+      onClick: e => {
+        e.stopPropagation();
+        onRestore(v.content);
+      },
+      style: {
+        marginTop: 8,
+        fontSize: 12,
+        background: 'var(--blue-600)',
+        color: 'white',
+        border: 'none',
+        borderRadius: 6,
+        padding: '5px 12px',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-sans)'
+      }
+    }, "Restore this version")))));
+  }
+
+  // ── File Preview ───────────────────────────────────────────────────────────────
+  function FilePreview({
+    file,
+    onClose
+  }) {
+    const t = file.file_type || '';
+    const n = file.name || '';
+    const isImg = t.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(n);
+    const isPdf = t === 'application/pdf' || /\.pdf$/i.test(n);
+    const isVid = t.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(n);
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.75)',
+        zIndex: 3000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 40
+      },
+      onClick: onClose
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: 'white',
+        borderRadius: 14,
+        overflow: 'hidden',
+        maxWidth: '88vw',
+        maxHeight: '88vh',
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 400
+      },
+      onClick: e => e.stopPropagation()
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '13px 20px',
+        borderBottom: '1px solid var(--slate-200)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 14,
+        fontWeight: 600,
+        margin: 0
+      }
+    }, file.name), /*#__PURE__*/React.createElement("button", {
+      onClick: onClose,
+      style: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'var(--text-muted)',
+        padding: 4
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "x",
+      size: 18
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        overflowY: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24
+      }
+    }, isImg && /*#__PURE__*/React.createElement("img", {
+      src: file.url,
+      alt: file.name,
+      style: {
+        maxWidth: '100%',
+        maxHeight: '72vh',
+        borderRadius: 8,
+        objectFit: 'contain'
+      }
+    }), isPdf && /*#__PURE__*/React.createElement("iframe", {
+      src: file.url,
+      style: {
+        width: 680,
+        height: '72vh',
+        border: 'none',
+        borderRadius: 4
+      }
+    }), isVid && /*#__PURE__*/React.createElement("video", {
+      src: file.url,
+      controls: true,
+      style: {
+        maxWidth: '100%',
+        maxHeight: '72vh',
+        borderRadius: 8
+      }
+    }), !isImg && !isPdf && !isVid && /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center',
+        padding: 48
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "file",
+      size: 52,
+      style: {
+        color: 'var(--slate-300)'
+      }
+    }), /*#__PURE__*/React.createElement("p", {
+      style: {
+        color: 'var(--text-muted)',
+        margin: '14px 0 18px',
+        fontSize: 15
+      }
+    }, "Preview not available"), /*#__PURE__*/React.createElement("a", {
+      href: file.url,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: {
+        color: 'var(--blue-600)',
+        fontWeight: 600,
+        fontSize: 14,
+        textDecoration: 'none',
+        background: 'var(--blue-50)',
+        padding: '8px 18px',
+        borderRadius: 8
+      }
+    }, "Open file ↗")))));
+  }
+
+  // ── Files Browser ─────────────────────────────────────────────────────────────
+  function FilesBrowser({
+    projectId
+  }) {
+    const [allFolders, setAllFolders] = React.useState([]);
+    const [files, setFiles] = React.useState([]);
+    const [currentFolder, setCurrentFolder] = React.useState(null);
+    const [crumb, setCrumb] = React.useState([]);
+    const [preview, setPreview] = React.useState(null);
+    const [uploading, setUploading] = React.useState(false);
+    const [search, setSearch] = React.useState('');
+    const [newName, setNewName] = React.useState('');
+    const [showNew, setShowNew] = React.useState(false);
+    const [drag, setDrag] = React.useState(false);
+    const [view, setView] = React.useState('grid'); // 'grid' | 'list'
+
+    async function load() {
+      if (!window.API) return;
+      try {
+        const {
+          data
+        } = await window.API.getFolders(projectId);
+        setAllFolders(data || []);
+      } catch {}
+      try {
+        const {
+          data
+        } = await window.API.getFiles({
+          projectId,
+          folderId: currentFolder
+        });
+        setFiles(data || []);
+      } catch {}
+    }
+    React.useEffect(() => {
+      if (projectId) load();
+    }, [projectId, currentFolder]);
+    async function upload(fileList) {
+      if (!fileList?.length || !window.API) return;
+      setUploading(true);
+      for (const f of Array.from(fileList)) {
+        try {
+          const path = `${projectId}/${Date.now()}_${f.name}`;
+          const url = await window.API.uploadFile('project-files', path, f);
+          await window.API.createFile({
+            name: f.name,
+            url,
+            file_type: f.type,
+            file_size: f.size,
+            project_id: projectId,
+            folder_id: currentFolder
+          });
+        } catch {}
+      }
+      setUploading(false);
+      load();
+    }
+    async function createFolder() {
+      if (!newName.trim() || !window.API) return;
+      try {
+        await window.API.createFolder({
+          name: newName.trim(),
+          project_id: projectId,
+          parent_id: currentFolder
+        });
+        setNewName('');
+        setShowNew(false);
+        load();
+      } catch {}
+    }
+    const folders = allFolders.filter(f => f.parent_id === currentFolder);
+    const filtered = files.filter(f => !search || f.name?.toLowerCase().includes(search.toLowerCase()));
+    function fmt(bytes) {
+      if (!bytes) return '—';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+    function FileIco({
+      file
+    }) {
+      const t = file.file_type || '';
+      if (t.startsWith('image/')) return /*#__PURE__*/React.createElement(Icon, {
+        name: "image",
+        size: 22,
+        style: {
+          color: '#3b82f6'
+        }
+      });
+      if (t === 'application/pdf') return /*#__PURE__*/React.createElement(Icon, {
+        name: "file-text",
+        size: 22,
+        style: {
+          color: '#ef4444'
+        }
+      });
+      if (t.startsWith('video/')) return /*#__PURE__*/React.createElement(Icon, {
+        name: "video",
+        size: 22,
+        style: {
+          color: '#8b5cf6'
+        }
+      });
+      if (t.includes('sheet') || t.includes('excel')) return /*#__PURE__*/React.createElement(Icon, {
+        name: "table",
+        size: 22,
+        style: {
+          color: '#22c55e'
+        }
+      });
+      return /*#__PURE__*/React.createElement(Icon, {
+        name: "file",
+        size: 22,
+        style: {
+          color: 'var(--slate-400)'
+        }
+      });
+    }
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '14px 24px',
+        borderBottom: '1px solid var(--slate-200)',
+        display: 'flex',
+        gap: 10,
+        alignItems: 'center',
+        flexWrap: 'wrap'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        position: 'relative',
+        minWidth: 200
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "search",
+      size: 14,
+      style: {
+        position: 'absolute',
+        left: 10,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        color: 'var(--text-muted)'
+      }
+    }), /*#__PURE__*/React.createElement("input", {
+      value: search,
+      onChange: e => setSearch(e.target.value),
+      placeholder: "Search files...",
+      style: {
+        width: '100%',
+        paddingLeft: 30,
+        paddingRight: 12,
+        height: 36,
+        border: '1px solid var(--slate-200)',
+        borderRadius: 8,
+        fontSize: 14,
+        fontFamily: 'var(--font-sans)',
+        outline: 'none',
+        boxSizing: 'border-box'
+      }
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setView(v => v === 'grid' ? 'list' : 'grid'),
+      style: {
+        height: 36,
+        padding: '0 12px',
+        border: '1px solid var(--slate-200)',
+        borderRadius: 8,
+        background: 'white',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 13,
+        color: 'var(--text-muted)',
+        fontFamily: 'var(--font-sans)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: view === 'grid' ? 'list' : 'grid-2x2',
+      size: 15
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowNew(true),
+      style: {
+        height: 36,
+        padding: '0 14px',
+        border: '1px solid var(--slate-200)',
+        borderRadius: 8,
+        background: 'white',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 13,
+        fontFamily: 'var(--font-sans)',
+        color: 'var(--text-body)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "folder-plus",
+      size: 15
+    }), " New folder"), /*#__PURE__*/React.createElement("label", {
+      style: {
+        height: 36,
+        padding: '0 16px',
+        background: 'var(--blue-600)',
+        color: 'white',
+        borderRadius: 8,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 14,
+        fontWeight: 600
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "upload",
+      size: 15
+    }), " Upload", /*#__PURE__*/React.createElement("input", {
+      type: "file",
+      multiple: true,
+      style: {
+        display: 'none'
+      },
+      onChange: e => upload(e.target.files)
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '8px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+        fontSize: 14
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setCurrentFolder(null);
+        setCrumb([]);
+      },
+      style: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: crumb.length ? 'var(--blue-600)' : 'var(--text-body)',
+        padding: 0,
+        fontFamily: 'var(--font-sans)',
+        fontSize: 14,
+        fontWeight: !crumb.length ? 600 : 400
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "folder",
+      size: 14,
+      style: {
+        marginRight: 4,
+        verticalAlign: 'middle'
+      }
+    }), "All Files"), crumb.map((bc, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: bc.id
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "chevron-right",
+      size: 13,
+      style: {
+        color: 'var(--text-muted)'
+      }
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setCurrentFolder(bc.id);
+        setCrumb(c => c.slice(0, i + 1));
+      },
+      style: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: i === crumb.length - 1 ? 'var(--text-body)' : 'var(--blue-600)',
+        padding: 0,
+        fontFamily: 'var(--font-sans)',
+        fontSize: 14,
+        fontWeight: i === crumb.length - 1 ? 600 : 400
+      }
+    }, bc.name)))), showNew && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '6px 24px 10px',
+        display: 'flex',
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      value: newName,
+      onChange: e => setNewName(e.target.value),
+      placeholder: "Folder name...",
+      autoFocus: true,
+      onKeyDown: e => {
+        if (e.key === 'Enter') createFolder();
+        if (e.key === 'Escape') {
+          setShowNew(false);
+          setNewName('');
+        }
+      },
+      style: {
+        flex: 1,
+        height: 34,
+        padding: '0 12px',
+        border: '1px solid var(--blue-400)',
+        borderRadius: 7,
+        fontSize: 14,
+        fontFamily: 'var(--font-sans)',
+        outline: 'none'
+      }
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: createFolder,
+      style: {
+        height: 34,
+        padding: '0 14px',
+        background: 'var(--blue-600)',
+        color: 'white',
+        border: 'none',
+        borderRadius: 7,
+        cursor: 'pointer',
+        fontSize: 14,
+        fontFamily: 'var(--font-sans)'
+      }
+    }, "Create"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setShowNew(false);
+        setNewName('');
+      },
+      style: {
+        height: 34,
+        padding: '0 12px',
+        background: 'none',
+        border: '1px solid var(--slate-200)',
+        borderRadius: 7,
+        cursor: 'pointer',
+        fontSize: 14,
+        color: 'var(--text-muted)',
+        fontFamily: 'var(--font-sans)'
+      }
+    }, "Cancel")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        overflowY: 'auto',
+        padding: '8px 24px 32px',
+        position: 'relative'
+      },
+      onDragOver: e => {
+        e.preventDefault();
+        setDrag(true);
+      },
+      onDragLeave: () => setDrag(false),
+      onDrop: e => {
+        e.preventDefault();
+        setDrag(false);
+        upload(e.dataTransfer.files);
+      }
+    }, drag && /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'absolute',
+        inset: 0,
+        background: 'rgba(59,130,246,0.08)',
+        border: '3px dashed var(--blue-400)',
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 12,
+        pointerEvents: 'none'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center',
+        color: 'var(--blue-600)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "upload-cloud",
+      size: 44
+    }), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 18,
+        fontWeight: 700,
+        margin: '8px 0 0'
+      }
+    }, "Drop to upload"))), uploading && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '10px 14px',
+        background: 'var(--blue-50)',
+        borderRadius: 8,
+        marginBottom: 12,
+        color: 'var(--blue-700)',
+        fontSize: 14,
+        fontWeight: 500
+      }
+    }, "⟳ Uploading files..."), folders.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 20
+      }
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 11,
+        fontWeight: 700,
+        color: 'var(--text-muted)',
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+        margin: '0 0 10px'
+      }
+    }, "Folders"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+        gap: 10
+      }
+    }, folders.map(f => /*#__PURE__*/React.createElement("div", {
+      key: f.id,
+      onClick: () => {
+        setCurrentFolder(f.id);
+        setCrumb(c => [...c, {
+          id: f.id,
+          name: f.name
+        }]);
+      },
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '11px 14px',
+        border: '1px solid var(--slate-200)',
+        borderRadius: 9,
+        cursor: 'pointer',
+        background: 'white',
+        transition: 'background 0.15s'
+      },
+      onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
+      onMouseLeave: e => e.currentTarget.style.background = 'white'
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "folder",
+      size: 20,
+      style: {
+        color: '#f59e0b',
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 14,
+        fontWeight: 500,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, f.name))))), filtered.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 11,
+        fontWeight: 700,
+        color: 'var(--text-muted)',
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+        margin: '0 0 10px'
+      }
+    }, "Files (", filtered.length, ")"), view === 'grid' ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))',
+        gap: 10
+      }
+    }, filtered.map(f => {
+      const isImg = f.file_type?.startsWith('image/');
+      return /*#__PURE__*/React.createElement("div", {
+        key: f.id,
+        onClick: () => setPreview(f),
+        style: {
+          border: '1px solid var(--slate-200)',
+          borderRadius: 10,
+          overflow: 'hidden',
+          cursor: 'pointer',
+          background: 'white',
+          transition: 'box-shadow 0.15s'
+        },
+        onMouseEnter: e => e.currentTarget.style.boxShadow = 'var(--shadow-md)',
+        onMouseLeave: e => e.currentTarget.style.boxShadow = 'none'
+      }, isImg ? /*#__PURE__*/React.createElement("div", {
+        style: {
+          height: 110,
+          overflow: 'hidden',
+          background: 'var(--slate-100)'
+        }
+      }, /*#__PURE__*/React.createElement("img", {
+        src: f.url,
+        alt: f.name,
+        style: {
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover'
+        }
+      })) : /*#__PURE__*/React.createElement("div", {
+        style: {
+          height: 80,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--slate-50)'
+        }
+      }, /*#__PURE__*/React.createElement(FileIco, {
+        file: f
+      })), /*#__PURE__*/React.createElement("div", {
+        style: {
+          padding: '8px 11px'
+        }
+      }, /*#__PURE__*/React.createElement("p", {
+        style: {
+          fontSize: 13,
+          fontWeight: 500,
+          margin: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }
+      }, f.name), /*#__PURE__*/React.createElement("p", {
+        style: {
+          fontSize: 11,
+          color: 'var(--text-muted)',
+          margin: '2px 0 0'
+        }
+      }, fmt(f.file_size))));
+    })) : /*#__PURE__*/React.createElement("div", {
+      style: {
+        border: '1px solid var(--slate-200)',
+        borderRadius: 10,
+        overflow: 'hidden'
+      }
+    }, filtered.map((f, i) => /*#__PURE__*/React.createElement("div", {
+      key: f.id,
+      onClick: () => setPreview(f),
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 16px',
+        borderBottom: i < filtered.length - 1 ? '1px solid var(--slate-100)' : 'none',
+        cursor: 'pointer',
+        background: 'white'
+      },
+      onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
+      onMouseLeave: e => e.currentTarget.style.background = 'white'
+    }, /*#__PURE__*/React.createElement(FileIco, {
+      file: f
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 14,
+        fontWeight: 500,
+        margin: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, f.name)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        color: 'var(--text-muted)',
+        whiteSpace: 'nowrap'
+      }
+    }, fmt(f.file_size)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        color: 'var(--text-muted)',
+        whiteSpace: 'nowrap'
+      }
+    }, new Date(f.created_at).toLocaleDateString()))))), folders.length === 0 && filtered.length === 0 && !uploading && /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center',
+        padding: '64px 40px',
+        color: 'var(--text-muted)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "folder-open",
+      size: 44,
+      style: {
+        color: 'var(--slate-200)'
+      }
+    }), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 16,
+        fontWeight: 600,
+        color: 'var(--text-heading)',
+        margin: '14px 0 6px'
+      }
+    }, "No files here yet"), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 14,
+        margin: 0
+      }
+    }, "Drag & drop files or click Upload to get started"))), preview && /*#__PURE__*/React.createElement(FilePreview, {
+      file: preview,
+      onClose: () => setPreview(null)
+    }));
+  }
+
+  // ── Main Docs Screen ───────────────────────────────────────────────────────────
+  function Docs() {
+    const [projects, setProjects] = React.useState([]);
+    const [project, setProject] = React.useState(null);
+    const [docs, setDocs] = React.useState([]);
+    const [doc, setDoc] = React.useState(null);
+    const [blocks, setBlocks] = React.useState([mkBlock()]);
+    const [title, setTitle] = React.useState('Untitled');
+    const [saving, setSaving] = React.useState(false);
+    const [saved, setSaved] = React.useState(false);
+    const [showVersions, setShowVersions] = React.useState(false);
+    const [tab, setTab] = React.useState('docs');
+    const [search, setSearch] = React.useState('');
+    const [tasks, setTasks] = React.useState([]);
+    const [linkedTask, setLinkedTask] = React.useState(null);
+    const [peers, setPeers] = React.useState([]);
+    const [docCh, setDocCh] = React.useState(null);
+    const timer = React.useRef(null);
+    React.useEffect(() => {
+      if (!window.API) return;
+      (async () => {
+        try {
+          const {
+            data
+          } = await window.API.getProjects();
+          if (data?.length) {
+            setProjects(data);
+            setProject(data[0]);
+          }
+        } catch {}
+      })();
+    }, []);
+    React.useEffect(() => {
+      if (!project || !window.API) return;
+      setDoc(null);
+      setDocs([]);
+      (async () => {
+        try {
+          const {
+            data
+          } = await window.API.getDocs(project.id);
+          setDocs(data || []);
+        } catch {}
+        try {
+          const {
+            data
+          } = await window.API.getTasks({
+            projectId: project.id
+          });
+          setTasks(data || []);
+        } catch {}
+      })();
+    }, [project?.id]);
+
+    // Realtime collaboration
+    React.useEffect(() => {
+      if (!doc || !window.db) return;
+      const myId = (() => {
+        let id = localStorage.getItem('_tf_doc_uid');
+        if (!id) {
+          id = uid();
+          localStorage.setItem('_tf_doc_uid', id);
+        }
+        return id;
+      })();
+      const myName = localStorage.getItem('tf_chat_member') || 'Someone';
+      const ch = window.db.channel(`doc:${doc.id}`).on('broadcast', {
+        event: 'edit'
+      }, ({
+        payload
+      }) => {
+        if (payload.uid !== myId) {
+          setBlocks(payload.blocks);
+          setPeers(prev => {
+            const ex = prev.find(p => p.id === payload.uid);
+            if (ex) return prev.map(p => p.id === payload.uid ? {
+              ...p,
+              ts: Date.now()
+            } : p);
+            return [...prev, {
+              id: payload.uid,
+              name: payload.name,
+              ts: Date.now()
+            }];
+          });
+        }
+      }).subscribe();
+      setDocCh({
+        ch,
+        myId,
+        myName
+      });
+      return () => {
+        window.db.removeChannel(ch);
+        setPeers([]);
+      };
+    }, [doc?.id]);
+    function bcast(newBlocks) {
+      if (!docCh) return;
+      docCh.ch.send({
+        type: 'broadcast',
+        event: 'edit',
+        payload: {
+          blocks: newBlocks,
+          uid: docCh.myId,
+          name: docCh.myName
+        }
+      });
+    }
+    async function save(b = blocks, t = title) {
+      if (!doc || !window.API) return;
+      setSaving(true);
+      try {
+        await window.API.updateDoc(doc.id, {
+          content: b,
+          title: t,
+          updated_at: new Date().toISOString()
+        });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+        // 15% chance to snapshot version
+        if (Math.random() < 0.15) {
+          try {
+            await window.API.createDocVersion({
+              document_id: doc.id,
+              content: b,
+              title: t
+            });
+          } catch {}
+        }
+      } catch {}
+      setSaving(false);
+    }
+    function handleBlocks(nb) {
+      setBlocks(nb);
+      setSaved(false);
+      bcast(nb);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => save(nb, title), 1500);
+    }
+    function handleTitle(e) {
+      const t = e.target.value;
+      setTitle(t);
+      setSaved(false);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => save(blocks, t), 1500);
+    }
+    async function newDoc() {
+      if (!project || !window.API) return;
+      try {
+        const {
+          data
+        } = await window.API.createDoc({
+          title: 'Untitled',
+          content: [mkBlock()],
+          project_id: project.id
+        });
+        if (data) {
+          setDocs(prev => [data, ...prev]);
+          openDoc(data);
+        }
+      } catch {}
+    }
+    function openDoc(d) {
+      setDoc(d);
+      setTitle(d.title || 'Untitled');
+      setBlocks(d.content?.length ? d.content : [mkBlock()]);
+      setLinkedTask(d.task_id || null);
+      setShowVersions(false);
+    }
+    async function linkTask(taskId) {
+      setLinkedTask(taskId || null);
+      if (doc && window.API) {
+        try {
+          await window.API.updateDoc(doc.id, {
+            task_id: taskId || null
+          });
+        } catch {}
+      }
+    }
+    const filteredDocs = docs.filter(d => !search || d.title?.toLowerCase().includes(search.toLowerCase()));
+    const activePeers = peers.filter(p => Date.now() - p.ts < 30000);
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        height: '100%',
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 255,
+        borderRight: '1px solid var(--slate-200)',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--slate-50)',
+        flexShrink: 0,
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '14px 14px 10px'
+      }
+    }, /*#__PURE__*/React.createElement("select", {
+      value: project?.id || '',
+      onChange: e => setProject(projects.find(p => p.id === e.target.value)),
+      style: {
+        width: '100%',
+        padding: '8px 10px',
+        border: '1px solid var(--slate-200)',
+        borderRadius: 8,
+        fontSize: 14,
+        fontFamily: 'var(--font-sans)',
+        background: 'white',
+        outline: 'none',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "— Select project —"), projects.map(p => /*#__PURE__*/React.createElement("option", {
+      key: p.id,
+      value: p.id
+    }, p.name)))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        padding: '0 10px 10px',
+        gap: 4
+      }
+    }, ['docs', 'files'].map(t => /*#__PURE__*/React.createElement("button", {
+      key: t,
+      onClick: () => setTab(t),
+      style: {
+        flex: 1,
+        padding: '6px 0',
+        border: 'none',
+        borderRadius: 7,
+        cursor: 'pointer',
+        fontSize: 13,
+        fontWeight: 600,
+        fontFamily: 'var(--font-sans)',
+        background: tab === t ? 'var(--blue-600)' : 'transparent',
+        color: tab === t ? 'white' : 'var(--text-muted)'
+      }
+    }, t === 'docs' ? 'Docs' : 'Files'))), tab === 'docs' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '0 10px 8px',
+        position: 'relative'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "search",
+      size: 13,
+      style: {
+        position: 'absolute',
+        left: 20,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        color: 'var(--text-muted)'
+      }
+    }), /*#__PURE__*/React.createElement("input", {
+      value: search,
+      onChange: e => setSearch(e.target.value),
+      placeholder: "Search docs...",
+      style: {
+        width: '100%',
+        paddingLeft: 28,
+        paddingRight: 8,
+        height: 32,
+        border: '1px solid var(--slate-200)',
+        borderRadius: 7,
+        fontSize: 13,
+        fontFamily: 'var(--font-sans)',
+        outline: 'none',
+        boxSizing: 'border-box',
+        background: 'white'
+      }
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: newDoc,
+      style: {
+        margin: '0 10px 10px',
+        padding: '8px 0',
+        background: 'var(--blue-600)',
+        color: 'white',
+        border: 'none',
+        borderRadius: 8,
+        cursor: 'pointer',
+        fontSize: 13,
+        fontWeight: 700,
+        fontFamily: 'var(--font-sans)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 14
+    }), " New Document"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        overflowY: 'auto',
+        padding: '0 8px 16px'
+      }
+    }, !filteredDocs.length && /*#__PURE__*/React.createElement("p", {
+      style: {
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 13,
+        marginTop: 24
+      }
+    }, "No documents yet"), filteredDocs.map(d => /*#__PURE__*/React.createElement("button", {
+      key: d.id,
+      onClick: () => openDoc(d),
+      style: {
+        width: '100%',
+        textAlign: 'left',
+        padding: '8px 10px',
+        borderRadius: 8,
+        border: 'none',
+        cursor: 'pointer',
+        background: doc?.id === d.id ? 'var(--blue-50)' : 'transparent',
+        marginBottom: 2,
+        fontFamily: 'var(--font-sans)'
+      },
+      onMouseEnter: e => {
+        if (doc?.id !== d.id) e.currentTarget.style.background = 'var(--slate-100)';
+      },
+      onMouseLeave: e => {
+        if (doc?.id !== d.id) e.currentTarget.style.background = 'transparent';
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 7
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "file-text",
+      size: 14,
+      style: {
+        color: doc?.id === d.id ? 'var(--blue-600)' : 'var(--text-muted)',
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 14,
+        fontWeight: doc?.id === d.id ? 600 : 400,
+        color: doc?.id === d.id ? 'var(--blue-700)' : 'var(--text-body)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, d.title || 'Untitled')), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 11,
+        color: 'var(--text-muted)',
+        margin: '2px 0 0 21px'
+      }
+    }, new Date(d.updated_at || d.created_at).toLocaleDateString())))))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }
+    }, tab === 'files' ? project ? /*#__PURE__*/React.createElement(FilesBrowser, {
+      projectId: project.id
+    }) : /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 15
+      }
+    }, "Select a project to view files") : doc ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        flex: 1,
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '10px 28px',
+        borderBottom: '1px solid var(--slate-200)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        flexShrink: 0
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 13,
+        fontWeight: 500,
+        color: saving ? 'var(--blue-600)' : saved ? 'var(--green-600)' : 'transparent'
+      }
+    }, saving ? '⟳ Saving...' : '✓ Saved'), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1
+      }
+    }), activePeers.map(p => /*#__PURE__*/React.createElement("span", {
+      key: p.id,
+      style: {
+        fontSize: 12,
+        background: 'var(--green-100)',
+        color: 'var(--green-700)',
+        borderRadius: 20,
+        padding: '3px 10px',
+        fontWeight: 600
+      }
+    }, "👁 ", p.name)), /*#__PURE__*/React.createElement("select", {
+      value: linkedTask || '',
+      onChange: e => linkTask(e.target.value),
+      style: {
+        height: 32,
+        padding: '0 10px',
+        border: '1px solid var(--slate-200)',
+        borderRadius: 7,
+        fontSize: 13,
+        fontFamily: 'var(--font-sans)',
+        background: 'white',
+        cursor: 'pointer',
+        maxWidth: 180,
+        color: linkedTask ? 'var(--blue-700)' : 'var(--text-muted)'
+      }
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "🔗 Link to task"), tasks.map(t => /*#__PURE__*/React.createElement("option", {
+      key: t.id,
+      value: t.id
+    }, t.title))), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowVersions(v => !v),
+      style: {
+        height: 32,
+        padding: '0 12px',
+        border: `1px solid ${showVersions ? 'var(--blue-400)' : 'var(--slate-200)'}`,
+        borderRadius: 7,
+        background: showVersions ? 'var(--blue-50)' : 'white',
+        cursor: 'pointer',
+        fontSize: 13,
+        fontFamily: 'var(--font-sans)',
+        color: showVersions ? 'var(--blue-700)' : 'var(--text-body)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "history",
+      size: 14
+    }), " History"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => save(),
+      style: {
+        height: 32,
+        padding: '0 16px',
+        background: 'var(--blue-600)',
+        color: 'white',
+        border: 'none',
+        borderRadius: 7,
+        cursor: 'pointer',
+        fontSize: 13,
+        fontWeight: 700,
+        fontFamily: 'var(--font-sans)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "save",
+      size: 14
+    }), " Save")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        overflowY: 'auto'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        maxWidth: 760,
+        margin: '0 auto',
+        padding: '40px 40px 0'
+      }
+    }, /*#__PURE__*/React.createElement("textarea", {
+      value: title,
+      onChange: handleTitle,
+      placeholder: "Document title...",
+      rows: 1,
+      style: {
+        width: '100%',
+        border: 'none',
+        outline: 'none',
+        fontSize: 37,
+        fontWeight: 800,
+        letterSpacing: '-0.025em',
+        fontFamily: 'var(--font-sans)',
+        resize: 'none',
+        padding: 0,
+        marginBottom: 6,
+        lineHeight: 1.2,
+        background: 'transparent',
+        color: 'var(--text-heading)'
+      },
+      onInput: e => {
+        e.target.style.height = 'auto';
+        e.target.style.height = e.target.scrollHeight + 'px';
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 14,
+        fontSize: 13,
+        color: 'var(--text-muted)',
+        marginBottom: 32,
+        flexWrap: 'wrap'
+      }
+    }, project && /*#__PURE__*/React.createElement("span", null, "📁 ", project.name), linkedTask && /*#__PURE__*/React.createElement("span", null, "🔗 ", tasks.find(t => t.id === linkedTask)?.title), /*#__PURE__*/React.createElement("span", null, "Edited ", new Date(doc.updated_at || doc.created_at).toLocaleDateString())), /*#__PURE__*/React.createElement(BlockEditor, {
+      blocks: blocks,
+      onChange: handleBlocks
+    })))), showVersions && /*#__PURE__*/React.createElement(VersionHistory, {
+      docId: doc.id,
+      onRestore: content => {
+        setBlocks(content);
+        setShowVersions(false);
+        save(content);
+      },
+      onClose: () => setShowVersions(false)
+    })) : /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: 16,
+        color: 'var(--text-muted)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "file-text",
+      size: 52,
+      style: {
+        color: 'var(--slate-200)'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 18,
+        fontWeight: 700,
+        color: 'var(--text-heading)',
+        margin: '0 0 6px'
+      }
+    }, "No document open"), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 14,
+        margin: 0
+      }
+    }, "Select a project, then create or open a document")), project && /*#__PURE__*/React.createElement("button", {
+      onClick: newDoc,
+      style: {
+        padding: '10px 22px',
+        background: 'var(--blue-600)',
+        color: 'white',
+        border: 'none',
+        borderRadius: 9,
+        cursor: 'pointer',
+        fontSize: 14,
+        fontWeight: 700,
+        fontFamily: 'var(--font-sans)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 16
+    }), " New Document"))));
+  }
+  Object.assign(window, {
+    Docs
+  });
+})();
