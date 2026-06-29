@@ -151,9 +151,14 @@ function Sidebar({ active, onNavigate }) {
   );
 }
 
-function TopBar({ title, crumb, onOpenAI }) {
+function TopBar({ title, crumb, onOpenAI, onNavigate }) {
   const s0 = readTFSettings();
   const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
+  const [notifOpen,  setNotifOpen]  = React.useState(false);
+  const [avatarOpen, setAvatarOpen] = React.useState(false);
+  const [notifs,     setNotifs]     = React.useState([]);
+  const notifRef  = React.useRef(null);
+  const avatarRef = React.useRef(null);
 
   React.useEffect(() => {
     function onSettingsChange() {
@@ -168,7 +173,44 @@ function TopBar({ title, crumb, onOpenAI }) {
     };
   }, []);
 
+  React.useEffect(() => {
+    function onClickOutside(e) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+      if (avatarRef.current && !avatarRef.current.contains(e.target)) setAvatarOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  function openNotifs() {
+    setNotifOpen(o => !o);
+    setAvatarOpen(false);
+    if (!notifOpen && window.API) {
+      (async () => {
+        try {
+          const { data: tasks } = await window.API.getTasks();
+          if (!Array.isArray(tasks)) return;
+          const now = new Date();
+          const items = tasks
+            .filter(t => t.status !== 'done' && t.due_date)
+            .map(t => ({ ...t, _overdue: new Date(t.due_date) < now }))
+            .filter(t => t._overdue || (new Date(t.due_date) - now) < 48 * 3600 * 1000)
+            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+            .slice(0, 8);
+          setNotifs(items);
+        } catch {}
+      })();
+    }
+  }
+
   const avatarName = agencyName || 'TF';
+
+  const dropStyle = {
+    position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200,
+    background: 'var(--slate-0)', border: '1px solid var(--border-subtle)',
+    borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-xl)',
+    minWidth: 260, overflow: 'hidden',
+  };
 
   return (
     <header style={{
@@ -177,27 +219,101 @@ function TopBar({ title, crumb, onOpenAI }) {
       background: 'var(--glass-bg-strong)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
       borderBottom: '1px solid var(--border-subtle)', position: 'sticky', top: 0, zIndex: 20,
     }}>
+      {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>{crumb}</span>
+        <span
+          onClick={() => onNavigate && onNavigate('dashboard')}
+          style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', cursor: 'pointer' }}
+          onMouseEnter={e => e.target.style.color = 'var(--blue-600)'}
+          onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}
+        >{crumb}</span>
         <Icon name="chevron-right" size={15} style={{ color: 'var(--text-subtle)' }} />
         <span style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', letterSpacing: '-0.01em' }}>{title}</span>
       </div>
       <div style={{ flex: 1 }} />
-      {/* Search */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: 280, maxWidth: '32vw', height: 36, padding: '0 12px',
-        background: 'var(--slate-50)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)' }}>
+
+      {/* Search → opens AI */}
+      <button onClick={onOpenAI} style={{
+        display: 'flex', alignItems: 'center', gap: 8, width: 280, maxWidth: '32vw', height: 36, padding: '0 12px',
+        background: 'var(--slate-50)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)',
+        cursor: 'pointer', fontFamily: 'var(--font-sans)', textAlign: 'left',
+      }}>
         <Icon name="search" size={16} style={{ color: 'var(--text-subtle)' }} />
         <span style={{ flex: 1, fontSize: 'var(--text-sm)', color: 'var(--text-subtle)' }}>Search or ask AI…</span>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xs)', color: 'var(--text-subtle)', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-xs)', padding: '1px 5px' }}>⌘K</span>
-      </div>
+      </button>
+
+      {/* Ask AI */}
       <button onClick={onOpenAI} style={{
         display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 13px', borderRadius: 'var(--radius-md)',
         background: 'var(--grad-brand)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: 'var(--shadow-brand)',
         fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)' }}>
         <Icon name="sparkles" size={16} /> Ask AI
       </button>
-      <IconButton label="Notifications" variant="ghost"><Icon name="bell" size={18} /></IconButton>
-      <Avatar name={avatarName} status="online" />
+
+      {/* Bell with dropdown */}
+      <div ref={notifRef} style={{ position: 'relative' }}>
+        <button onClick={openNotifs} style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 36, height: 36, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)',
+          background: notifOpen ? 'var(--slate-100)' : 'transparent', cursor: 'pointer', color: 'var(--text-body)',
+        }}>
+          <Icon name="bell" size={18} />
+        </button>
+        {notifOpen && (
+          <div style={dropStyle}>
+            <div style={{ padding: '12px 14px 8px', borderBottom: '1px solid var(--border-subtle)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>
+              Notifications
+            </div>
+            {notifs.length === 0 ? (
+              <div style={{ padding: '20px 14px', fontSize: 'var(--text-sm)', color: 'var(--text-muted)', textAlign: 'center' }}>
+                No upcoming deadlines
+              </div>
+            ) : notifs.map(t => (
+              <div key={t.id} onClick={() => { setNotifOpen(false); onNavigate && onNavigate('tasks'); }} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', background: 'transparent' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--slate-50)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <span style={{ marginTop: 2, width: 8, height: 8, borderRadius: '50%', background: t._overdue ? 'var(--red-500)' : 'var(--amber-400)', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-medium)', color: 'var(--text-strong)' }}>{t.title}</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: t._overdue ? 'var(--red-500)' : 'var(--text-muted)', marginTop: 2 }}>
+                    {t._overdue ? 'Overdue · ' : 'Due · '}{new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div onClick={() => { setNotifOpen(false); onNavigate && onNavigate('tasks'); }} style={{ padding: '10px 14px', fontSize: 'var(--text-xs)', color: 'var(--blue-600)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer', textAlign: 'center' }}>
+              View all tasks →
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Avatar with dropdown */}
+      <div ref={avatarRef} style={{ position: 'relative' }}>
+        <div onClick={() => { setAvatarOpen(o => !o); setNotifOpen(false); }} style={{ cursor: 'pointer' }}>
+          <Avatar name={avatarName} status="online" />
+        </div>
+        {avatarOpen && (
+          <div style={{ ...dropStyle, minWidth: 200 }}>
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{agencyName || 'My Agency'}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>Agency account</div>
+            </div>
+            {[
+              { label: 'Settings', icon: 'settings', screen: 'settings' },
+              { label: 'Team', icon: 'users', screen: 'team' },
+            ].map(item => (
+              <div key={item.screen} onClick={() => { setAvatarOpen(false); onNavigate && onNavigate(item.screen); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--slate-50)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <Icon name={item.icon} size={15} style={{ color: 'var(--text-muted)' }} /> {item.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </header>
   );
 }
@@ -208,7 +324,7 @@ function AppShell({ active, onNavigate, title, crumb, onOpenAI, children }) {
     <div style={{ display: 'flex', height: '100%', width: '100%', background: 'var(--surface-page)' }}>
       <Sidebar active={active} onNavigate={onNavigate} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
-        <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} />
+        <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onNavigate={onNavigate} />
         <main className="tf-scroll" style={{ flex: 1, overflowY: 'auto' }}>{children}</main>
       </div>
     </div>

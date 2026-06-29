@@ -306,10 +306,16 @@
   function TopBar({
     title,
     crumb,
-    onOpenAI
+    onOpenAI,
+    onNavigate
   }) {
     const s0 = readTFSettings();
     const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
+    const [notifOpen, setNotifOpen] = React.useState(false);
+    const [avatarOpen, setAvatarOpen] = React.useState(false);
+    const [notifs, setNotifs] = React.useState([]);
+    const notifRef = React.useRef(null);
+    const avatarRef = React.useRef(null);
     React.useEffect(() => {
       function onSettingsChange() {
         const s = readTFSettings();
@@ -322,7 +328,47 @@
         window.removeEventListener('storage', onSettingsChange);
       };
     }, []);
+    React.useEffect(() => {
+      function onClickOutside(e) {
+        if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+        if (avatarRef.current && !avatarRef.current.contains(e.target)) setAvatarOpen(false);
+      }
+      document.addEventListener('mousedown', onClickOutside);
+      return () => document.removeEventListener('mousedown', onClickOutside);
+    }, []);
+    function openNotifs() {
+      setNotifOpen(o => !o);
+      setAvatarOpen(false);
+      if (!notifOpen && window.API) {
+        (async () => {
+          try {
+            const {
+              data: tasks
+            } = await window.API.getTasks();
+            if (!Array.isArray(tasks)) return;
+            const now = new Date();
+            const items = tasks.filter(t => t.status !== 'done' && t.due_date).map(t => ({
+              ...t,
+              _overdue: new Date(t.due_date) < now
+            })).filter(t => t._overdue || new Date(t.due_date) - now < 48 * 3600 * 1000).sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 8);
+            setNotifs(items);
+          } catch {}
+        })();
+      }
+    }
     const avatarName = agencyName || 'TF';
+    const dropStyle = {
+      position: 'absolute',
+      top: 'calc(100% + 8px)',
+      right: 0,
+      zIndex: 200,
+      background: 'var(--slate-0)',
+      border: '1px solid var(--border-subtle)',
+      borderRadius: 'var(--radius-lg)',
+      boxShadow: 'var(--shadow-xl)',
+      minWidth: 260,
+      overflow: 'hidden'
+    };
     return /*#__PURE__*/React.createElement("header", {
       style: {
         height: 'var(--topbar-height)',
@@ -348,10 +394,14 @@
         minWidth: 0
       }
     }, /*#__PURE__*/React.createElement("span", {
+      onClick: () => onNavigate && onNavigate('dashboard'),
       style: {
         fontSize: 'var(--text-sm)',
-        color: 'var(--text-muted)'
-      }
+        color: 'var(--text-muted)',
+        cursor: 'pointer'
+      },
+      onMouseEnter: e => e.target.style.color = 'var(--blue-600)',
+      onMouseLeave: e => e.target.style.color = 'var(--text-muted)'
     }, crumb), /*#__PURE__*/React.createElement(Icon, {
       name: "chevron-right",
       size: 15,
@@ -369,7 +419,8 @@
       style: {
         flex: 1
       }
-    }), /*#__PURE__*/React.createElement("div", {
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: onOpenAI,
       style: {
         display: 'flex',
         alignItems: 'center',
@@ -380,7 +431,10 @@
         padding: '0 12px',
         background: 'var(--slate-50)',
         border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-md)'
+        borderRadius: 'var(--radius-md)',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-sans)',
+        textAlign: 'left'
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "search",
@@ -425,16 +479,169 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "sparkles",
       size: 16
-    }), " Ask AI"), /*#__PURE__*/React.createElement(IconButton, {
-      label: "Notifications",
-      variant: "ghost"
+    }), " Ask AI"), /*#__PURE__*/React.createElement("div", {
+      ref: notifRef,
+      style: {
+        position: 'relative'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: openNotifs,
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 36,
+        height: 36,
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-subtle)',
+        background: notifOpen ? 'var(--slate-100)' : 'transparent',
+        cursor: 'pointer',
+        color: 'var(--text-body)'
+      }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "bell",
       size: 18
-    })), /*#__PURE__*/React.createElement(Avatar, {
+    })), notifOpen && /*#__PURE__*/React.createElement("div", {
+      style: dropStyle
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '12px 14px 8px',
+        borderBottom: '1px solid var(--border-subtle)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)'
+      }
+    }, "Notifications"), notifs.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '20px 14px',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        textAlign: 'center'
+      }
+    }, "No upcoming deadlines") : notifs.map(t => /*#__PURE__*/React.createElement("div", {
+      key: t.id,
+      onClick: () => {
+        setNotifOpen(false);
+        onNavigate && onNavigate('tasks');
+      },
+      style: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 10,
+        padding: '10px 14px',
+        borderBottom: '1px solid var(--border-subtle)',
+        cursor: 'pointer',
+        background: 'transparent'
+      },
+      onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
+      onMouseLeave: e => e.currentTarget.style.background = 'transparent'
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        marginTop: 2,
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        background: t._overdue ? 'var(--red-500)' : 'var(--amber-400)',
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-medium)',
+        color: 'var(--text-strong)'
+      }
+    }, t.title), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: t._overdue ? 'var(--red-500)' : 'var(--text-muted)',
+        marginTop: 2
+      }
+    }, t._overdue ? 'Overdue · ' : 'Due · ', new Date(t.due_date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    }))))), /*#__PURE__*/React.createElement("div", {
+      onClick: () => {
+        setNotifOpen(false);
+        onNavigate && onNavigate('tasks');
+      },
+      style: {
+        padding: '10px 14px',
+        fontSize: 'var(--text-xs)',
+        color: 'var(--blue-600)',
+        fontWeight: 'var(--fw-semibold)',
+        cursor: 'pointer',
+        textAlign: 'center'
+      }
+    }, "View all tasks →"))), /*#__PURE__*/React.createElement("div", {
+      ref: avatarRef,
+      style: {
+        position: 'relative'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      onClick: () => {
+        setAvatarOpen(o => !o);
+        setNotifOpen(false);
+      },
+      style: {
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Avatar, {
       name: avatarName,
       status: "online"
-    }));
+    })), avatarOpen && /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...dropStyle,
+        minWidth: 200
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '12px 14px',
+        borderBottom: '1px solid var(--border-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)'
+      }
+    }, agencyName || 'My Agency'), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        marginTop: 2
+      }
+    }, "Agency account")), [{
+      label: 'Settings',
+      icon: 'settings',
+      screen: 'settings'
+    }, {
+      label: 'Team',
+      icon: 'users',
+      screen: 'team'
+    }].map(item => /*#__PURE__*/React.createElement("div", {
+      key: item.screen,
+      onClick: () => {
+        setAvatarOpen(false);
+        onNavigate && onNavigate(item.screen);
+      },
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '9px 14px',
+        cursor: 'pointer',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-body)'
+      },
+      onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
+      onMouseLeave: e => e.currentTarget.style.background = 'transparent'
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: item.icon,
+      size: 15,
+      style: {
+        color: 'var(--text-muted)'
+      }
+    }), " ", item.label)))));
   }
   function AppShell({
     active,
@@ -466,7 +673,8 @@
     }, /*#__PURE__*/React.createElement(TopBar, {
       title: title,
       crumb: crumb,
-      onOpenAI: onOpenAI
+      onOpenAI: onOpenAI,
+      onNavigate: onNavigate
     }), /*#__PURE__*/React.createElement("main", {
       className: "tf-scroll",
       style: {
