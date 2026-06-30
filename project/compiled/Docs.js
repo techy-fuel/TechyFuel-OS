@@ -341,7 +341,11 @@
         padding: '14px 18px',
         display: 'block'
       },
-      placeholder: "// write code here..."
+      placeholder: "// write code here...",
+      spellCheck: false,
+      autoComplete: "off",
+      autoCorrect: "off",
+      autoCapitalize: "off"
     }));
     if (block.type === 'table') return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -469,6 +473,10 @@
         color: block.checked ? 'var(--text-muted)' : 'inherit'
       },
       placeholder: "To-do...",
+      spellCheck: false,
+      autoComplete: "off",
+      autoCorrect: "off",
+      autoCapitalize: "off",
       onInput: e => {
         e.target.style.height = 'auto';
         e.target.style.height = e.target.scrollHeight + 'px';
@@ -563,6 +571,10 @@
         ...(styles[block.type] || styles.paragraph)
       },
       placeholder: ph[block.type] || '',
+      spellCheck: false,
+      autoComplete: "off",
+      autoCorrect: "off",
+      autoCapitalize: "off",
       onInput: e => {
         e.target.style.height = 'auto';
         e.target.style.height = e.target.scrollHeight + 'px';
@@ -2117,6 +2129,10 @@
         background: 'transparent',
         color: 'var(--text-heading)'
       },
+      spellCheck: false,
+      autoComplete: "off",
+      autoCorrect: "off",
+      autoCapitalize: "off",
       onInput: e => {
         e.target.style.height = 'auto';
         e.target.style.height = e.target.scrollHeight + 'px';
@@ -2131,6 +2147,7 @@
         flexWrap: 'wrap'
       }
     }, project && /*#__PURE__*/React.createElement("span", null, "📁 ", project.name), linkedTask && /*#__PURE__*/React.createElement("span", null, "🔗 ", tasks.find(t => t.id === linkedTask)?.title), /*#__PURE__*/React.createElement("span", null, "Edited ", new Date(doc.updated_at || doc.created_at).toLocaleDateString())), /*#__PURE__*/React.createElement(BlockEditor, {
+      key: doc.id,
       blocks: blocks,
       onChange: handleBlocks
     })))), showVersions && /*#__PURE__*/React.createElement(VersionHistory, {

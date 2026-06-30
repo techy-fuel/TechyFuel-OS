@@ -97,7 +97,8 @@ function Block({ block, index, onChange, onKeyDown, elRef }) {
       <textarea ref={elRef} value={block.code || ''} onChange={e => onChange({ ...block, code: e.target.value })} onKeyDown={e => onKeyDown(e, block, index)}
         rows={Math.max(3, (block.code || '').split('\n').length + 1)}
         style={{ ...base, color: '#a8d8ea', fontSize: 13.5, fontFamily: 'monospace', lineHeight: 1.65, padding: '14px 18px', display: 'block' }}
-        placeholder="// write code here..." />
+        placeholder="// write code here..."
+        spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off" />
     </div>
   );
 
@@ -133,6 +134,7 @@ function Block({ block, index, onChange, onKeyDown, elRef }) {
       <textarea ref={elRef} value={block.text || ''} onChange={e => detectMarkdown(e.target.value)} onKeyDown={e => onKeyDown(e, block, index)} rows={1}
         style={{ ...base, fontSize: 15, lineHeight: 1.65, flex: 1, textDecoration: block.checked ? 'line-through' : 'none', color: block.checked ? 'var(--text-muted)' : 'inherit' }}
         placeholder="To-do..."
+        spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} />
     </div>
   );
@@ -155,6 +157,7 @@ function Block({ block, index, onChange, onKeyDown, elRef }) {
       <textarea ref={elRef} value={block.text || ''} onChange={e => detectMarkdown(e.target.value)} onKeyDown={e => onKeyDown(e, block, index)} rows={1}
         style={{ ...base, ...(styles[block.type] || styles.paragraph) }}
         placeholder={ph[block.type] || ''}
+        spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} />
     </div>
   );
@@ -725,13 +728,14 @@ function Docs() {
                 <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 40px 0' }}>
                   <textarea value={title} onChange={handleTitle} placeholder="Document title..."
                     rows={1} style={{ width: '100%', border: 'none', outline: 'none', fontSize: 37, fontWeight: 800, letterSpacing: '-0.025em', fontFamily: 'var(--font-sans)', resize: 'none', padding: 0, marginBottom: 6, lineHeight: 1.2, background: 'transparent', color: 'var(--text-heading)' }}
+                    spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
                     onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} />
                   <div style={{ display: 'flex', gap: 14, fontSize: 13, color: 'var(--text-muted)', marginBottom: 32, flexWrap: 'wrap' }}>
                     {project && <span>📁 {project.name}</span>}
                     {linkedTask && <span>🔗 {tasks.find(t => t.id === linkedTask)?.title}</span>}
                     <span>Edited {new Date(doc.updated_at || doc.created_at).toLocaleDateString()}</span>
                   </div>
-                  <BlockEditor blocks={blocks} onChange={handleBlocks} />
+                  <BlockEditor key={doc.id} blocks={blocks} onChange={handleBlocks} />
                 </div>
               </div>
             </div>
