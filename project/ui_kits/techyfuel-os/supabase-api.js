@@ -108,7 +108,7 @@
     createExpense: (d) => client.from('expenses').insert(d).select().single(),
 
     // ── FILES ────────────────────────────────────────────
-    getFiles: (filters = {}) => {
+    getFiles: async (filters = {}) => {
       let q = client.from('files')
         .select('*, projects(name), clients(name), team_members!uploaded_by(name)');
       if (filters.projectId) q = q.eq('project_id', filters.projectId);
@@ -117,7 +117,17 @@
         if (filters.folderId === null) q = q.is('folder_id', null);
         else q = q.eq('folder_id', filters.folderId);
       }
-      return q.order('created_at', { ascending: false });
+      const res = await q.order('created_at', { ascending: false });
+      if (res && res.data) {
+        res.data = res.data.map(f => {
+          const fp = f.file_path || '';
+          const url = /^https?:\/\//.test(fp)
+            ? fp
+            : (fp ? client.storage.from('files').getPublicUrl(fp).data.publicUrl : (f.url || null));
+          return { ...f, url, file_type: f.mime_type || f.file_type || '' };
+        });
+      }
+      return res;
     },
     uploadFile: async (bucket, path, file) => {
       const { data, error } = await client.storage.from(bucket).upload(path, file, { upsert: true });

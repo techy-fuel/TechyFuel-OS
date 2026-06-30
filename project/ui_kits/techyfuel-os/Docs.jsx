@@ -331,7 +331,7 @@ function FilesBrowser({ projectId }) {
       try {
         const path = `${projectId}/${Date.now()}_${f.name}`;
         const url = await window.API.uploadFile('project-files', path, f);
-        const rec = { name: f.name, url, file_type: f.type, file_size: f.size, folder_id: currentFolder };
+        const rec = { name: f.name, file_path: url, mime_type: f.type, file_size: f.size, folder_id: currentFolder };
         if (projectId) rec.project_id = projectId;
         const { error } = await window.API.createFile(rec);
         if (error) throw error;

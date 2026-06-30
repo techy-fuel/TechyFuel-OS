@@ -987,8 +987,8 @@
           const url = await window.API.uploadFile('project-files', path, f);
           const rec = {
             name: f.name,
-            url,
-            file_type: f.type,
+            file_path: url,
+            mime_type: f.type,
             file_size: f.size,
             folder_id: currentFolder
           };
