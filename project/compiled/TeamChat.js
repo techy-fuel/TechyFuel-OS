@@ -153,6 +153,7 @@
   }) {
     const [hover, setHover] = React.useState(false);
     const [emojiOpen, setEmojiOpen] = React.useState(false);
+    useLucide();
     const senderName = msg.team_members?.name || 'Unknown';
     const reactionMap = {};
     (msg.reactions || []).forEach(r => {
@@ -452,6 +453,7 @@
     myId,
     placeholder
   }) {
+    useLucide();
     const [text, setText] = React.useState('');
     const [mentionQ, setMentionQ] = React.useState('');
     const [mentionOpen, setMentionOpen] = React.useState(false);
@@ -809,6 +811,7 @@
     onCreate,
     type
   }) {
+    useLucide();
     const [name, setName] = React.useState('');
     const [desc, setDesc] = React.useState('');
     const [selectedMembers, setSelectedMembers] = React.useState([]);
@@ -1030,6 +1033,7 @@
     onClose,
     onJump
   }) {
+    useLucide();
     const [q, setQ] = React.useState('');
     const [results, setResults] = React.useState([]);
     const [loading, setLoading] = React.useState(false);
@@ -1189,6 +1193,7 @@
 
   // ── Main TeamChat component ───────────────────────────────────────
   function TeamChat() {
+    useLucide();
     const [channels, setChannels] = React.useState([]);
     const [activeId, setActiveId] = React.useState(null);
     const [messages, setMessages] = React.useState([]);
@@ -2270,6 +2275,7 @@
     call,
     onClose
   }) {
+    useLucide();
     const containerRef = React.useRef(null);
     const apiRef = React.useRef(null);
     const [ready, setReady] = React.useState(false);
