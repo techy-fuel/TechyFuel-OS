@@ -3,12 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>TechyFuel OS — Agency Operating System</title>
   <link rel="icon" type="image/png" href="assets/techyfuel-mark.png" />
   <link rel="stylesheet" href="project/styles.css" />
   <style>
     html, body { height: 100%; margin: 0; overflow: hidden; }
     #root { height: 100%; }
+    @keyframes tf-spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -35,6 +37,7 @@
 <!-- Pre-compiled screen components (no Babel runtime needed) -->
 <script src="project/compiled/helpers.js"></script>
 <script src="project/compiled/charts.js"></script>
+<script src="project/compiled/Auth.js"></script>
 <script src="project/compiled/AppShell.js"></script>
 <script src="project/compiled/Dashboard.js"></script>
 <script src="project/compiled/Projects.js"></script>
@@ -48,7 +51,12 @@
 <script src="project/compiled/Finance.js"></script>
 <script src="project/compiled/Reports.js"></script>
 <script src="project/compiled/Files.js"></script>
+<script src="project/compiled/Docs.js"></script>
 <script src="project/compiled/Team.js"></script>
+<script src="project/compiled/TeamChat.js"></script>
+<script src="project/compiled/Automations.js"></script>
+<script src="project/compiled/Integrations.js"></script>
+<script src="project/compiled/Workspace.js"></script>
 <script src="project/compiled/Settings.js"></script>
 <script src="project/compiled/Calendar.js"></script>
 
@@ -59,98 +67,109 @@
 
   /* ── Route table ──────────────────────────────────────────── */
   var ROUTES = {
-    dashboard: { crumb: 'Workspace',  title: 'Executive dashboard',  comp: 'Dashboard' },
-    tasks:     { crumb: 'Workspace',  title: 'Tasks',                comp: 'TasksBoard' },
-    projects:  { crumb: 'Workspace',  title: 'Projects',             comp: 'Projects' },
-    content:   { crumb: 'Marketing',  title: 'Content calendar',     comp: 'ContentCalendar' },
-    crm:       { crumb: 'Clients',    title: 'Client CRM',           comp: 'CRM' },
-    ads:       { crumb: 'Marketing',  title: 'Meta Ads Center',      comp: 'MetaAds' },
-    portal:    { crumb: 'Clients',    title: 'Client portal',        comp: 'ClientPortal' },
-    pipeline:  { crumb: 'Clients',    title: 'Sales pipeline',       comp: 'Pipeline' },
-    finance:   { crumb: 'Business',   title: 'Finance',              comp: 'Finance' },
-    reports:   { crumb: 'Business',   title: 'Reporting center',     comp: 'Reports' },
-    files:     { crumb: 'Business',   title: 'Files',                comp: 'Files' },
-    team:      { crumb: 'Business',   title: 'Team',                 comp: 'Team' },
-    settings:  { crumb: 'Workspace',  title: 'Settings',             comp: 'Settings' },
-    calendar:  { crumb: 'Workspace',  title: 'Calendar',             comp: 'Calendar' },
+    dashboard:    { crumb: 'Workspace', title: 'Executive dashboard', comp: 'Dashboard' },
+    tasks:        { crumb: 'Workspace', title: 'Tasks',               comp: 'TasksBoard' },
+    projects:     { crumb: 'Workspace', title: 'Projects',            comp: 'Projects' },
+    content:      { crumb: 'Marketing', title: 'Content calendar',    comp: 'ContentCalendar' },
+    crm:          { crumb: 'Clients',   title: 'Client CRM',          comp: 'CRM' },
+    ads:          { crumb: 'Marketing', title: 'Meta Ads Center',     comp: 'MetaAds' },
+    portal:       { crumb: 'Clients',   title: 'Client portal',       comp: 'ClientPortal' },
+    pipeline:     { crumb: 'Clients',   title: 'Sales pipeline',      comp: 'Pipeline' },
+    finance:      { crumb: 'Business',  title: 'Finance',             comp: 'Finance' },
+    reports:      { crumb: 'Business',  title: 'Reporting center',    comp: 'Reports' },
+    files:        { crumb: 'Business',  title: 'Files',               comp: 'Files' },
+    docs:         { crumb: 'Business',  title: 'Docs & Files',        comp: 'Docs' },
+    team:         { crumb: 'Business',  title: 'Team',                comp: 'Team' },
+    chat:         { crumb: 'Business',  title: 'Team Chat',           comp: 'TeamChat' },
+    automations:  { crumb: 'Business',  title: 'Automations',         comp: 'Automations' },
+    integrations: { crumb: 'Business',  title: 'Integrations',        comp: 'Integrations' },
+    workspace:    { crumb: 'Business',  title: 'Workspace',           comp: 'Workspace' },
+    settings:     { crumb: 'Workspace', title: 'Settings',            comp: 'Settings' },
+    calendar:     { crumb: 'Workspace', title: 'Calendar',           comp: 'Calendar' },
   };
 
   var PLACEHOLDER = {};
-
   var e = React.createElement;
 
   /* ── Placeholder for unbuilt modules ─────────────────────── */
   function Placeholder(props) {
     var pair  = PLACEHOLDER[props.id] || ['layout-dashboard', 'Module'];
-    var iname = pair[0];
-    var label = pair[1];
     return e('div', {
-      style: {
-        height: '100%', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40,
-      }},
-      e('span', {
-        style: {
-          width: 64, height: 64, borderRadius: 'var(--radius-2xl)',
+      style: { height: '100%', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40 }},
+      e('span', { style: { width: 64, height: 64, borderRadius: 'var(--radius-2xl)',
           background: 'var(--blue-50)', display: 'inline-flex',
-          alignItems: 'center', justifyContent: 'center',
-        }},
-        e(window.Icon, { name: iname, size: 30, style: { color: 'var(--blue-600)' } })
+          alignItems: 'center', justifyContent: 'center' }},
+        e(window.Icon, { name: pair[0], size: 30, style: { color: 'var(--blue-600)' } })
       ),
       e('div', { style: { textAlign: 'center' } },
-        e('h2', {
-          style: {
-            fontSize: 'var(--text-2xl)', fontWeight: 'var(--fw-extrabold)',
-            letterSpacing: '-0.02em', margin: 0,
-          }}, label),
-        e('p', {
-          style: {
-            fontSize: 'var(--text-base)', color: 'var(--text-muted)',
-            marginTop: 6, maxWidth: 360,
-          }},
-          'This module is part of TechyFuel OS. Explore the other screens from the sidebar.'
-        )
+        e('h2', { style: { fontSize: 'var(--text-2xl)', fontWeight: 'var(--fw-extrabold)',
+            letterSpacing: '-0.02em', margin: 0 }}, pair[1]),
+        e('p', { style: { fontSize: 'var(--text-base)', color: 'var(--text-muted)',
+            marginTop: 6, maxWidth: 360 }},
+          'This module is part of TechyFuel OS. Explore the other screens from the sidebar.')
       ),
-      e('span', {
-        style: {
-          fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)',
+      e('span', { style: { fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)',
           color: 'var(--blue-700)', background: 'var(--blue-50)',
-          borderRadius: 'var(--radius-full)', padding: '5px 12px',
-        }}, 'Kit preview')
+          borderRadius: 'var(--radius-full)', padding: '5px 12px' }}, 'Kit preview')
+    );
+  }
+
+  /* ── Loading screen ──────────────────────────────────────── */
+  function LoadingScreen() {
+    return e('div', { style: { height: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(145deg,#0c1320 0%,#0f2044 45%,#1a3a6e 100%)' }},
+      e('div', { style: { textAlign: 'center' } },
+        e('div', { style: { width: 56, height: 56, border: '3px solid rgba(255,255,255,0.15)',
+          borderTop: '3px solid #60a5fa', borderRadius: '50%',
+          animation: 'tf-spin 0.8s linear infinite', margin: '0 auto 18px' }}),
+        e('p', { style: { color: 'rgba(255,255,255,0.55)', fontSize: 14 } }, 'Loading TechyFuel OS…')
+      )
     );
   }
 
   /* ── Root app ────────────────────────────────────────────── */
   function App() {
-    var state   = React.useState('dashboard');
-    var active  = state[0];
-    var setActive = state[1];
-    var aiState = React.useState(false);
-    var aiOpen  = aiState[0];
-    var setAiOpen = aiState[1];
+    var s1 = React.useState('dashboard'); var active = s1[0], setActive = s1[1];
+    var s2 = React.useState(false);       var aiOpen = s2[0], setAiOpen = s2[1];
+    var s3 = React.useState(null);        var authUser = s3[0], setAuthUser = s3[1];
+    var s4 = React.useState(true);        var authLoading = s4[0], setAuthLoading = s4[1];
+
+    React.useEffect(function () { window.TFNavigate = setActive; }, []);
+
+    React.useEffect(function () {
+      if (!window.db) { setAuthLoading(false); return; }
+      window.db.auth.getSession().then(function (res) {
+        setAuthUser((res.data && res.data.session && res.data.session.user) || null);
+        setAuthLoading(false);
+      }).catch(function () { setAuthLoading(false); });
+      var sub = window.db.auth.onAuthStateChange(function (_evt, session) {
+        setAuthUser((session && session.user) || null);
+      });
+      return function () { try { sub.data.subscription.unsubscribe(); } catch (x) {} };
+    }, []);
+
+    function handleSignOut() {
+      if (window.db) window.db.auth.signOut();
+      setAuthUser(null);
+    }
+
+    if (authLoading) return e(LoadingScreen);
+    if (!authUser && window.db) return e(window.AuthScreen, { onAuth: setAuthUser });
 
     var route = ROUTES[active];
-    var meta  = route || {
-      crumb: 'TechyFuel OS',
-      title: (PLACEHOLDER[active] || ['', 'Module'])[1],
-    };
-
-    var screenEl = route
-      ? e(window[route.comp])
-      : e(Placeholder, { id: active });
+    var meta  = route || { crumb: 'TechyFuel OS', title: (PLACEHOLDER[active] || ['', 'Module'])[1] };
+    var screenEl = route ? e(window[route.comp]) : e(Placeholder, { id: active });
 
     return e(React.Fragment, null,
       e(window.AppShell, {
-        active:     active,
-        onNavigate: setActive,
-        title:      meta.title,
-        crumb:      meta.crumb,
-        onOpenAI:   function () { setAiOpen(true); },
+        active: active, onNavigate: setActive,
+        title: meta.title, crumb: meta.crumb,
+        onOpenAI: function () { setAiOpen(true); },
+        authUser: authUser, onSignOut: handleSignOut,
       }, screenEl),
-      e(window.AIPanel, {
-        open:    aiOpen,
-        onClose: function () { setAiOpen(false); },
-      })
+      e(window.AIPanel, { open: aiOpen, onClose: function () { setAiOpen(false); } })
     );
   }
 
