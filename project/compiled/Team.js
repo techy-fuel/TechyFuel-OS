@@ -84,22 +84,34 @@
       }).catch(() => {});
     }, []);
     async function handleInviteMember() {
-      if (!form.name.trim()) return;
+      if (!form.name.trim()) {
+        alert('Name is required.');
+        return;
+      }
+      if (!form.email.trim()) {
+        alert('Email is required.');
+        return;
+      }
       setSaving(true);
       try {
         const payload = {
-          name: form.name,
+          name: form.name.trim(),
+          email: form.email.trim(),
           role: form.role,
           status: 'active'
         };
-        if (form.email) payload.email = form.email;
         if (form.department) payload.department = form.department;
         if (window.API) {
           const {
             data,
             error
           } = await window.API.addTeamMember(payload);
-          if (!error && data) setTeam(prev => [...prev, data]);
+          if (error) {
+            const msg = error.message || error.details || JSON.stringify(error);
+            alert('Could not add member:\n\n' + msg);
+            return;
+          }
+          if (data) setTeam(prev => [...prev, data]);
         }
         setModalOpen(false);
         setForm({
@@ -108,6 +120,8 @@
           department: '',
           role: 'member'
         });
+      } catch (err) {
+        alert('Error: ' + (err.message || JSON.stringify(err)));
       } finally {
         setSaving(false);
       }
@@ -310,7 +324,8 @@
       value: form.name,
       onChange: e => set('name', e.target.value)
     })), /*#__PURE__*/React.createElement(FormRow, {
-      label: "Email"
+      label: "Email",
+      required: true
     }, /*#__PURE__*/React.createElement("input", {
       style: FF.input,
       type: "email",

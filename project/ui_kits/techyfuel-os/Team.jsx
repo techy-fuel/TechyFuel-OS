@@ -38,18 +38,30 @@ function Team() {
   }, []);
 
   async function handleInviteMember() {
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) { alert('Name is required.'); return; }
+    if (!form.email.trim()) { alert('Email is required.'); return; }
     setSaving(true);
     try {
-      const payload = { name: form.name, role: form.role, status: 'active' };
-      if (form.email)      payload.email      = form.email;
+      const payload = {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        role: form.role,
+        status: 'active',
+      };
       if (form.department) payload.department = form.department;
       if (window.API) {
         const { data, error } = await window.API.addTeamMember(payload);
-        if (!error && data) setTeam(prev => [...prev, data]);
+        if (error) {
+          const msg = error.message || error.details || JSON.stringify(error);
+          alert('Could not add member:\n\n' + msg);
+          return;
+        }
+        if (data) setTeam(prev => [...prev, data]);
       }
       setModalOpen(false);
       setForm({ name: '', email: '', department: '', role: 'member' });
+    } catch (err) {
+      alert('Error: ' + (err.message || JSON.stringify(err)));
     } finally { setSaving(false); }
   }
 
@@ -113,7 +125,7 @@ function Team() {
           <FormRow label="Full name" required>
             <input style={FF.input} placeholder="Name…" value={form.name} onChange={e => set('name', e.target.value)} />
           </FormRow>
-          <FormRow label="Email">
+          <FormRow label="Email" required>
             <input style={FF.input} type="email" placeholder="email@agency.com" value={form.email} onChange={e => set('email', e.target.value)} />
           </FormRow>
         </div>
