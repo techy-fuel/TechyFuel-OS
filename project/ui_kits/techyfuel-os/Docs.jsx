@@ -334,6 +334,7 @@ function FilePreview({ file, onClose }) {
 
 // ── Files Browser ─────────────────────────────────────────────────────────────
 function FilesBrowser({ projectId }) {
+  useLucide();
   const [allFolders, setAllFolders] = React.useState([]);
   const [files, setFiles] = React.useState([]);
   const [currentFolder, setCurrentFolder] = React.useState(null);
@@ -405,7 +406,8 @@ function FilesBrowser({ projectId }) {
             style={{ width: '100%', paddingLeft: 30, paddingRight: 12, height: 36, border: '1px solid var(--slate-200)', borderRadius: 8, fontSize: 14, fontFamily: 'var(--font-sans)', outline: 'none', boxSizing: 'border-box' }} />
         </div>
         <button onClick={() => setView(v => v === 'grid' ? 'list' : 'grid')} style={{ height: 36, padding: '0 12px', border: '1px solid var(--slate-200)', borderRadius: 8, background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
-          <Icon name={view === 'grid' ? 'list' : 'grid-2x2'} size={15} />
+          <Icon name={view === 'grid' ? 'layout-list' : 'layout-grid'} size={15} />
+          {view === 'grid' ? 'List' : 'Grid'}
         </button>
         <button onClick={() => setShowNew(true)} style={{ height: 36, padding: '0 14px', border: '1px solid var(--slate-200)', borderRadius: 8, background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontFamily: 'var(--font-sans)', color: 'var(--text-body)' }}>
           <Icon name="folder-plus" size={15} /> New folder
@@ -538,6 +540,7 @@ function FilesBrowser({ projectId }) {
 
 // ── Main Docs Screen ───────────────────────────────────────────────────────────
 function Docs() {
+  useLucide();
   const [projects, setProjects] = React.useState([]);
   const [project, setProject] = React.useState(null);
   const [docs, setDocs] = React.useState([]);

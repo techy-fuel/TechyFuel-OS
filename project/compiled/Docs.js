@@ -1011,6 +1011,7 @@
   function FilesBrowser({
     projectId
   }) {
+    useLucide();
     const [allFolders, setAllFolders] = React.useState([]);
     const [files, setFiles] = React.useState([]);
     const [currentFolder, setCurrentFolder] = React.useState(null);
@@ -1197,9 +1198,9 @@
         fontFamily: 'var(--font-sans)'
       }
     }, /*#__PURE__*/React.createElement(Icon, {
-      name: view === 'grid' ? 'list' : 'grid-2x2',
+      name: view === 'grid' ? 'layout-list' : 'layout-grid',
       size: 15
-    })), /*#__PURE__*/React.createElement("button", {
+    }), view === 'grid' ? 'List' : 'Grid'), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowNew(true),
       style: {
         height: 36,
@@ -1616,6 +1617,7 @@
 
   // ── Main Docs Screen ───────────────────────────────────────────────────────────
   function Docs() {
+    useLucide();
     const [projects, setProjects] = React.useState([]);
     const [project, setProject] = React.useState(null);
     const [docs, setDocs] = React.useState([]);
