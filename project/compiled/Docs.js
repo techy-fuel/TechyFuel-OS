@@ -1761,6 +1761,15 @@
       clearTimeout(timer.current);
       timer.current = setTimeout(() => save(blocks, t), 1500);
     }
+    async function deleteDocById(id, e) {
+      e.stopPropagation();
+      if (!window.confirm('Delete this document?')) return;
+      try {
+        await window.API.deleteDoc(id);
+      } catch {}
+      setDocs(prev => prev.filter(d => d.id !== id));
+      if (doc?.id === id) setDoc(null);
+    }
     async function newDoc() {
       if (!project || !window.API) return;
       try {
@@ -1935,25 +1944,32 @@
         fontSize: 13,
         marginTop: 24
       }
-    }, "No documents yet"), filteredDocs.map(d => /*#__PURE__*/React.createElement("button", {
+    }, "No documents yet"), filteredDocs.map(d => /*#__PURE__*/React.createElement("div", {
       key: d.id,
+      style: {
+        position: 'relative',
+        marginBottom: 2
+      },
+      onMouseEnter: e => {
+        e.currentTarget.querySelector('.del-btn').style.opacity = '1';
+        if (doc?.id !== d.id) e.currentTarget.querySelector('.doc-row').style.background = 'var(--slate-100)';
+      },
+      onMouseLeave: e => {
+        e.currentTarget.querySelector('.del-btn').style.opacity = '0';
+        if (doc?.id !== d.id) e.currentTarget.querySelector('.doc-row').style.background = 'transparent';
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "doc-row",
       onClick: () => openDoc(d),
       style: {
         width: '100%',
         textAlign: 'left',
-        padding: '8px 10px',
+        padding: '8px 32px 8px 10px',
         borderRadius: 8,
         border: 'none',
         cursor: 'pointer',
         background: doc?.id === d.id ? 'var(--blue-50)' : 'transparent',
-        marginBottom: 2,
         fontFamily: 'var(--font-sans)'
-      },
-      onMouseEnter: e => {
-        if (doc?.id !== d.id) e.currentTarget.style.background = 'var(--slate-100)';
-      },
-      onMouseLeave: e => {
-        if (doc?.id !== d.id) e.currentTarget.style.background = 'transparent';
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -1983,7 +1999,32 @@
         color: 'var(--text-muted)',
         margin: '2px 0 0 21px'
       }
-    }, new Date(d.updated_at || d.created_at).toLocaleDateString())))))), /*#__PURE__*/React.createElement(DocErrorBoundary, null, /*#__PURE__*/React.createElement("div", {
+    }, new Date(d.updated_at || d.created_at).toLocaleDateString())), /*#__PURE__*/React.createElement("button", {
+      className: "del-btn",
+      onClick: e => deleteDocById(d.id, e),
+      style: {
+        position: 'absolute',
+        right: 6,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        background: 'var(--red-50)',
+        border: 'none',
+        borderRadius: 5,
+        width: 22,
+        height: 22,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        opacity: 0,
+        transition: 'opacity 0.15s',
+        color: 'var(--red-500)'
+      },
+      title: "Delete document"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "trash-2",
+      size: 12
+    }))))))), /*#__PURE__*/React.createElement(DocErrorBoundary, null, /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         display: 'flex',
@@ -2148,6 +2189,25 @@
       name: "history",
       size: 14
     }), " History"), /*#__PURE__*/React.createElement("button", {
+      onClick: e => deleteDocById(doc.id, e),
+      style: {
+        height: 32,
+        padding: '0 12px',
+        border: '1px solid var(--red-200)',
+        borderRadius: 7,
+        background: 'white',
+        cursor: 'pointer',
+        fontSize: 13,
+        fontFamily: 'var(--font-sans)',
+        color: 'var(--red-500)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "trash-2",
+      size: 14
+    }), " Delete"), /*#__PURE__*/React.createElement("button", {
       onClick: () => save(),
       style: {
         height: 32,

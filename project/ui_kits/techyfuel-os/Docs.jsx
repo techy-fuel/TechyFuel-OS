@@ -618,6 +618,14 @@ function Docs() {
     clearTimeout(timer.current); timer.current = setTimeout(() => save(blocks, t), 1500);
   }
 
+  async function deleteDocById(id, e) {
+    e.stopPropagation();
+    if (!window.confirm('Delete this document?')) return;
+    try { await window.API.deleteDoc(id); } catch {}
+    setDocs(prev => prev.filter(d => d.id !== id));
+    if (doc?.id === id) setDoc(null);
+  }
+
   async function newDoc() {
     if (!project || !window.API) return;
     try {
@@ -678,16 +686,23 @@ function Docs() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 16px' }}>
               {!filteredDocs.length && <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 24 }}>No documents yet</p>}
               {filteredDocs.map(d => (
-                <button key={d.id} onClick={() => openDoc(d)}
-                  style={{ width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: doc?.id === d.id ? 'var(--blue-50)' : 'transparent', marginBottom: 2, fontFamily: 'var(--font-sans)' }}
-                  onMouseEnter={e => { if (doc?.id !== d.id) e.currentTarget.style.background = 'var(--slate-100)'; }}
-                  onMouseLeave={e => { if (doc?.id !== d.id) e.currentTarget.style.background = 'transparent'; }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <Icon name="file-text" size={14} style={{ color: doc?.id === d.id ? 'var(--blue-600)' : 'var(--text-muted)', flexShrink: 0 }} />
-                    <span style={{ fontSize: 14, fontWeight: doc?.id === d.id ? 600 : 400, color: doc?.id === d.id ? 'var(--blue-700)' : 'var(--text-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title || 'Untitled'}</span>
-                  </div>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0 21px' }}>{new Date(d.updated_at || d.created_at).toLocaleDateString()}</p>
-                </button>
+                <div key={d.id} style={{ position: 'relative', marginBottom: 2 }}
+                  onMouseEnter={e => { e.currentTarget.querySelector('.del-btn').style.opacity = '1'; if (doc?.id !== d.id) e.currentTarget.querySelector('.doc-row').style.background = 'var(--slate-100)'; }}
+                  onMouseLeave={e => { e.currentTarget.querySelector('.del-btn').style.opacity = '0'; if (doc?.id !== d.id) e.currentTarget.querySelector('.doc-row').style.background = 'transparent'; }}>
+                  <button className="doc-row" onClick={() => openDoc(d)}
+                    style={{ width: '100%', textAlign: 'left', padding: '8px 32px 8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: doc?.id === d.id ? 'var(--blue-50)' : 'transparent', fontFamily: 'var(--font-sans)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <Icon name="file-text" size={14} style={{ color: doc?.id === d.id ? 'var(--blue-600)' : 'var(--text-muted)', flexShrink: 0 }} />
+                      <span style={{ fontSize: 14, fontWeight: doc?.id === d.id ? 600 : 400, color: doc?.id === d.id ? 'var(--blue-700)' : 'var(--text-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title || 'Untitled'}</span>
+                    </div>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0 21px' }}>{new Date(d.updated_at || d.created_at).toLocaleDateString()}</p>
+                  </button>
+                  <button className="del-btn" onClick={e => deleteDocById(d.id, e)}
+                    style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'var(--red-50)', border: 'none', borderRadius: 5, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: 0, transition: 'opacity 0.15s', color: 'var(--red-500)' }}
+                    title="Delete document">
+                    <Icon name="trash-2" size={12} />
+                  </button>
+                </div>
               ))}
             </div>
           </>
@@ -743,6 +758,10 @@ function Docs() {
                   <button onClick={() => setShowVersions(v => !v)}
                     style={{ height: 32, padding: '0 12px', border: `1px solid ${showVersions ? 'var(--blue-400)' : 'var(--slate-200)'}`, borderRadius: 7, background: showVersions ? 'var(--blue-50)' : 'white', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)', color: showVersions ? 'var(--blue-700)' : 'var(--text-body)', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Icon name="history" size={14} /> History
+                  </button>
+                  <button onClick={e => deleteDocById(doc.id, e)}
+                    style={{ height: 32, padding: '0 12px', border: '1px solid var(--red-200)', borderRadius: 7, background: 'white', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)', color: 'var(--red-500)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="trash-2" size={14} /> Delete
                   </button>
                   <button onClick={() => save()}
                     style={{ height: 32, padding: '0 16px', background: 'var(--blue-600)', color: 'white', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: 6 }}>
