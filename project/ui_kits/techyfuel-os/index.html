@@ -5,6 +5,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>TechyFuel OS</title>
 <link rel="stylesheet" href="../../styles.css" />
 <style>
@@ -19,30 +22,39 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../../_ds_bundle.js"></script>
-<script type="text/babel" src="helpers.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Auth.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="charts.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="AppShell.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Dashboard.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Projects.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="ContentCalendar.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="CRM.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="TasksBoard.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="MetaAds.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="AIPanel.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="ClientPortal.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Pipeline.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Finance.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Reports.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Files.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Team.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Calendar.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Settings.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="TeamChat.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Automations.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Docs.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Integrations.jsx?v=4" data-presets="react"></script>
-<script type="text/babel" src="Workspace.jsx?v=4" data-presets="react"></script>
+<!-- ── Supabase (auth + database) ── -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+  // TechyFuel OS — Supabase config.
+  // Get these from Supabase Dashboard → Project Settings → API.
+  window.__SUPABASE_URL = 'https://nvgzzhqfibhtbauinmwu.supabase.co';
+  window.__SUPABASE_KEY = ''; // ← paste your "anon public" key here to enable login + live data
+</script>
+<script src="supabase-api.js?v=5"></script>
+<script type="text/babel" src="helpers.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Auth.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="charts.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="AppShell.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Dashboard.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Projects.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="ContentCalendar.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="CRM.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="TasksBoard.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="MetaAds.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="AIPanel.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="ClientPortal.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Pipeline.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Finance.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Reports.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Files.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Team.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Calendar.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Settings.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="TeamChat.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Automations.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Docs.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Integrations.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="Workspace.jsx?v=5" data-presets="react"></script>
 <script type="text/babel" data-presets="react">
 const ROUTES = {
   dashboard: { crumb: 'Workspace', title: 'Executive dashboard', render: () => <Dashboard /> },

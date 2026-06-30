@@ -1,7 +1,7 @@
 // Supabase client — available globally as window.db
 (() => {
   try {
-  if (!window.supabase || !window.__SUPABASE_URL) {
+  if (!window.supabase || !window.__SUPABASE_URL || !window.__SUPABASE_KEY) {
     console.warn('[TechyFuel OS] Supabase not configured — running in demo mode');
     window.db = null; window.API = {};
     return;
