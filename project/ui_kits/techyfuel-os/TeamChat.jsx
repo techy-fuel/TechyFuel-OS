@@ -949,8 +949,12 @@ function CallModal({ call, onClose }) {
             startWithAudioMuted: false,
             startWithVideoMuted: call.type === 'audio',
             prejoinPageEnabled: false,
+            prejoinConfig: { enabled: false },
             disableDeepLinking: true,
             enableNoisyMicDetection: true,
+            disableThirdPartyRequests: true,
+            hideConferenceSubject: true,
+            subject: 'TechyFuel OS Call',
           },
           interfaceConfigOverwrite: {
             TOOLBAR_BUTTONS: call.type === 'audio'
@@ -958,8 +962,13 @@ function CallModal({ call, onClose }) {
               : ['microphone', 'camera', 'desktop', 'recording', 'fullscreen', 'hangup'],
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
+            SHOW_BRAND_WATERMARK: false,
+            SHOW_POWERED_BY: false,
+            DISPLAY_WELCOME_FOOTER: false,
+            HIDE_INVITE_MORE_HEADER: true,
             DEFAULT_REMOTE_DISPLAY_NAME: 'Team member',
             APP_NAME: 'TechyFuel OS',
+            NATIVE_APP_NAME: 'TechyFuel OS',
           },
           userInfo: { displayName: (localStorage.getItem('tf_my_name') || 'Team Member') },
         });
