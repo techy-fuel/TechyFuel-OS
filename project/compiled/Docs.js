@@ -985,15 +985,23 @@
         try {
           const path = `${projectId}/${Date.now()}_${f.name}`;
           const url = await window.API.uploadFile('project-files', path, f);
-          await window.API.createFile({
+          const rec = {
             name: f.name,
             url,
             file_type: f.type,
             file_size: f.size,
-            project_id: projectId,
             folder_id: currentFolder
-          });
-        } catch {}
+          };
+          if (projectId) rec.project_id = projectId;
+          const {
+            error
+          } = await window.API.createFile(rec);
+          if (error) throw error;
+        } catch (err) {
+          const msg = err && (err.message || err.error_description || err.msg) || JSON.stringify(err);
+          alert('Upload failed for "' + f.name + '":\n\n' + msg);
+          console.error('[Upload error]', err);
+        }
       }
       setUploading(false);
       load();
