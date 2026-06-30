@@ -48,6 +48,15 @@ function mkBlock(type = 'paragraph') {
   return { id, type, text: '' };
 }
 
+// Shared props that block browser extensions (Grammarly, translate, spellcheck)
+// from wrapping/modifying textareas, which breaks React's removeChild calls
+const NO_EXT = {
+  spellCheck: false, autoComplete: 'off', autoCorrect: 'off',
+  autoCapitalize: 'off', translate: 'no',
+  'data-gramm': 'false', 'data-gramm_editor': 'false',
+  'data-enable-grammarly': 'false',
+};
+
 // ── Single Block ──────────────────────────────────────────────────────────────
 function Block({ block, index, onChange, onKeyDown, elRef }) {
   const base = { outline: 'none', width: '100%', border: 'none', background: 'transparent', fontFamily: 'var(--font-sans)', resize: 'none', padding: 0 };
@@ -97,8 +106,7 @@ function Block({ block, index, onChange, onKeyDown, elRef }) {
       <textarea ref={elRef} value={block.code || ''} onChange={e => onChange({ ...block, code: e.target.value })} onKeyDown={e => onKeyDown(e, block, index)}
         rows={Math.max(3, (block.code || '').split('\n').length + 1)}
         style={{ ...base, color: '#a8d8ea', fontSize: 13.5, fontFamily: 'monospace', lineHeight: 1.65, padding: '14px 18px', display: 'block' }}
-        placeholder="// write code here..."
-        spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off" />
+        placeholder="// write code here..." {...NO_EXT} />
     </div>
   );
 
@@ -133,8 +141,7 @@ function Block({ block, index, onChange, onKeyDown, elRef }) {
       <input type="checkbox" checked={!!block.checked} onChange={e => onChange({ ...block, checked: e.target.checked })} style={{ marginTop: 4, accentColor: 'var(--blue-600)', cursor: 'pointer', width: 16, height: 16, flexShrink: 0 }} />
       <textarea ref={elRef} value={block.text || ''} onChange={e => detectMarkdown(e.target.value)} onKeyDown={e => onKeyDown(e, block, index)} rows={1}
         style={{ ...base, fontSize: 15, lineHeight: 1.65, flex: 1, textDecoration: block.checked ? 'line-through' : 'none', color: block.checked ? 'var(--text-muted)' : 'inherit' }}
-        placeholder="To-do..."
-        spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
+        placeholder="To-do..." {...NO_EXT}
         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} />
     </div>
   );
@@ -156,8 +163,7 @@ function Block({ block, index, onChange, onKeyDown, elRef }) {
       {block.type === 'numbered' && <span style={{ position: 'absolute', left: 0, top: 2, fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.75, minWidth: 18 }}>{index + 1}.</span>}
       <textarea ref={elRef} value={block.text || ''} onChange={e => detectMarkdown(e.target.value)} onKeyDown={e => onKeyDown(e, block, index)} rows={1}
         style={{ ...base, ...(styles[block.type] || styles.paragraph) }}
-        placeholder={ph[block.type] || ''}
-        spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
+        placeholder={ph[block.type] || ''} {...NO_EXT}
         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} />
     </div>
   );
@@ -688,73 +694,82 @@ function Docs() {
         )}
       </div>
 
-      {/* Main */}
+      {/* Main — use display:none toggling (not conditional render) to avoid removeChild */}
       <DocErrorBoundary>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {tab === 'files' ? (
-          project ? <FilesBrowser projectId={project.id} /> :
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 15 }}>Select a project to view files</div>
-        ) : doc ? (
-          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              {/* Toolbar */}
-              <div style={{ padding: '10px 28px', borderBottom: '1px solid var(--slate-200)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: saving ? 'var(--blue-600)' : saved ? 'var(--green-600)' : 'transparent' }}>
-                  {saving ? '⟳ Saving...' : '✓ Saved'}
-                </span>
-                <div style={{ flex: 1 }} />
-                {activePeers.map(p => (
-                  <span key={p.id} style={{ fontSize: 12, background: 'var(--green-100)', color: 'var(--green-700)', borderRadius: 20, padding: '3px 10px', fontWeight: 600 }}>
-                    👁 {p.name}
-                  </span>
-                ))}
-                <select value={linkedTask || ''} onChange={e => linkTask(e.target.value)}
-                  style={{ height: 32, padding: '0 10px', border: '1px solid var(--slate-200)', borderRadius: 7, fontSize: 13, fontFamily: 'var(--font-sans)', background: 'white', cursor: 'pointer', maxWidth: 180, color: linkedTask ? 'var(--blue-700)' : 'var(--text-muted)' }}>
-                  <option value="">🔗 Link to task</option>
-                  {tasks.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
-                </select>
-                <button onClick={() => setShowVersions(v => !v)}
-                  style={{ height: 32, padding: '0 12px', border: `1px solid ${showVersions ? 'var(--blue-400)' : 'var(--slate-200)'}`, borderRadius: 7, background: showVersions ? 'var(--blue-50)' : 'white', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)', color: showVersions ? 'var(--blue-700)' : 'var(--text-body)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="history" size={14} /> History
-                </button>
-                <button onClick={() => save()}
-                  style={{ height: 32, padding: '0 16px', background: 'var(--blue-600)', color: 'white', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="save" size={14} /> Save
-                </button>
-              </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
 
-              {/* Editor */}
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 40px 0' }}>
-                  <textarea value={title} onChange={handleTitle} placeholder="Document title..."
-                    rows={1} style={{ width: '100%', border: 'none', outline: 'none', fontSize: 37, fontWeight: 800, letterSpacing: '-0.025em', fontFamily: 'var(--font-sans)', resize: 'none', padding: 0, marginBottom: 6, lineHeight: 1.2, background: 'transparent', color: 'var(--text-heading)' }}
-                    spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
-                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} />
-                  <div style={{ display: 'flex', gap: 14, fontSize: 13, color: 'var(--text-muted)', marginBottom: 32, flexWrap: 'wrap' }}>
-                    {project && <span>📁 {project.name}</span>}
-                    {linkedTask && <span>🔗 {tasks.find(t => t.id === linkedTask)?.title}</span>}
-                    <span>Edited {new Date(doc.updated_at || doc.created_at).toLocaleDateString()}</span>
+        {/* Files tab */}
+        <div style={{ display: tab === 'files' ? 'flex' : 'none', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
+          {tab === 'files' && (project ? <FilesBrowser projectId={project.id} /> :
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 15 }}>Select a project to view files</div>
+          )}
+        </div>
+
+        {/* Docs tab — empty state */}
+        <div style={{ display: tab !== 'files' && !doc ? 'flex' : 'none', flex: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, color: 'var(--text-muted)' }}>
+          <Icon name="file-text" size={52} style={{ color: 'var(--slate-200)' }} />
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-heading)', margin: '0 0 6px' }}>No document open</p>
+            <p style={{ fontSize: 14, margin: 0 }}>Select a project, then create or open a document</p>
+          </div>
+          {project && (
+            <button onClick={newDoc} style={{ padding: '10px 22px', background: 'var(--blue-600)', color: 'white', border: 'none', borderRadius: 9, cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="plus" size={16} /> New Document
+            </button>
+          )}
+        </div>
+
+        {/* Docs tab — editor (always mounted when doc exists, hidden when not) */}
+        <div style={{ display: tab !== 'files' && doc ? 'flex' : 'none', flex: 1, overflow: 'hidden' }}>
+          {doc && (
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {/* Toolbar */}
+                <div style={{ padding: '10px 28px', borderBottom: '1px solid var(--slate-200)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: saving ? 'var(--blue-600)' : saved ? 'var(--green-600)' : 'transparent' }}>
+                    {saving ? '⟳ Saving...' : '✓ Saved'}
+                  </span>
+                  <div style={{ flex: 1 }} />
+                  {activePeers.map(p => (
+                    <span key={p.id} style={{ fontSize: 12, background: 'var(--green-100)', color: 'var(--green-700)', borderRadius: 20, padding: '3px 10px', fontWeight: 600 }}>
+                      👁 {p.name}
+                    </span>
+                  ))}
+                  <select value={linkedTask || ''} onChange={e => linkTask(e.target.value)}
+                    style={{ height: 32, padding: '0 10px', border: '1px solid var(--slate-200)', borderRadius: 7, fontSize: 13, fontFamily: 'var(--font-sans)', background: 'white', cursor: 'pointer', maxWidth: 180, color: linkedTask ? 'var(--blue-700)' : 'var(--text-muted)' }}>
+                    <option value="">🔗 Link to task</option>
+                    {tasks.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                  </select>
+                  <button onClick={() => setShowVersions(v => !v)}
+                    style={{ height: 32, padding: '0 12px', border: `1px solid ${showVersions ? 'var(--blue-400)' : 'var(--slate-200)'}`, borderRadius: 7, background: showVersions ? 'var(--blue-50)' : 'white', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)', color: showVersions ? 'var(--blue-700)' : 'var(--text-body)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="history" size={14} /> History
+                  </button>
+                  <button onClick={() => save()}
+                    style={{ height: 32, padding: '0 16px', background: 'var(--blue-600)', color: 'white', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="save" size={14} /> Save
+                  </button>
+                </div>
+                {/* Editor */}
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 40px 0' }}>
+                    <textarea value={title} onChange={handleTitle} placeholder="Document title..."
+                      rows={1} style={{ width: '100%', border: 'none', outline: 'none', fontSize: 37, fontWeight: 800, letterSpacing: '-0.025em', fontFamily: 'var(--font-sans)', resize: 'none', padding: 0, marginBottom: 6, lineHeight: 1.2, background: 'transparent', color: 'var(--text-heading)' }}
+                      {...NO_EXT}
+                      onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} />
+                    <div style={{ display: 'flex', gap: 14, fontSize: 13, color: 'var(--text-muted)', marginBottom: 32, flexWrap: 'wrap' }}>
+                      {project && <span>📁 {project.name}</span>}
+                      {linkedTask && <span>🔗 {tasks.find(t => t.id === linkedTask)?.title}</span>}
+                      <span>Edited {new Date(doc.updated_at || doc.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <BlockEditor key={doc.id} blocks={blocks} onChange={handleBlocks} />
                   </div>
-                  <BlockEditor key={doc.id} blocks={blocks} onChange={handleBlocks} />
                 </div>
               </div>
+              {showVersions && <VersionHistory docId={doc.id} onRestore={content => { setBlocks(content); setShowVersions(false); save(content); }} onClose={() => setShowVersions(false)} />}
             </div>
-            {showVersions && <VersionHistory docId={doc.id} onRestore={content => { setBlocks(content); setShowVersions(false); save(content); }} onClose={() => setShowVersions(false)} />}
-          </div>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, color: 'var(--text-muted)' }}>
-            <Icon name="file-text" size={52} style={{ color: 'var(--slate-200)' }} />
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-heading)', margin: '0 0 6px' }}>No document open</p>
-              <p style={{ fontSize: 14, margin: 0 }}>Select a project, then create or open a document</p>
-            </div>
-            {project && (
-              <button onClick={newDoc} style={{ padding: '10px 22px', background: 'var(--blue-600)', color: 'white', border: 'none', borderRadius: 9, cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Icon name="plus" size={16} /> New Document
-              </button>
-            )}
-          </div>
-        )}
+          )}
+        </div>
+
       </div>
       </DocErrorBoundary>
     </div>

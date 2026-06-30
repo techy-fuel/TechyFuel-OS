@@ -142,6 +142,19 @@
     };
   }
 
+  // Shared props that block browser extensions (Grammarly, translate, spellcheck)
+  // from wrapping/modifying textareas, which breaks React's removeChild calls
+  const NO_EXT = {
+    spellCheck: false,
+    autoComplete: 'off',
+    autoCorrect: 'off',
+    autoCapitalize: 'off',
+    translate: 'no',
+    'data-gramm': 'false',
+    'data-gramm_editor': 'false',
+    'data-enable-grammarly': 'false'
+  };
+
   // ── Single Block ──────────────────────────────────────────────────────────────
   function Block({
     block,
@@ -342,10 +355,7 @@
         display: 'block'
       },
       placeholder: "// write code here...",
-      spellCheck: false,
-      autoComplete: "off",
-      autoCorrect: "off",
-      autoCapitalize: "off"
+      ...NO_EXT
     }));
     if (block.type === 'table') return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -473,10 +483,7 @@
         color: block.checked ? 'var(--text-muted)' : 'inherit'
       },
       placeholder: "To-do...",
-      spellCheck: false,
-      autoComplete: "off",
-      autoCorrect: "off",
-      autoCapitalize: "off",
+      ...NO_EXT,
       onInput: e => {
         e.target.style.height = 'auto';
         e.target.style.height = e.target.scrollHeight + 'px';
@@ -571,10 +578,7 @@
         ...(styles[block.type] || styles.paragraph)
       },
       placeholder: ph[block.type] || '',
-      spellCheck: false,
-      autoComplete: "off",
-      autoCorrect: "off",
-      autoCapitalize: "off",
+      ...NO_EXT,
       onInput: e => {
         e.target.style.height = 'auto';
         e.target.style.height = e.target.scrollHeight + 'px';
@@ -1984,9 +1988,17 @@
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
+        position: 'relative'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: tab === 'files' ? 'flex' : 'none',
+        flex: 1,
+        flexDirection: 'column',
         overflow: 'hidden'
       }
-    }, tab === 'files' ? project ? /*#__PURE__*/React.createElement(FilesBrowser, {
+    }, tab === 'files' && (project ? /*#__PURE__*/React.createElement(FilesBrowser, {
       projectId: project.id
     }) : /*#__PURE__*/React.createElement("div", {
       style: {
@@ -1997,7 +2009,64 @@
         color: 'var(--text-muted)',
         fontSize: 15
       }
-    }, "Select a project to view files") : doc ? /*#__PURE__*/React.createElement("div", {
+    }, "Select a project to view files"))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: tab !== 'files' && !doc ? 'flex' : 'none',
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: 16,
+        color: 'var(--text-muted)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "file-text",
+      size: 52,
+      style: {
+        color: 'var(--slate-200)'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 18,
+        fontWeight: 700,
+        color: 'var(--text-heading)',
+        margin: '0 0 6px'
+      }
+    }, "No document open"), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 14,
+        margin: 0
+      }
+    }, "Select a project, then create or open a document")), project && /*#__PURE__*/React.createElement("button", {
+      onClick: newDoc,
+      style: {
+        padding: '10px 22px',
+        background: 'var(--blue-600)',
+        color: 'white',
+        border: 'none',
+        borderRadius: 9,
+        cursor: 'pointer',
+        fontSize: 14,
+        fontWeight: 700,
+        fontFamily: 'var(--font-sans)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 16
+    }), " New Document")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: tab !== 'files' && doc ? 'flex' : 'none',
+        flex: 1,
+        overflow: 'hidden'
+      }
+    }, doc && /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flex: 1,
@@ -2129,10 +2198,7 @@
         background: 'transparent',
         color: 'var(--text-heading)'
       },
-      spellCheck: false,
-      autoComplete: "off",
-      autoCorrect: "off",
-      autoCapitalize: "off",
+      ...NO_EXT,
       onInput: e => {
         e.target.style.height = 'auto';
         e.target.style.height = e.target.scrollHeight + 'px';
@@ -2158,58 +2224,7 @@
         save(content);
       },
       onClose: () => setShowVersions(false)
-    })) : /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: 16,
-        color: 'var(--text-muted)'
-      }
-    }, /*#__PURE__*/React.createElement(Icon, {
-      name: "file-text",
-      size: 52,
-      style: {
-        color: 'var(--slate-200)'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: 'center'
-      }
-    }, /*#__PURE__*/React.createElement("p", {
-      style: {
-        fontSize: 18,
-        fontWeight: 700,
-        color: 'var(--text-heading)',
-        margin: '0 0 6px'
-      }
-    }, "No document open"), /*#__PURE__*/React.createElement("p", {
-      style: {
-        fontSize: 14,
-        margin: 0
-      }
-    }, "Select a project, then create or open a document")), project && /*#__PURE__*/React.createElement("button", {
-      onClick: newDoc,
-      style: {
-        padding: '10px 22px',
-        background: 'var(--blue-600)',
-        color: 'white',
-        border: 'none',
-        borderRadius: 9,
-        cursor: 'pointer',
-        fontSize: 14,
-        fontWeight: 700,
-        fontFamily: 'var(--font-sans)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8
-      }
-    }, /*#__PURE__*/React.createElement(Icon, {
-      name: "plus",
-      size: 16
-    }), " New Document")))));
+    }))))));
   }
   Object.assign(window, {
     Docs
