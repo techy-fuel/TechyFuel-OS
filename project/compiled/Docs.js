@@ -4,7 +4,56 @@
     Card,
     Badge,
     Avatar
-  } = window.TechyFuelOSDesignSystem_be0222;
+  } = window.TechyFuelOSDesignSystem_be0222 || {};
+
+  // Error boundary to prevent the whole app crashing on doc-editor errors
+  class DocErrorBoundary extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = {
+        err: null
+      };
+    }
+    static getDerivedStateFromError(e) {
+      return {
+        err: e
+      };
+    }
+    render() {
+      if (this.state.err) return /*#__PURE__*/React.createElement("div", {
+        style: {
+          padding: 40,
+          textAlign: 'center',
+          color: 'var(--text-muted)'
+        }
+      }, /*#__PURE__*/React.createElement("p", {
+        style: {
+          fontWeight: 700,
+          color: 'var(--red-600)',
+          marginBottom: 8
+        }
+      }, "Document error"), /*#__PURE__*/React.createElement("p", {
+        style: {
+          fontSize: 13
+        }
+      }, String(this.state.err)), /*#__PURE__*/React.createElement("button", {
+        onClick: () => this.setState({
+          err: null
+        }),
+        style: {
+          marginTop: 16,
+          padding: '8px 20px',
+          background: 'var(--blue-600)',
+          color: 'white',
+          border: 'none',
+          borderRadius: 8,
+          cursor: 'pointer',
+          fontFamily: 'var(--font-sans)'
+        }
+      }, "Retry"));
+      return this.props.children;
+    }
+  }
   const BLOCK_TYPES = [{
     type: 'paragraph',
     label: 'Text',
@@ -601,9 +650,10 @@
 
   // ── Block Editor ──────────────────────────────────────────────────────────────
   function BlockEditor({
-    blocks,
+    blocks: rawBlocks,
     onChange
   }) {
+    const blocks = Array.isArray(rawBlocks) ? rawBlocks : [mkBlock()];
     const [slash, setSlash] = React.useState(null);
     const refs = React.useRef({});
     function update(updated) {
@@ -1699,22 +1749,35 @@
       if (!project || !window.API) return;
       try {
         const {
-          data
+          data,
+          error
         } = await window.API.createDoc({
           title: 'Untitled',
           content: [mkBlock()],
           project_id: project.id
         });
+        if (error) throw error;
         if (data) {
           setDocs(prev => [data, ...prev]);
           openDoc(data);
         }
-      } catch {}
+      } catch (err) {
+        const msg = err && (err.message || err.error_description || err.msg) || JSON.stringify(err);
+        alert('Could not create document:\n\n' + msg);
+      }
     }
     function openDoc(d) {
       setDoc(d);
       setTitle(d.title || 'Untitled');
-      setBlocks(d.content?.length ? d.content : [mkBlock()]);
+      let content = d.content;
+      if (typeof content === 'string') {
+        try {
+          content = JSON.parse(content);
+        } catch {
+          content = null;
+        }
+      }
+      setBlocks(Array.isArray(content) && content.length ? content : [mkBlock()]);
       setLinkedTask(d.task_id || null);
       setShowVersions(false);
     }
@@ -1904,7 +1967,7 @@
         color: 'var(--text-muted)',
         margin: '2px 0 0 21px'
       }
-    }, new Date(d.updated_at || d.created_at).toLocaleDateString())))))), /*#__PURE__*/React.createElement("div", {
+    }, new Date(d.updated_at || d.created_at).toLocaleDateString())))))), /*#__PURE__*/React.createElement(DocErrorBoundary, null, /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         display: 'flex',
@@ -2129,7 +2192,7 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "plus",
       size: 16
-    }), " New Document"))));
+    }), " New Document")))));
   }
   Object.assign(window, {
     Docs

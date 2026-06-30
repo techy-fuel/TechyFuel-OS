@@ -1,6 +1,25 @@
 // Docs.jsx — Rich Documents & File Storage
 (() => {
-const { Card, Badge, Avatar } = window.TechyFuelOSDesignSystem_be0222;
+const { Card, Badge, Avatar } = window.TechyFuelOSDesignSystem_be0222 || {};
+
+// Error boundary to prevent the whole app crashing on doc-editor errors
+class DocErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { err: null }; }
+  static getDerivedStateFromError(e) { return { err: e }; }
+  render() {
+    if (this.state.err) return (
+      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+        <p style={{ fontWeight: 700, color: 'var(--red-600)', marginBottom: 8 }}>Document error</p>
+        <p style={{ fontSize: 13 }}>{String(this.state.err)}</p>
+        <button onClick={() => this.setState({ err: null })}
+          style={{ marginTop: 16, padding: '8px 20px', background: 'var(--blue-600)', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+          Retry
+        </button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
 const BLOCK_TYPES = [
   { type: 'paragraph', label: 'Text', icon: 'type' },
@@ -170,7 +189,8 @@ function SlashMenu({ pos, query, onSelect, onClose }) {
 }
 
 // ── Block Editor ──────────────────────────────────────────────────────────────
-function BlockEditor({ blocks, onChange }) {
+function BlockEditor({ blocks: rawBlocks, onChange }) {
+  const blocks = Array.isArray(rawBlocks) ? rawBlocks : [mkBlock()];
   const [slash, setSlash] = React.useState(null);
   const refs = React.useRef({});
 
@@ -592,14 +612,20 @@ function Docs() {
   async function newDoc() {
     if (!project || !window.API) return;
     try {
-      const { data } = await window.API.createDoc({ title: 'Untitled', content: [mkBlock()], project_id: project.id });
+      const { data, error } = await window.API.createDoc({ title: 'Untitled', content: [mkBlock()], project_id: project.id });
+      if (error) throw error;
       if (data) { setDocs(prev => [data, ...prev]); openDoc(data); }
-    } catch {}
+    } catch (err) {
+      const msg = (err && (err.message || err.error_description || err.msg)) || JSON.stringify(err);
+      alert('Could not create document:\n\n' + msg);
+    }
   }
 
   function openDoc(d) {
     setDoc(d); setTitle(d.title || 'Untitled');
-    setBlocks(d.content?.length ? d.content : [mkBlock()]);
+    let content = d.content;
+    if (typeof content === 'string') { try { content = JSON.parse(content); } catch { content = null; } }
+    setBlocks(Array.isArray(content) && content.length ? content : [mkBlock()]);
     setLinkedTask(d.task_id || null);
     setShowVersions(false);
   }
@@ -660,6 +686,7 @@ function Docs() {
       </div>
 
       {/* Main */}
+      <DocErrorBoundary>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {tab === 'files' ? (
           project ? <FilesBrowser projectId={project.id} /> :
@@ -725,6 +752,7 @@ function Docs() {
           </div>
         )}
       </div>
+      </DocErrorBoundary>
     </div>
   );
 }
