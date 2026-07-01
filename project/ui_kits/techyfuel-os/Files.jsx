@@ -41,6 +41,7 @@ function fmtWhen(ds) {
 }
 
 function Files() {
+  useLucide();
   const [files, setFiles]     = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [uploading, setUploading] = React.useState(false);

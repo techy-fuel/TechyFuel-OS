@@ -55,6 +55,7 @@ function ProfileField({ icon, label, value }) {
 }
 
 function CRM() {
+  useLucide();
   const [clients, setClients] = React.useState([]);
   const [selId,   setSelId]   = React.useState(null);
   const [search,  setSearch]  = React.useState('');

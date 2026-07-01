@@ -73,6 +73,7 @@ function ActivityRow({ item }) {
 }
 
 function Dashboard() {
+  useLucide();
   const [stats,     setStats]     = React.useState({ activeClients: 0, activeProjects: 0, openTasks: 0, revenue: 0 });
   const [deadlines, setDeadlines] = React.useState([]);
   const [activity,  setActivity]  = React.useState([]);

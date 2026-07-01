@@ -222,6 +222,7 @@ function ReportCard({ report }) {
 
 /* ── Main ─────────────────────────────────────────────────────── */
 function Reports() {
+  useLucide();
   return (
     <div style={{ padding: 24, maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>

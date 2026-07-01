@@ -205,6 +205,7 @@
     open,
     onClose
   }) {
+    useLucide();
     const [messages, setMessages] = React.useState([]);
     const [input, setInput] = React.useState('');
     const [loading, setLoading] = React.useState(false);

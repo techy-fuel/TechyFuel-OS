@@ -806,6 +806,7 @@
 
   // ── Main Screen ────────────────────────────────────────────────────────────────
   function Integrations() {
+    useLucide();
     const [cfg, setCfg] = React.useState(readCfg);
     const [filter, setFilter] = React.useState('All');
     function handleChange(id, updated) {

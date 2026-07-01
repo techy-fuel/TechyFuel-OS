@@ -414,6 +414,7 @@ ${bodyHtml}
 
   /* ── Main ─────────────────────────────────────────────────────── */
   function Reports() {
+    useLucide();
     return /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 24,

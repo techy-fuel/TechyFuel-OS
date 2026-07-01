@@ -120,6 +120,7 @@
     }, "+", dayEvents.length - 3, " more")));
   }
   function Calendar() {
+    useLucide();
     const today = new Date();
     const [year, setYear] = React.useState(today.getFullYear());
     const [month, setMonth] = React.useState(today.getMonth());

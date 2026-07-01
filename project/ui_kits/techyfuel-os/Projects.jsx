@@ -72,6 +72,7 @@ function ProjectCard({ p }) {
 }
 
 function Projects() {
+  useLucide();
   const [projects, setProjects] = React.useState(FALLBACK);
   const [activeCount, setActiveCount] = React.useState(FALLBACK.filter(p => p.status === 'active').length);
   const [totalBudget, setTotalBudget] = React.useState(FALLBACK.reduce((s, p) => s + (p.budget || 0), 0));

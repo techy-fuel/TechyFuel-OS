@@ -53,6 +53,7 @@
     status: 'active'
   }];
   function Team() {
+    useLucide();
     const [team, setTeam] = React.useState(FALLBACK_TEAM);
     const [taskCounts, setTaskCounts] = React.useState({});
     const [modalOpen, setModalOpen] = React.useState(false);

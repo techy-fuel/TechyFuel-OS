@@ -149,6 +149,7 @@
     }, post.assigned_to_name));
   }
   function ContentCalendar() {
+    useLucide();
     const [postMap, setPostMap] = React.useState(EMPTY_WEEK);
     const [totalPosts, setTotalPosts] = React.useState(0);
     const days = React.useMemo(() => getWeekDays(), []);

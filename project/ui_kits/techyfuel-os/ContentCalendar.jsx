@@ -65,6 +65,7 @@ function PostCard({ post, onStatusChange }) {
 }
 
 function ContentCalendar() {
+  useLucide();
   const [postMap, setPostMap] = React.useState(EMPTY_WEEK);
   const [totalPosts, setTotalPosts] = React.useState(0);
   const days = React.useMemo(() => getWeekDays(), []);

@@ -103,6 +103,7 @@
     })));
   }
   function Pipeline() {
+    useLucide();
     const [stageMap, setStageMap] = React.useState(() => {
       const m = {};
       STAGE_CONFIG.forEach(s => {

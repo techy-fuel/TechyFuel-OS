@@ -161,6 +161,7 @@ function printInvoicePDF(inv, clients) {
 
 // ── Main component ────────────────────────────────────────────────
 function Finance() {
+  useLucide();
   const [invoices, setInvoices] = React.useState([]);
   const [clients,  setClients]  = React.useState([]);
   const [loading,  setLoading]  = React.useState(true);

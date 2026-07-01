@@ -534,6 +534,7 @@ function ApplyTemplateModal({ open, template, team, projects, onClose, onApply }
 
 // ── Main Automations component ────────────────────────────────────
 function Automations() {
+  useLucide();
   const [tab, setTab] = React.useState('rules');
   const [rules, setRules] = React.useState([]);
   const [templates, setTemplates] = React.useState([]);

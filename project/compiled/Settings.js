@@ -469,6 +469,7 @@
 
   /* ── Settings ─────────────────────────────────────────────────── */
   function Settings() {
+    useLucide();
     const saved = loadSaved();
     const [tab, setTab] = React.useState('Agency branding');
     const [team, setTeam] = React.useState([]);

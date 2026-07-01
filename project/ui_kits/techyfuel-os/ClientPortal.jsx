@@ -109,6 +109,7 @@ function downloadInvoicePDF(inv, agencyName) {
 }
 
 function ClientPortal() {
+  useLucide();
   const [clients,    setClients]    = React.useState([]);
   const [clientId,   setClientId]   = React.useState(null);
   const [client,     setClient]     = React.useState(null);

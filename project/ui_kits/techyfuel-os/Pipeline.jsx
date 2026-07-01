@@ -39,6 +39,7 @@ function Deal({ d }) {
 }
 
 function Pipeline() {
+  useLucide();
   const [stageMap, setStageMap] = React.useState(() => {
     const m = {};
     STAGE_CONFIG.forEach(s => { m[s.id] = []; });

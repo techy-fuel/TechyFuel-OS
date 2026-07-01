@@ -150,6 +150,7 @@
     }, fmtWhen(item.created_at)));
   }
   function Dashboard() {
+    useLucide();
     const [stats, setStats] = React.useState({
       activeClients: 0,
       activeProjects: 0,

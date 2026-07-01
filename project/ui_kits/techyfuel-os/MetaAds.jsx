@@ -31,6 +31,7 @@ function AdStat({ label, value, sub, color }) {
 }
 
 function MetaAds() {
+  useLucide();
   const [campaigns, setCampaigns] = React.useState([]);
   const [loading,   setLoading]   = React.useState(true);
   const [clients,   setClients]   = React.useState([]);

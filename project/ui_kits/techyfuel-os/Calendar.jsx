@@ -67,6 +67,7 @@ function CalendarCell({ day, year, month, events, isToday, isOtherMonth }) {
 }
 
 function Calendar() {
+  useLucide();
   const today = new Date();
   const [year, setYear] = React.useState(today.getFullYear());
   const [month, setMonth] = React.useState(today.getMonth());

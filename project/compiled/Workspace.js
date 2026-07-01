@@ -816,6 +816,7 @@
 
   // ── Main Workspace Screen ──────────────────────────────────────────────────────
   function Workspace() {
+    useLucide();
     const [tab, setTab] = React.useState('members'); // 'members' | 'teams' | 'invites' | 'permissions'
     const [workspaces, setWorkspaces] = React.useState([]);
     const [activeWs, setActiveWs] = React.useState(null);

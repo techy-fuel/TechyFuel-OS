@@ -202,6 +202,7 @@ function TeamPermissionsTab({ team, setTeam, inputStyle, showToast, ROLE_COLORS 
 
 /* ── Settings ─────────────────────────────────────────────────── */
 function Settings() {
+  useLucide();
   const saved = loadSaved();
 
   const [tab,        setTab]        = React.useState('Agency branding');

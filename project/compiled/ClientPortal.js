@@ -166,6 +166,7 @@
     setTimeout(() => win.print(), 600);
   }
   function ClientPortal() {
+    useLucide();
     const [clients, setClients] = React.useState([]);
     const [clientId, setClientId] = React.useState(null);
     const [client, setClient] = React.useState(null);
