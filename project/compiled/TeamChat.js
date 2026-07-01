@@ -2266,6 +2266,7 @@
       onCreate: handleCreateChannel
     }), call && /*#__PURE__*/React.createElement(CallModal, {
       call: call,
+      myId: myId,
       onClose: () => setCall(null)
     }));
   }
@@ -2273,15 +2274,35 @@
   // ── Call Modal (Jitsi Meet embed) ─────────────────────────────────────────────
   function CallModal({
     call,
+    myId,
     onClose
   }) {
     useLucide();
     const containerRef = React.useRef(null);
     const apiRef = React.useRef(null);
+    const sessionIdRef = React.useRef(null);
+    const participantsRef = React.useRef(1);
     const [ready, setReady] = React.useState(false);
     const [duration, setDuration] = React.useState(0);
     const [participants, setParticipants] = React.useState(1);
     const roomName = 'techyfuel-os-' + call.channelId.replace(/-/g, '').slice(0, 12);
+
+    // Record the call session for the activity log
+    React.useEffect(() => {
+      if (!window.API) return;
+      window.API.startCallSession({
+        channel_id: call.channelId,
+        type: call.type,
+        room_name: roomName,
+        started_by: myId || null,
+        channelName: call.channelName
+      }).then(r => {
+        if (r.data) sessionIdRef.current = r.data.id;
+      }).catch(() => {});
+      return () => {
+        if (sessionIdRef.current) window.API.endCallSession(sessionIdRef.current, participantsRef.current).catch(() => {});
+      };
+    }, []);
     React.useEffect(() => {
       let loaded = false;
       function initJitsi() {
@@ -2324,8 +2345,15 @@
           });
           apiRef.current = api;
           api.addEventListener('videoConferenceJoined', () => setReady(true));
-          api.addEventListener('participantJoined', () => setParticipants(p => p + 1));
-          api.addEventListener('participantLeft', () => setParticipants(p => Math.max(1, p - 1)));
+          api.addEventListener('participantJoined', () => setParticipants(p => {
+            participantsRef.current = p + 1;
+            return p + 1;
+          }));
+          api.addEventListener('participantLeft', () => setParticipants(p => {
+            const n = Math.max(1, p - 1);
+            participantsRef.current = n;
+            return n;
+          }));
           api.addEventListener('readyToClose', onClose);
         } catch (e) {
           console.error('Jitsi init error', e);

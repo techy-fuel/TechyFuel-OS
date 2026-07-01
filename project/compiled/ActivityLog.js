@@ -10,7 +10,9 @@
     client: 'contact',
     document: 'file-text',
     file: 'paperclip',
-    team_member: 'user-plus'
+    team_member: 'user-plus',
+    call: 'phone',
+    message: 'message-square'
   };
   const ENTITY_LABEL = {
     task: 'Task',
@@ -18,7 +20,9 @@
     client: 'Client',
     document: 'Document',
     file: 'File',
-    team_member: 'Team member'
+    team_member: 'Team member',
+    call: 'Call',
+    message: 'Message'
   };
   const ENTITY_TONE = {
     task: 'brand',
@@ -26,14 +30,19 @@
     client: 'success',
     document: 'violet',
     file: 'teal',
-    team_member: 'warning'
+    team_member: 'warning',
+    call: 'danger',
+    message: 'neutral'
   };
   const ACTION_LABEL = {
     created: 'created',
     updated: 'updated',
     deleted: 'deleted',
     uploaded: 'uploaded',
-    invited: 'invited'
+    invited: 'invited',
+    started: 'started',
+    ended: 'ended',
+    sent: 'sent'
   };
   function fmtWhen(ts) {
     if (!ts) return '';

@@ -11,17 +11,20 @@
   window.db = client;
 
   // Fire-and-forget activity log entry — never blocks or throws into callers.
-  function logActivity(action, entityType, row, nameField) {
+  function insertActivity(action, entityType, entityId, entityName) {
     try {
       const actorId = localStorage.getItem('tf_chat_member') || null;
       client.from('activity_log').insert({
         actor_id: actorId,
         action,
         entity_type: entityType,
-        entity_id: (row && row.id) || null,
-        entity_name: (row && (row[nameField] || row.name || row.title)) || null,
+        entity_id: entityId || null,
+        entity_name: entityName || null,
       }).then(() => {}, () => {});
     } catch {}
+  }
+  function logActivity(action, entityType, row, nameField) {
+    insertActivity(action, entityType, row && row.id, row && (row[nameField] || row.name || row.title));
   }
 
   // Convenience: expose typed query helpers on window.API
@@ -207,7 +210,14 @@
       else q = q.is('thread_parent_id', null);
       return q.order('created_at', { ascending: true });
     },
-    sendMessage: (d) => client.from('messages').insert(d).select('*, team_members!sender_id(id, name, avatar_url)').single(),
+    sendMessage: async (d) => {
+      const r = await client.from('messages').insert(d).select('*, team_members!sender_id(id, name, avatar_url)').single();
+      if (r.data && !d.thread_parent_id) {
+        const preview = (r.data.content || (r.data.file_name ? `Shared file: ${r.data.file_name}` : '')).slice(0, 60);
+        insertActivity('sent', 'message', r.data.id, preview);
+      }
+      return r;
+    },
     updateMessage: (id, d) => client.from('messages').update(d).eq('id', id).select().single(),
     deleteMessage: (id) => client.from('messages').delete().eq('id', id),
     pinMessage: (id, pinned) => client.from('messages').update({ pinned }).eq('id', id).select().single(),
@@ -236,6 +246,19 @@
       client.channel(`chat:${channelId}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` }, payload => onNew(payload.new))
         .subscribe(),
+
+    // ── CALLS ────────────────────────────────────────────
+    startCallSession: async (d) => {
+      const { channelName, ...row } = d;
+      const r = await client.from('call_sessions').insert(row).select().single();
+      if (r.data) insertActivity('started', 'call', r.data.id, channelName ? `${d.type === 'audio' ? 'Voice' : 'Video'} call in #${channelName}` : null);
+      return r;
+    },
+    endCallSession: async (id, participantCount) => {
+      const r = await client.from('call_sessions').update({ ended_at: new Date().toISOString(), participant_count: participantCount || 1 }).eq('id', id).select().single();
+      if (r.data) insertActivity('ended', 'call', r.data.id, null);
+      return r;
+    },
 
     // ── AUTOMATIONS ──────────────────────────────────────
     getRules: () => client.from('automation_rules').select('*, team_members!created_by(name)').order('created_at', { ascending: false }),
