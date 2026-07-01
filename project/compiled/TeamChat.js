@@ -1211,6 +1211,7 @@
     const [membersOpen, setMembersOpen] = React.useState(false);
     const [channelMembers, setChannelMembers] = React.useState([]);
     const [call, setCall] = React.useState(null); // { channelId, channelName, type: 'audio'|'video' }
+    const [otherReadAt, setOtherReadAt] = React.useState(null); // DM partner's last_read_at, for "Seen"
     const subRef = React.useRef(null);
     const bottomRef = React.useRef(null);
     const savedMyId = React.useRef(null);
@@ -1264,6 +1265,7 @@
       setMsgLoading(true);
       setThread(null);
       setMessages([]);
+      setOtherReadAt(null);
 
       // Unsubscribe previous
       if (subRef.current) {
@@ -1280,6 +1282,12 @@
           }
         } catch {}
         setMsgLoading(false);
+        refreshReadStatus(activeId);
+        if (myId) {
+          try {
+            await window.API.markChannelRead(activeId, myId);
+          } catch {}
+        }
 
         // Realtime subscription
         try {
@@ -1315,6 +1323,12 @@
                   ...prev,
                   [activeId]: (prev[activeId] || 0) + 1
                 }));
+                // The channel is open right now — mark it read immediately.
+                if (myId) {
+                  try {
+                    await window.API.markChannelRead(activeId, myId);
+                  } catch {}
+                }
               }
             }
           });
@@ -1326,7 +1340,19 @@
         ...prev,
         [activeId]: 0
       }));
-    }, [activeId]);
+
+      // Poll the DM partner's read state so "Seen" appears without a reload.
+      const readPoll = setInterval(() => refreshReadStatus(activeId), 8000);
+      return () => clearInterval(readPoll);
+    }, [activeId, myId]);
+    async function refreshReadStatus(channelId) {
+      if (!window.API || !myId) return;
+      try {
+        const r = await window.API.getChannelMembers(channelId);
+        const other = (r.data || []).find(cm => cm.member_id !== myId);
+        setOtherReadAt(other ? other.last_read_at : null);
+      } catch {}
+    }
 
     // Auto-scroll to bottom
     React.useEffect(() => {
@@ -1528,6 +1554,11 @@
       const curr = new Date(msgs[idx].created_at).toDateString();
       return prev !== curr;
     }
+
+    // "Seen" indicator (DMs only) — shows under the last message you sent
+    // once the other participant's last_read_at catches up to it.
+    const lastOwnMsg = activeChannel?.type === 'dm' ? [...messages].reverse().find(m => m.sender_id === myId) : null;
+    const seenByOther = !!(lastOwnMsg && otherReadAt && new Date(otherReadAt) >= new Date(lastOwnMsg.created_at));
     if (loading) return /*#__PURE__*/React.createElement("div", {
       style: {
         height: '100%',
@@ -1948,7 +1979,27 @@
       onPin: handlePin,
       onDelete: handleDelete,
       showDateDivider: showDivider(messages, i)
-    })), /*#__PURE__*/React.createElement("div", {
+    })), lastOwnMsg && /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+        padding: '2px 16px 6px'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-2xs)',
+        color: 'var(--text-subtle)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 3
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: seenByOther ? 'check-check' : 'check',
+      size: 12,
+      style: {
+        color: seenByOther ? 'var(--blue-500)' : 'var(--text-subtle)'
+      }
+    }), seenByOther ? `Seen ${fmtTime(otherReadAt)}` : 'Delivered')), /*#__PURE__*/React.createElement("div", {
       ref: bottomRef,
       style: {
         height: 1

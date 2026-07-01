@@ -214,6 +214,8 @@
     addChannelMember: (d) => client.from('channel_members').insert(d).select().single(),
     removeChannelMember: (channelId, memberId) =>
       client.from('channel_members').delete().eq('channel_id', channelId).eq('member_id', memberId),
+    markChannelRead: (channelId, memberId) =>
+      client.from('channel_members').update({ last_read_at: new Date().toISOString() }).eq('channel_id', channelId).eq('member_id', memberId),
 
     getMessages: (channelId, { parentId = null } = {}) => {
       let q = client.from('messages')

@@ -458,6 +458,7 @@ function TeamChat() {
   const [membersOpen, setMembersOpen] = React.useState(false);
   const [channelMembers, setChannelMembers] = React.useState([]);
   const [call, setCall] = React.useState(null); // { channelId, channelName, type: 'audio'|'video' }
+  const [otherReadAt, setOtherReadAt] = React.useState(null); // DM partner's last_read_at, for "Seen"
   const subRef = React.useRef(null);
   const bottomRef = React.useRef(null);
   const savedMyId = React.useRef(null);
@@ -503,6 +504,7 @@ function TeamChat() {
     setMsgLoading(true);
     setThread(null);
     setMessages([]);
+    setOtherReadAt(null);
 
     // Unsubscribe previous
     if (subRef.current) { try { subRef.current.unsubscribe(); } catch {} }
@@ -516,6 +518,8 @@ function TeamChat() {
         }
       } catch {}
       setMsgLoading(false);
+      refreshReadStatus(activeId);
+      if (myId) { try { await window.API.markChannelRead(activeId, myId); } catch {} }
 
       // Realtime subscription
       try {
@@ -540,6 +544,8 @@ function TeamChat() {
             // Mark as unread if not our message
             if (newMsg.sender_id !== savedMyId.current) {
               setUnread(prev => ({ ...prev, [activeId]: (prev[activeId] || 0) + 1 }));
+              // The channel is open right now — mark it read immediately.
+              if (myId) { try { await window.API.markChannelRead(activeId, myId); } catch {} }
             }
           }
         });
@@ -548,7 +554,20 @@ function TeamChat() {
 
     // Clear unread for this channel
     setUnread(prev => ({ ...prev, [activeId]: 0 }));
-  }, [activeId]);
+
+    // Poll the DM partner's read state so "Seen" appears without a reload.
+    const readPoll = setInterval(() => refreshReadStatus(activeId), 8000);
+    return () => clearInterval(readPoll);
+  }, [activeId, myId]);
+
+  async function refreshReadStatus(channelId) {
+    if (!window.API || !myId) return;
+    try {
+      const r = await window.API.getChannelMembers(channelId);
+      const other = (r.data || []).find(cm => cm.member_id !== myId);
+      setOtherReadAt(other ? other.last_read_at : null);
+    } catch {}
+  }
 
   // Auto-scroll to bottom
   React.useEffect(() => {
@@ -680,6 +699,11 @@ function TeamChat() {
     return prev !== curr;
   }
 
+  // "Seen" indicator (DMs only) — shows under the last message you sent
+  // once the other participant's last_read_at catches up to it.
+  const lastOwnMsg = activeChannel?.type === 'dm' ? [...messages].reverse().find(m => m.sender_id === myId) : null;
+  const seenByOther = !!(lastOwnMsg && otherReadAt && new Date(otherReadAt) >= new Date(lastOwnMsg.created_at));
+
   if (loading) return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Loading chat…</div>;
 
   return (
@@ -805,6 +829,14 @@ function TeamChat() {
               showDateDivider={showDivider(messages, i)}
             />
           ))}
+          {lastOwnMsg && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 16px 6px' }}>
+              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-subtle)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <Icon name={seenByOther ? 'check-check' : 'check'} size={12} style={{ color: seenByOther ? 'var(--blue-500)' : 'var(--text-subtle)' }} />
+                {seenByOther ? `Seen ${fmtTime(otherReadAt)}` : 'Delivered'}
+              </span>
+            </div>
+          )}
           <div ref={bottomRef} style={{ height: 1 }} />
         </div>
 
