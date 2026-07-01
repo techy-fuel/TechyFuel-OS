@@ -271,9 +271,9 @@
         }
       }, "Loading…");
     }
-    const sel = clients.find(c => c.id === selId) || clients[0];
-    const s = TF_STATUS[sel.status] || TF_STATUS.lead;
-    const displayName = sel.company || sel.name;
+    const sel = clients.find(c => c.id === selId) || clients[0] || null;
+    const s = sel ? TF_STATUS[sel.status] || TF_STATUS.lead : TF_STATUS.lead;
+    const displayName = sel ? sel.company || sel.name : '';
     const activeCount = clients.filter(c => c.status === 'active').length;
     const totalValue = clients.reduce((s, c) => s + (Number(c.monthly_value) || 0), 0);
     return /*#__PURE__*/React.createElement("div", {
@@ -403,7 +403,31 @@
         position: 'sticky',
         top: 84
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, !sel && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '40px 20px',
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "contact",
+      size: 32,
+      style: {
+        color: 'var(--text-subtle)',
+        marginBottom: 10
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-strong)'
+      }
+    }, "No clients yet"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        marginTop: 4
+      }
+    }, "Add your first client to see their profile here.")), sel && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       style: {
         background: 'var(--grad-hero)',
         padding: '20px 18px',
@@ -600,7 +624,7 @@
         color: 'var(--text-muted)',
         lineHeight: 1.6
       }
-    }, "Client can log in at the portal link using ", /*#__PURE__*/React.createElement("strong", null, sel.email || 'their email'), ". They will receive a magic link to sign in securely.")))), /*#__PURE__*/React.createElement(Modal, {
+    }, "Client can log in at the portal link using ", /*#__PURE__*/React.createElement("strong", null, sel.email || 'their email'), ". They will receive a magic link to sign in securely."))))), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
       onClose: () => setModalOpen(false),
       title: "Add client",

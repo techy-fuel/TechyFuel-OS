@@ -93,6 +93,16 @@
   var PLACEHOLDER = {};
   var e = React.createElement;
 
+  /* ── URL <-> screen-id mapping ──────────────────────────────
+     Each screen gets its own bookmarkable/shareable URL (e.g. /tasks),
+     switched via the History API so navigation never triggers a full
+     page reload (real-time chat/notifications stay connected). */
+  function pathToRoute(pathname) {
+    var seg = (pathname || '/').replace(/^\/+|\/+$/g, '');
+    if (!seg) return 'dashboard';
+    return ROUTES[seg] ? seg : null;
+  }
+
   /* ── Placeholder for unbuilt modules ─────────────────────── */
   function Placeholder(props) {
     var pair  = PLACEHOLDER[props.id] || ['layout-dashboard', 'Module'];
@@ -155,14 +165,32 @@
 
   /* ── Root app ────────────────────────────────────────────── */
   function App() {
-    var s1 = React.useState('dashboard'); var active = s1[0], setActive = s1[1];
+    var s1 = React.useState(function () { return pathToRoute(window.location.pathname) || 'dashboard'; });
+    var active = s1[0], setActive = s1[1];
     var s2 = React.useState(false);       var aiOpen = s2[0], setAiOpen = s2[1];
     var s3 = React.useState(null);        var authUser = s3[0], setAuthUser = s3[1];
     var s4 = React.useState(true);        var authLoading = s4[0], setAuthLoading = s4[1];
     var s5 = React.useState(false);       var suspended = s5[0], setSuspended = s5[1];
     var s6 = React.useState(true);        var accessChecked = s6[0], setAccessChecked = s6[1];
 
-    React.useEffect(function () { window.TFNavigate = setActive; }, []);
+    function navigate(id) {
+      if (window.location.pathname !== '/' + id) window.history.pushState({ id: id }, '', '/' + id);
+      setActive(id);
+    }
+
+    // Redirect unknown paths straight to the dashboard.
+    React.useEffect(function () {
+      if (!pathToRoute(window.location.pathname)) window.history.replaceState({}, '', '/dashboard');
+    }, []);
+
+    // Sync screen with the browser's back/forward buttons.
+    React.useEffect(function () {
+      function onPopState() { setActive(pathToRoute(window.location.pathname) || 'dashboard'); }
+      window.addEventListener('popstate', onPopState);
+      return function () { window.removeEventListener('popstate', onPopState); };
+    }, []);
+
+    React.useEffect(function () { window.TFNavigate = navigate; }, []);
 
     React.useEffect(function () {
       if (!window.db) { setAuthLoading(false); return; }
@@ -206,7 +234,7 @@
 
     return e(React.Fragment, null,
       e(window.AppShell, {
-        active: active, onNavigate: setActive,
+        active: active, onNavigate: navigate,
         title: meta.title, crumb: meta.crumb,
         onOpenAI: function () { setAiOpen(true); },
         authUser: authUser, onSignOut: handleSignOut,

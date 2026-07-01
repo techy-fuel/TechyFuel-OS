@@ -125,9 +125,9 @@ function CRM() {
     return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading…</div>;
   }
 
-  const sel = clients.find(c => c.id === selId) || clients[0];
-  const s = TF_STATUS[sel.status] || TF_STATUS.lead;
-  const displayName = sel.company || sel.name;
+  const sel = clients.find(c => c.id === selId) || clients[0] || null;
+  const s = sel ? (TF_STATUS[sel.status] || TF_STATUS.lead) : TF_STATUS.lead;
+  const displayName = sel ? (sel.company || sel.name) : '';
   const activeCount = clients.filter(c => c.status === 'active').length;
   const totalValue = clients.reduce((s, c) => s + (Number(c.monthly_value) || 0), 0);
 
@@ -162,6 +162,15 @@ function CRM() {
         </Card>
 
         <Card padding="none" style={{ overflow: 'hidden', position: 'sticky', top: 84 }}>
+          {!sel && (
+            <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+              <Icon name="contact" size={32} style={{ color: 'var(--text-subtle)', marginBottom: 10 }} />
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>No clients yet</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 4 }}>Add your first client to see their profile here.</div>
+            </div>
+          )}
+          {sel && (
+          <>
           <div style={{ background: 'var(--grad-hero)', padding: '20px 18px', borderBottom: '1px solid var(--border-subtle)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Avatar name={displayName} size="lg" />
@@ -214,6 +223,8 @@ function CRM() {
               Client can log in at the portal link using <strong>{sel.email || 'their email'}</strong>. They will receive a magic link to sign in securely.
             </div>
           </div>
+          </>
+          )}
         </Card>
       </div>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add client" onSubmit={handleAddClient} loading={saving} submitLabel="Add client">
