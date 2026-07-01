@@ -2,6 +2,7 @@
 (() => {
 
 function AuthScreen({ onAuth }) {
+  useLucide();
   const [mode, setMode] = React.useState('signin');
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
