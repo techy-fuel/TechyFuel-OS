@@ -93,6 +93,42 @@
   var PLACEHOLDER = {};
   var e = React.createElement;
 
+  /* ── Root error boundary ──────────────────────────────────────
+     Catches any render crash anywhere in the app and shows the actual
+     error instead of a blank white screen. */
+  var RootErrorBoundary = /*#__PURE__*/(function (Component) {
+    function RootErrorBoundary(props) {
+      Component.call(this, props);
+      this.state = { error: null };
+    }
+    if (Component) RootErrorBoundary.__proto__ = Component;
+    RootErrorBoundary.prototype = Object.create(Component && Component.prototype);
+    RootErrorBoundary.prototype.constructor = RootErrorBoundary;
+    RootErrorBoundary.getDerivedStateFromError = function (error) { return { error: error }; };
+    RootErrorBoundary.prototype.componentDidCatch = function (error, info) {
+      console.error('[TechyFuel OS] Render crash:', error, info && info.componentStack);
+    };
+    RootErrorBoundary.prototype.render = function () {
+      if (this.state.error) {
+        return e('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'sans-serif', background: '#f8fafc' } },
+          e('div', { style: { maxWidth: 560, background: '#fff', border: '1px solid #fecdd3', borderRadius: 14, padding: 28, boxShadow: '0 8px 30px rgba(0,0,0,0.08)' } },
+            e('h2', { style: { margin: '0 0 10px', fontSize: 18, fontWeight: 800, color: '#be123c' } }, 'Something broke'),
+            e('p', { style: { margin: '0 0 14px', fontSize: 13, color: '#475569', lineHeight: 1.6 } }, 'The app hit an error instead of rendering. Send this message so it can be fixed:'),
+            e('pre', { style: { background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: 12, fontSize: 12, color: '#881337', whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: '0 0 16px' } },
+              String((this.state.error && (this.state.error.stack || this.state.error.message)) || this.state.error)
+            ),
+            e('button', {
+              onClick: function () { window.location.href = '/dashboard'; },
+              style: { height: 38, padding: '0 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' }
+            }, 'Back to Dashboard')
+          )
+        );
+      }
+      return this.props.children;
+    };
+    return RootErrorBoundary;
+  })(React.Component);
+
   /* ── Role-based access ──────────────────────────────────────
      'member' is restricted to day-to-day work screens — company-wide
      admin surfaces (finance, team management, integrations, workspace
@@ -277,7 +313,7 @@
     );
   }
 
-  ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+  ReactDOM.createRoot(document.getElementById('root')).render(e(RootErrorBoundary, null, e(App)));
 })();
 </script>
 </body>
