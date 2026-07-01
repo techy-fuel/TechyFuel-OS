@@ -923,18 +923,19 @@ function TeamChat() {
   );
 }
 
-// ── Call Modal (Jitsi Meet embed) ─────────────────────────────────────────────
+// ── Call Modal (Daily.co embed) ────────────────────────────────────────────────
 function CallModal({ call, myId, onClose }) {
   useLucide();
   const containerRef = React.useRef(null);
-  const apiRef = React.useRef(null);
+  const frameRef = React.useRef(null);
   const sessionIdRef = React.useRef(null);
   const participantsRef = React.useRef(1);
   const [ready, setReady] = React.useState(false);
+  const [error, setError] = React.useState(null);
   const [duration, setDuration] = React.useState(0);
   const [participants, setParticipants] = React.useState(1);
 
-  const roomName = 'techyfuel-os-' + call.channelId.replace(/-/g, '').slice(0, 12);
+  const roomName = 'techyfuel-os-' + call.channelId.replace(/-/g, '').slice(0, 20);
 
   // Record the call session for the activity log
   React.useEffect(() => {
@@ -952,60 +953,58 @@ function CallModal({ call, myId, onClose }) {
   }, []);
 
   React.useEffect(() => {
-    let loaded = false;
-    function initJitsi() {
-      if (loaded || !containerRef.current || !window.JitsiMeetExternalAPI) return;
-      loaded = true;
-      try {
-        const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
-          roomName,
-          parentNode: containerRef.current,
-          width: '100%',
-          height: '100%',
-          configOverwrite: {
-            startWithAudioMuted: false,
-            startWithVideoMuted: call.type === 'audio',
-            prejoinPageEnabled: false,
-            prejoinConfig: { enabled: false },
-            disableDeepLinking: true,
-            enableNoisyMicDetection: true,
-            disableThirdPartyRequests: true,
-            hideConferenceSubject: true,
-            subject: 'TechyFuel OS Call',
-          },
-          interfaceConfigOverwrite: {
-            TOOLBAR_BUTTONS: call.type === 'audio'
-              ? ['microphone', 'hangup']
-              : ['microphone', 'camera', 'desktop', 'recording', 'fullscreen', 'hangup'],
-            SHOW_JITSI_WATERMARK: false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            SHOW_BRAND_WATERMARK: false,
-            SHOW_POWERED_BY: false,
-            DISPLAY_WELCOME_FOOTER: false,
-            HIDE_INVITE_MORE_HEADER: true,
-            DEFAULT_REMOTE_DISPLAY_NAME: 'Team member',
-            APP_NAME: 'TechyFuel OS',
-            NATIVE_APP_NAME: 'TechyFuel OS',
-          },
-          userInfo: { displayName: (localStorage.getItem('tf_my_name') || 'Team Member') },
-        });
-        apiRef.current = api;
-        api.addEventListener('videoConferenceJoined', () => setReady(true));
-        api.addEventListener('participantJoined', () => setParticipants(p => { participantsRef.current = p + 1; return p + 1; }));
-        api.addEventListener('participantLeft', () => setParticipants(p => { const n = Math.max(1, p - 1); participantsRef.current = n; return n; }));
-        api.addEventListener('readyToClose', onClose);
-      } catch(e) { console.error('Jitsi init error', e); }
+    let cancelled = false;
+    let frame = null;
+
+    function join(url) {
+      if (cancelled || !containerRef.current || !window.DailyIframe) return;
+      frame = window.DailyIframe.createFrame(containerRef.current, {
+        showLeaveButton: false,
+        showFullscreenButton: true,
+        iframeStyle: { width: '100%', height: '100%', border: '0' },
+      });
+      frameRef.current = frame;
+      frame.on('joined-meeting', () => setReady(true));
+      frame.on('participant-joined', () => setParticipants(p => { participantsRef.current = p + 1; return p + 1; }));
+      frame.on('participant-left', () => setParticipants(p => { const n = Math.max(1, p - 1); participantsRef.current = n; return n; }));
+      frame.on('left-meeting', onClose);
+      frame.on('error', (e) => setError((e && e.errorMsg) || 'Call connection error'));
+      frame.join({
+        url,
+        userName: localStorage.getItem('tf_my_name') || 'Team Member',
+        startVideoOff: call.type === 'audio',
+      });
     }
 
-    if (window.JitsiMeetExternalAPI) {
-      initJitsi();
+    function requestRoom() {
+      fetch('/api/daily-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomName }),
+      })
+        .then(r => r.json())
+        .then(({ url, error: err }) => {
+          if (cancelled) return;
+          if (!url) { setError(err || 'Could not start call'); return; }
+          join(url);
+        })
+        .catch(() => { if (!cancelled) setError('Could not reach call server'); });
+    }
+
+    if (window.DailyIframe) {
+      requestRoom();
     } else {
       const s = document.createElement('script');
-      s.src = 'https://meet.jit.si/external_api.js';
-      s.onload = initJitsi;
+      s.src = 'https://unpkg.com/@daily-co/daily-js/dist/daily-iframe.js';
+      s.onload = requestRoom;
+      s.onerror = () => setError('Could not load video call library');
       document.head.appendChild(s);
     }
-    return () => { if (apiRef.current) { try { apiRef.current.dispose(); } catch {} } };
+
+    return () => {
+      cancelled = true;
+      if (frameRef.current) { try { frameRef.current.destroy(); } catch {} }
+    };
   }, []);
 
   // Duration timer
@@ -1038,12 +1037,19 @@ function CallModal({ call, myId, onClose }) {
         </button>
       </div>
 
-      {/* Jitsi container */}
+      {/* Daily.co container */}
       <div ref={containerRef} style={{ flex: 1, position: 'relative' }}>
-        {!ready && (
+        {!ready && !error && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: '#8b949e' }}>
             <div style={{ width: 48, height: 48, border: '3px solid #30363d', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             <p style={{ fontSize: 15 }}>Connecting to call…</p>
+          </div>
+        )}
+        {error && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#8b949e', padding: 24, textAlign: 'center' }}>
+            <Icon name="phone-off" size={32} style={{ color: '#ef4444' }} />
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>Could not start call</p>
+            <p style={{ fontSize: 13, maxWidth: 360 }}>{error}</p>
           </div>
         )}
       </div>
