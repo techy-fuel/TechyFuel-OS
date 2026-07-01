@@ -474,10 +474,11 @@ function TeamChat() {
         const chs = cr.data || [];
         setTeam(members);
 
-        // Use stored myId or default to first team member
-        const stored = localStorage.getItem('tf_chat_member');
-        const me = members.find(m => m.id === stored) || members[0];
-        if (me) { setMyId(me.id); savedMyId.current = me.id; localStorage.setItem('tf_chat_member', me.id); }
+        // Chat identity is always the real signed-in user — never a
+        // manual picker. Falls back to the first team member only when
+        // there's no resolved auth identity (e.g. local/demo preview).
+        const me = members.find(m => m.id === window.TFMyMemberId) || members[0];
+        if (me) { setMyId(me.id); savedMyId.current = me.id; }
 
         // Enrich DM channel display names
         const enriched = chs.map(ch => {
@@ -693,12 +694,13 @@ function TeamChat() {
               <Icon name="search" size={14} />
             </button>
           </div>
-          {/* My identity */}
-          <select value={myId || ''} onChange={e => { setMyId(e.target.value); savedMyId.current = e.target.value; localStorage.setItem('tf_chat_member', e.target.value); }}
-            style={{ width: '100%', height: 30, padding: '0 8px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 'var(--radius-sm)', color: '#fff', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', outline: 'none', cursor: 'pointer' }}>
-            <option value="" style={{ color: '#000' }}>— You are —</option>
-            {team.map(m => <option key={m.id} value={m.id} style={{ color: '#000' }}>{m.name}</option>)}
-          </select>
+          {/* My identity — always the real signed-in user, not switchable */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 30, padding: '0 8px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 'var(--radius-sm)' }}>
+            <MemberAvatar name={team.find(m => m.id === myId)?.name || ''} size={18} />
+            <span style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,0.85)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {team.find(m => m.id === myId)?.name || 'You'}
+            </span>
+          </div>
         </div>
 
         {/* Channel list */}

@@ -1229,13 +1229,13 @@
           const chs = cr.data || [];
           setTeam(members);
 
-          // Use stored myId or default to first team member
-          const stored = localStorage.getItem('tf_chat_member');
-          const me = members.find(m => m.id === stored) || members[0];
+          // Chat identity is always the real signed-in user — never a
+          // manual picker. Falls back to the first team member only when
+          // there's no resolved auth identity (e.g. local/demo preview).
+          const me = members.find(m => m.id === window.TFMyMemberId) || members[0];
           if (me) {
             setMyId(me.id);
             savedMyId.current = me.id;
-            localStorage.setItem('tf_chat_member', me.id);
           }
 
           // Enrich DM channel display names
@@ -1588,38 +1588,30 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "search",
       size: 14
-    }))), /*#__PURE__*/React.createElement("select", {
-      value: myId || '',
-      onChange: e => {
-        setMyId(e.target.value);
-        savedMyId.current = e.target.value;
-        localStorage.setItem('tf_chat_member', e.target.value);
-      },
+    }))), /*#__PURE__*/React.createElement("div", {
       style: {
-        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
         height: 30,
         padding: '0 8px',
-        background: 'rgba(255,255,255,0.1)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: 'var(--radius-sm)',
-        color: '#fff',
-        fontFamily: 'var(--font-sans)',
+        background: 'rgba(255,255,255,0.08)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: 'var(--radius-sm)'
+      }
+    }, /*#__PURE__*/React.createElement(MemberAvatar, {
+      name: team.find(m => m.id === myId)?.name || '',
+      size: 18
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
         fontSize: 'var(--text-xs)',
-        outline: 'none',
-        cursor: 'pointer'
+        color: 'rgba(255,255,255,0.85)',
+        fontWeight: 600,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
       }
-    }, /*#__PURE__*/React.createElement("option", {
-      value: "",
-      style: {
-        color: '#000'
-      }
-    }, "— You are —"), team.map(m => /*#__PURE__*/React.createElement("option", {
-      key: m.id,
-      value: m.id,
-      style: {
-        color: '#000'
-      }
-    }, m.name)))), /*#__PURE__*/React.createElement("div", {
+    }, team.find(m => m.id === myId)?.name || 'You'))), /*#__PURE__*/React.createElement("div", {
       className: "tf-scroll",
       style: {
         flex: 1,
