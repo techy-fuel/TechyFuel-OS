@@ -70,7 +70,7 @@ function StatusDot({ status }) {
   return <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot, display: 'inline-block', flexShrink: 0 }} />;
 }
 
-function TaskListView({ allTasks, onAdd, onEdit }) {
+function TaskListView({ allTasks, onAdd, onEdit, onToggle }) {
   const thStyle = { textAlign: 'left', padding: '10px 12px', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-subtle)', whiteSpace: 'nowrap' };
   const tdStyle = { padding: '10px 12px', fontSize: 'var(--text-sm)', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'middle' };
 
@@ -109,7 +109,8 @@ function TaskListView({ allTasks, onAdd, onEdit }) {
                 onMouseLeave={e => e.currentTarget.style.background = ''}>
                 <td style={{ ...tdStyle, fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', maxWidth: 280 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${t.done ? 'var(--green-400)' : 'var(--border-strong)'}`, background: t.done ? 'var(--green-400)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span onClick={e => { e.stopPropagation(); onToggle && onToggle(t); }} title={t.done ? 'Mark as not done' : 'Mark as done'}
+                      style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${t.done ? 'var(--green-400)' : 'var(--border-strong)'}`, background: t.done ? 'var(--green-400)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}>
                       {t.done && <Icon name="check" size={9} style={{ color: '#fff' }} />}
                     </span>
                     <span style={{ textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.55 : 1 }}>{t.title}</span>
@@ -321,6 +322,22 @@ function TasksBoard() {
   }
   function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
 
+  async function toggleTaskDone(task) {
+    const newStatus = task.status === 'done' ? 'todo' : 'done';
+    const updated = { ...task, status: newStatus, done: newStatus === 'done' };
+    setAllTasks(prev => prev.map(t => t.id === task.id ? updated : t));
+    setTaskMap(prev => {
+      const next = {};
+      COLUMN_CONFIG.forEach(c => { next[c.id] = (prev[c.id] || []).filter(t => t.id !== task.id); });
+      next[newStatus] = [...(next[newStatus] || []), updated];
+      return next;
+    });
+    setTotalOpen(prev => newStatus === 'done' ? Math.max(0, prev - 1) : prev + 1);
+    if (window.API && task.id && !String(task.id).startsWith('f')) {
+      try { await window.API.updateTask(task.id, { status: newStatus }); } catch {}
+    }
+  }
+
   async function handleUpdateTask() {
     if (!editTask || !editForm.title?.trim()) return;
     setEditSaving(true);
@@ -469,7 +486,7 @@ function TasksBoard() {
       )}
 
       {!loading && activeTab === 'list' && (
-        <TaskListView allTasks={allTasks} onAdd={() => setModalOpen(true)} onEdit={openEdit} />
+        <TaskListView allTasks={allTasks} onAdd={() => setModalOpen(true)} onEdit={openEdit} onToggle={toggleTaskDone} />
       )}
 
       {!loading && activeTab === 'calendar' && (

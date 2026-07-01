@@ -215,7 +215,8 @@
   function TaskListView({
     allTasks,
     onAdd,
-    onEdit
+    onEdit,
+    onToggle
   }) {
     const thStyle = {
       textAlign: 'left',
@@ -332,6 +333,11 @@
           gap: 8
         }
       }, /*#__PURE__*/React.createElement("span", {
+        onClick: e => {
+          e.stopPropagation();
+          onToggle && onToggle(t);
+        },
+        title: t.done ? 'Mark as not done' : 'Mark as done',
         style: {
           width: 14,
           height: 14,
@@ -341,7 +347,8 @@
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexShrink: 0
+          flexShrink: 0,
+          cursor: 'pointer'
         }
       }, t.done && /*#__PURE__*/React.createElement(Icon, {
         name: "check",
@@ -839,6 +846,31 @@
         [k]: v
       }));
     }
+    async function toggleTaskDone(task) {
+      const newStatus = task.status === 'done' ? 'todo' : 'done';
+      const updated = {
+        ...task,
+        status: newStatus,
+        done: newStatus === 'done'
+      };
+      setAllTasks(prev => prev.map(t => t.id === task.id ? updated : t));
+      setTaskMap(prev => {
+        const next = {};
+        COLUMN_CONFIG.forEach(c => {
+          next[c.id] = (prev[c.id] || []).filter(t => t.id !== task.id);
+        });
+        next[newStatus] = [...(next[newStatus] || []), updated];
+        return next;
+      });
+      setTotalOpen(prev => newStatus === 'done' ? Math.max(0, prev - 1) : prev + 1);
+      if (window.API && task.id && !String(task.id).startsWith('f')) {
+        try {
+          await window.API.updateTask(task.id, {
+            status: newStatus
+          });
+        } catch {}
+      }
+    }
     async function handleUpdateTask() {
       if (!editTask || !editForm.title?.trim()) return;
       setEditSaving(true);
@@ -1220,7 +1252,8 @@
     })), !loading && activeTab === 'list' && /*#__PURE__*/React.createElement(TaskListView, {
       allTasks: allTasks,
       onAdd: () => setModalOpen(true),
-      onEdit: openEdit
+      onEdit: openEdit,
+      onToggle: toggleTaskDone
     }), !loading && activeTab === 'calendar' && /*#__PURE__*/React.createElement(TaskCalView, {
       allTasks: allTasks,
       onAdd: () => setModalOpen(true),
