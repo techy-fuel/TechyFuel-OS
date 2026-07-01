@@ -130,13 +130,16 @@
   })(React.Component);
 
   /* ── Role-based access ──────────────────────────────────────
-     'member' is restricted to day-to-day work screens — company-wide
-     admin surfaces (finance, team management, integrations, workspace
-     settings, the audit log) stay owner/admin-only. Clients never sign
-     in here at all — they use the separate client-portal.html, already
+     'member' only gets their day-to-day work surfaces — Dashboard (its
+     own personalized view, not the company-wide one), Tasks, Projects,
+     Calendar, and Chat (channels stay visible; DMs are scoped to their
+     own by RLS). Everything else — CRM, pipeline, portal, content, ads,
+     finance, reports, docs, team, automations, activity, integrations,
+     workspace, settings — is owner/admin only. Clients never sign in
+     here at all — they use the separate client-portal.html, already
      scoped to their own client_id. Unknown/no team_members row (e.g. a
      brand-new owner signup) defaults to full access. */
-  var MEMBER_HIDDEN_ROUTES = ['finance', 'team', 'integrations', 'workspace', 'activity'];
+  var MEMBER_ALLOWED_ROUTES = ['dashboard', 'tasks', 'projects', 'calendar', 'chat'];
 
   /* ── URL <-> screen-id mapping ──────────────────────────────
      Each screen gets its own bookmarkable/shareable URL (e.g. /tasks),
@@ -268,18 +271,23 @@
     }, []);
 
     // Block access if this user's team_members row has been suspended,
-    // and pick up their role for sidebar/route gating below.
+    // and pick up their role/identity for sidebar/route gating and for
+    // screens (like the member Dashboard) that need to know who's viewing.
     React.useEffect(function () {
       if (!authUser || !window.API) { setAccessChecked(true); return; }
       setAccessChecked(false);
       setSuspended(false);
       setMyRole(null);
+      window.TFMyRole = null; window.TFMyMemberId = null; window.TFMyName = null;
       window.API.getTeamMemberByEmail(authUser.email).then(function (r) {
         if (r.data && r.data.status === 'inactive') {
           setSuspended(true);
           if (window.db) window.db.auth.signOut();
         } else if (r.data) {
           setMyRole(r.data.role || 'member');
+          window.TFMyRole = r.data.role || 'member';
+          window.TFMyMemberId = r.data.id;
+          window.TFMyName = r.data.name;
         }
         setAccessChecked(true);
       }).catch(function () { setAccessChecked(true); });
@@ -295,7 +303,9 @@
     if (suspended) return e(SuspendedScreen, { onSignOut: handleSignOut });
     if (!authUser && window.db) return e(window.AuthScreen, { onAuth: setAuthUser });
 
-    var hiddenIds = myRole === 'member' ? MEMBER_HIDDEN_ROUTES : [];
+    var hiddenIds = myRole === 'member'
+      ? Object.keys(ROUTES).filter(function (id) { return MEMBER_ALLOWED_ROUTES.indexOf(id) === -1; })
+      : [];
     var route = ROUTES[active];
     var meta  = route || { crumb: 'TechyFuel OS', title: (PLACEHOLDER[active] || ['', 'Module'])[1] };
     var restricted = hiddenIds.indexOf(active) !== -1;

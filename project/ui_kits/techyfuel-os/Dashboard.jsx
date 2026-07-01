@@ -72,7 +72,113 @@ function ActivityRow({ item }) {
   );
 }
 
-function Dashboard() {
+// ── Member dashboard — only their own tasks/projects/chat, no company-wide
+//    figures (revenue, client list, other people's work) ──────────────────
+function MemberDashboard() {
+  useLucide();
+  const [greeting, setGreeting] = React.useState((window.TFMyName || '').split(' ')[0] || '');
+  const [myTasks,  setMyTasks]  = React.useState([]);
+  const [unread,   setUnread]   = React.useState(0);
+  const [loading,  setLoading]  = React.useState(true);
+
+  React.useEffect(() => {
+    if (!window.API) { setLoading(false); return; }
+    const myId = window.TFMyMemberId;
+    (async () => {
+      try {
+        const r = await window.API.getTasks({ assignedTo: myId });
+        if (r.data) setMyTasks(r.data);
+      } catch {}
+      try {
+        const count = await window.API.getUnreadCount(myId);
+        setUnread(count || 0);
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  const openTasks = myTasks.filter(t => t.status !== 'done');
+  const doneTasks = myTasks.filter(t => t.status === 'done');
+  const upcoming = openTasks.filter(t => t.due_date).sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+  const overdue = upcoming.filter(t => new Date(t.due_date) < new Date());
+  const myProjects = Array.from(new Map(myTasks.filter(t => t.project_id && t.projects).map(t => [t.project_id, t.projects])).values());
+
+  if (loading) return <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>;
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
+          {greeting ? `Good morning, ${greeting}` : 'Good morning'}
+        </div>
+        <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>My dashboard</h1>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+        <StatCard label="Open tasks" value={String(openTasks.length)} icon={<Icon name="circle-check-big" />} tone="brand" />
+        <StatCard label="Overdue" value={String(overdue.length)} icon={<Icon name="alert-circle" />} tone={overdue.length ? 'danger' : 'neutral'} />
+        <StatCard label="Completed" value={String(doneTasks.length)} icon={<Icon name="check" />} tone="success" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+        <Card padding="lg">
+          <SectionHead title="My timeline" action={<LinkBtn onClick={() => window.TFNavigate && window.TFNavigate('tasks')}>View all tasks</LinkBtn>} />
+          {upcoming.length === 0 ? (
+            <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>No upcoming tasks — you're all caught up!</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {upcoming.slice(0, 8).map(t => {
+                const isOverdue = new Date(t.due_date) < new Date();
+                return (
+                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 12, borderBottom: '1px solid var(--border-subtle)' }}>
+                    <span style={{ width: 30, height: 30, flex: 'none', borderRadius: 'var(--radius-md)', background: isOverdue ? 'var(--red-50)' : 'var(--blue-50)', color: isOverdue ? 'var(--red-600)' : 'var(--blue-600)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon name={isOverdue ? 'alert-circle' : 'circle'} size={15} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
+                      {t.projects?.name && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{t.projects.name}</div>}
+                    </div>
+                    <Badge tone={isOverdue ? 'danger' : 'neutral'}>{fmtDueDate(t.due_date)}</Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Card padding="lg">
+            <SectionHead title="My projects" />
+            {myProjects.length === 0 ? (
+              <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>No projects yet</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {myProjects.map((p, i) => (
+                  <div key={i} onClick={() => window.TFNavigate && window.TFNavigate('projects')} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer' }}>
+                    <Icon name="folder-kanban" size={16} style={{ color: 'var(--blue-600)' }} />
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{p.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card padding="lg">
+            <SectionHead title="Team Chat" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+                {unread > 0 ? `${unread} unread message${unread === 1 ? '' : 's'}` : 'All caught up'}
+              </div>
+              <LinkBtn onClick={() => window.TFNavigate && window.TFNavigate('chat')}>Open chat</LinkBtn>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExecutiveDashboard() {
   useLucide();
   const [stats,     setStats]     = React.useState({ activeClients: 0, activeProjects: 0, openTasks: 0, revenue: 0 });
   const [deadlines, setDeadlines] = React.useState([]);
@@ -289,6 +395,12 @@ function Dashboard() {
       </Modal>
     </div>
   );
+}
+
+// Members get their own personalized view (no company-wide revenue/client
+// figures); everyone else gets the full executive dashboard.
+function Dashboard() {
+  return window.TFMyRole === 'member' ? <MemberDashboard /> : <ExecutiveDashboard />;
 }
 
 Object.assign(window, { Dashboard, TFSectionHead: SectionHead, TFLinkBtn: LinkBtn });
