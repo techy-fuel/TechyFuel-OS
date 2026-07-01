@@ -297,8 +297,8 @@ function Workspace() {
         const { data: ws } = await window.API.getWorkspaces();
         const wsArr = ws || [];
         setWorkspaces(wsArr);
-        const first = wsArr[0] || null;
-        setActiveWs(first);
+        const activeId = await window.API.getActiveWorkspaceId().catch(() => null);
+        setActiveWs(wsArr.find(w => w.id === activeId) || wsArr[0] || null);
       } catch {}
       try { const { data } = await window.API.getTeam(); setMembers(data || []); } catch {}
       setLoading(false);
@@ -317,11 +317,25 @@ function Workspace() {
     if (!newWs.name.trim() || !window.API) return;
     setSaving(true);
     try {
-      const slug = newWs.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      const { data } = await window.API.createWorkspace({ name: newWs.name.trim(), slug, description: newWs.description });
-      if (data) { setWorkspaces(prev => [...prev, data]); setActiveWs(data); setNewWs({ name: '', description: '' }); setShowNewWs(false); }
-    } catch {}
-    setSaving(false);
+      const { data, error } = await window.API.createWorkspace({ name: newWs.name.trim(), description: newWs.description });
+      if (error) { alert('Could not create workspace:\n\n' + (error.message || JSON.stringify(error))); return; }
+      // Creating a workspace makes it the new active one server-side —
+      // reload so every screen refetches data scoped to it.
+      window.location.reload();
+    } catch (err) {
+      alert('Error: ' + (err.message || JSON.stringify(err)));
+    } finally { setSaving(false); }
+  }
+
+  async function switchWorkspace(workspaceId) {
+    if (!workspaceId || workspaceId === activeWs?.id || !window.API) return;
+    try {
+      const { error } = await window.API.switchWorkspace(workspaceId);
+      if (error) { alert('Could not switch workspace:\n\n' + (error.message || JSON.stringify(error))); return; }
+      window.location.reload();
+    } catch (err) {
+      alert('Error: ' + (err.message || JSON.stringify(err)));
+    }
   }
 
   async function createTeam() {
@@ -404,7 +418,7 @@ function Workspace() {
             </div>
           </div>
           {workspaces.length > 1 && (
-            <select value={activeWs?.id || ''} onChange={e => setActiveWs(workspaces.find(w => w.id === e.target.value))}
+            <select value={activeWs?.id || ''} onChange={e => switchWorkspace(e.target.value)}
               style={{ height: 38, padding: '0 10px', border: '1px solid var(--slate-200)', borderRadius: 9, fontSize: 13, fontFamily: 'var(--font-sans)', background: 'white', cursor: 'pointer', outline: 'none' }}>
               {workspaces.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>

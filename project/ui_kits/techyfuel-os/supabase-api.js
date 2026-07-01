@@ -331,7 +331,18 @@
 
     // ── WORKSPACES ───────────────────────────────────────
     getWorkspaces: () => client.from('workspaces').select('*').order('created_at'),
-    createWorkspace: (d) => client.from('workspaces').insert(d).select().single(),
+    createWorkspace: async (d) => {
+      const { data, error } = await client.rpc('create_workspace', { ws_name: d.name, ws_description: d.description || null });
+      return { data, error };
+    },
+    switchWorkspace: async (workspaceId) => {
+      const { error } = await client.rpc('switch_workspace', { target_workspace_id: workspaceId });
+      return { error };
+    },
+    getActiveWorkspaceId: async () => {
+      const { data } = await client.from('user_active_workspace').select('workspace_id').maybeSingle();
+      return data ? data.workspace_id : null;
+    },
     updateWorkspace: (id, d) => client.from('workspaces').update(d).eq('id', id).select().single(),
 
     getTeams: (workspaceId) => {

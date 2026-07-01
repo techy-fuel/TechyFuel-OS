@@ -866,8 +866,8 @@
           } = await window.API.getWorkspaces();
           const wsArr = ws || [];
           setWorkspaces(wsArr);
-          const first = wsArr[0] || null;
-          setActiveWs(first);
+          const activeId = await window.API.getActiveWorkspaceId().catch(() => null);
+          setActiveWs(wsArr.find(w => w.id === activeId) || wsArr[0] || null);
         } catch {}
         try {
           const {
@@ -899,25 +899,40 @@
       if (!newWs.name.trim() || !window.API) return;
       setSaving(true);
       try {
-        const slug = newWs.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
         const {
-          data
+          data,
+          error
         } = await window.API.createWorkspace({
           name: newWs.name.trim(),
-          slug,
           description: newWs.description
         });
-        if (data) {
-          setWorkspaces(prev => [...prev, data]);
-          setActiveWs(data);
-          setNewWs({
-            name: '',
-            description: ''
-          });
-          setShowNewWs(false);
+        if (error) {
+          alert('Could not create workspace:\n\n' + (error.message || JSON.stringify(error)));
+          return;
         }
-      } catch {}
-      setSaving(false);
+        // Creating a workspace makes it the new active one server-side —
+        // reload so every screen refetches data scoped to it.
+        window.location.reload();
+      } catch (err) {
+        alert('Error: ' + (err.message || JSON.stringify(err)));
+      } finally {
+        setSaving(false);
+      }
+    }
+    async function switchWorkspace(workspaceId) {
+      if (!workspaceId || workspaceId === activeWs?.id || !window.API) return;
+      try {
+        const {
+          error
+        } = await window.API.switchWorkspace(workspaceId);
+        if (error) {
+          alert('Could not switch workspace:\n\n' + (error.message || JSON.stringify(error)));
+          return;
+        }
+        window.location.reload();
+      } catch (err) {
+        alert('Error: ' + (err.message || JSON.stringify(err)));
+      }
     }
     async function createTeam() {
       if (!newTeam.name.trim() || !activeWs || !window.API) return;
@@ -1111,7 +1126,7 @@
       }
     }, activeWs?.plan || 'free', " plan"))), workspaces.length > 1 && /*#__PURE__*/React.createElement("select", {
       value: activeWs?.id || '',
-      onChange: e => setActiveWs(workspaces.find(w => w.id === e.target.value)),
+      onChange: e => switchWorkspace(e.target.value),
       style: {
         height: 38,
         padding: '0 10px',
