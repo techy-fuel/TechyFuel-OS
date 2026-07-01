@@ -10,6 +10,20 @@
   const client = createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY);
   window.db = client;
 
+  // Fire-and-forget activity log entry — never blocks or throws into callers.
+  function logActivity(action, entityType, row, nameField) {
+    try {
+      const actorId = localStorage.getItem('tf_chat_member') || null;
+      client.from('activity_log').insert({
+        actor_id: actorId,
+        action,
+        entity_type: entityType,
+        entity_id: (row && row.id) || null,
+        entity_name: (row && (row[nameField] || row.name || row.title)) || null,
+      }).then(() => {}, () => {});
+    } catch {}
+  }
+
   // Convenience: expose typed query helpers on window.API
   window.API = {
     // ── DASHBOARD ────────────────────────────────────────
@@ -31,13 +45,21 @@
 
     // ── TEAM ─────────────────────────────────────────────
     getTeam: () => client.from('team_members').select('*').eq('status', 'active').order('name'),
-    addTeamMember: (d) => client.from('team_members').insert(d).select().single(),
+    addTeamMember: async (d) => {
+      const r = await client.from('team_members').insert(d).select().single();
+      if (r.data) logActivity('invited', 'team_member', r.data, 'name');
+      return r;
+    },
     updateTeamMember: (id, d) => client.from('team_members').update(d).eq('id', id).select().single(),
 
     // ── CLIENTS ──────────────────────────────────────────
     getClients: () => client.from('clients').select('*').order('name'),
     getClient: (id) => client.from('clients').select('*').eq('id', id).single(),
-    createClient: (d) => client.from('clients').insert(d).select().single(),
+    createClient: async (d) => {
+      const r = await client.from('clients').insert(d).select().single();
+      if (r.data) logActivity('created', 'client', r.data, 'name');
+      return r;
+    },
     updateClient: (id, d) => client.from('clients').update(d).eq('id', id).select().single(),
     deleteClient: (id) => client.from('clients').delete().eq('id', id),
 
@@ -52,6 +74,7 @@
         try {
           await client.from('channels').insert({ name: result.data.name.toLowerCase().replace(/\s+/g, '-'), type: 'project', project_id: result.data.id, description: `Channel for project: ${result.data.name}` });
         } catch {}
+        logActivity('created', 'project', result.data, 'name');
       }
       return result;
     },
@@ -66,7 +89,11 @@
       if (filters.status)     q = q.eq('status', filters.status);
       return q.order('due_date', { ascending: true });
     },
-    createTask: (d) => client.from('tasks').insert(d).select().single(),
+    createTask: async (d) => {
+      const r = await client.from('tasks').insert(d).select().single();
+      if (r.data) logActivity('created', 'task', r.data, 'title');
+      return r;
+    },
     updateTask: (id, d) => client.from('tasks').update(d).eq('id', id).select().single(),
     deleteTask: (id) => client.from('tasks').delete().eq('id', id),
 
@@ -134,7 +161,11 @@
       if (error) throw error;
       return client.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
     },
-    createFile: (d) => client.from('files').insert(d).select().single(),
+    createFile: async (d) => {
+      const r = await client.from('files').insert(d).select().single();
+      if (r.data) logActivity('uploaded', 'file', r.data, 'name');
+      return r;
+    },
 
     // ── FOLDERS ──────────────────────────────────────────
     getFolders: (projectId) => client.from('folders').select('*').eq('project_id', projectId).order('name'),
@@ -143,7 +174,11 @@
 
     // ── DOCUMENTS ────────────────────────────────────────
     getDocs: (projectId) => client.from('documents').select('*').eq('project_id', projectId).order('updated_at', { ascending: false }),
-    createDoc: (d) => client.from('documents').insert(d).select().single(),
+    createDoc: async (d) => {
+      const r = await client.from('documents').insert(d).select().single();
+      if (r.data) logActivity('created', 'document', r.data, 'title');
+      return r;
+    },
     updateDoc: (id, d) => client.from('documents').update(d).eq('id', id).select().single(),
     deleteDoc: (id) => client.from('documents').delete().eq('id', id),
     getDocVersions: (docId) => client.from('document_versions').select('*').eq('document_id', docId).order('created_at', { ascending: false }),
@@ -308,6 +343,13 @@
     deleteClientNote: (id) => client.from('client_notes').delete().eq('id', id),
     createClientInvite: (d) => client.from('client_invites').insert(d).select().single(),
     getClientInvite: (clientId) => client.from('client_invites').select('*').eq('client_id', clientId).order('created_at', { ascending: false }).limit(1).single(),
+
+    // ── ACTIVITY LOG ───────────────────────────────────────
+    getActivityLog: (filters = {}) => {
+      let q = client.from('activity_log').select('*, team_members(name, avatar_url)');
+      if (filters.entityType) q = q.eq('entity_type', filters.entityType);
+      return q.order('created_at', { ascending: false }).limit(filters.limit || 100);
+    },
   };
 
   console.log('[TechyFuel OS] Supabase connected:', window.__SUPABASE_URL);

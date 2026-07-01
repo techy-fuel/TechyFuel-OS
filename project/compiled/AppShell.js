@@ -77,6 +77,10 @@
       label: 'Automations',
       icon: 'zap'
     }, {
+      id: 'activity',
+      label: 'Activity Log',
+      icon: 'activity'
+    }, {
       id: 'integrations',
       label: 'Integrations',
       icon: 'plug'
