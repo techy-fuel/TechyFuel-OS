@@ -5,17 +5,10 @@ const { Card, Badge, Avatar, ProgressBar } = window.TechyFuelOSDesignSystem_be02
 const DEPT_TONE = { Design: 'violet', Video: 'teal', Marketing: 'success', Development: 'info', Sales: 'warning', Admin: 'neutral', Content: 'teal', Leadership: 'brand' };
 const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', member: 'Member' };
 
-const FALLBACK_TEAM = [
-  { id: '11111111-1111-1111-1111-111111111111', name: 'Sara Khan',     role: 'owner',  department: 'Leadership', status: 'active' },
-  { id: '22222222-2222-2222-2222-222222222222', name: 'Ali Raza',      role: 'admin',  department: 'Design',     status: 'active' },
-  { id: '33333333-3333-3333-3333-333333333333', name: 'Zara Ahmed',    role: 'member', department: 'Marketing',  status: 'active' },
-  { id: '44444444-4444-4444-4444-444444444444', name: 'Omar Sheikh',   role: 'member', department: 'Development',status: 'active' },
-  { id: '55555555-5555-5555-5555-555555555555', name: 'Hina Malik',    role: 'member', department: 'Content',    status: 'active' },
-];
-
 function Team() {
   useLucide();
-  const [team, setTeam] = React.useState(FALLBACK_TEAM);
+  const [team, setTeam] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
   const [taskCounts, setTaskCounts] = React.useState({});
   const [modalOpen, setModalOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -24,10 +17,10 @@ function Team() {
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
-    if (!window.API) return;
+    if (!window.API) { setLoading(false); return; }
     window.API.getAllTeamMembers().then(r => {
-      if (r.data && r.data.length > 0) setTeam(r.data);
-    }).catch(() => {});
+      setTeam(r.data || []);
+    }).catch(() => {}).finally(() => setLoading(false));
     window.API.getTasks().then(r => {
       if (!r.data) return;
       const counts = {};
@@ -105,6 +98,15 @@ function Team() {
           );
         })}
       </div>
+      {loading && <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading…</div>}
+      {!loading && team.length === 0 && (
+        <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+          <Icon name="users" size={40} style={{ color: 'var(--text-subtle)', marginBottom: 12 }} />
+          <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', marginBottom: 6 }}>No team members yet</div>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Invite your first teammate to get started.</div>
+        </div>
+      )}
+      {!loading && team.length > 0 && (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         {team.map((m, i) => {
           const tasks = taskCounts[m.id] || 0;
@@ -143,6 +145,7 @@ function Team() {
           );
         })}
       </div>
+      )}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Invite member" onSubmit={handleInviteMember} loading={saving} submitLabel="Add member">
         <div style={FF.row2}>
           <FormRow label="Full name" required>

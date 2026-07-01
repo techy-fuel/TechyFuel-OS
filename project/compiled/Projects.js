@@ -17,67 +17,6 @@
     medium: 'warning',
     low: 'neutral'
   };
-  const FALLBACK = [{
-    id: 'f1',
-    name: 'Nova Launch Campaign',
-    clients: {
-      name: 'Nova Tech'
-    },
-    status: 'active',
-    priority: 'high',
-    due_date: '2025-07-15',
-    budget: 8000,
-    spent: 5200,
-    progress: 65
-  }, {
-    id: 'f2',
-    name: 'Bloom Social Relaunch',
-    clients: {
-      name: 'Bloom Foods'
-    },
-    status: 'active',
-    priority: 'medium',
-    due_date: '2025-07-30',
-    budget: 3500,
-    spent: 1200,
-    progress: 34
-  }, {
-    id: 'f3',
-    name: 'Apex Lead Gen Ads',
-    clients: {
-      name: 'Apex Realty'
-    },
-    status: 'active',
-    priority: 'high',
-    due_date: '2025-06-28',
-    budget: 5000,
-    spent: 4100,
-    progress: 82
-  }, {
-    id: 'f4',
-    name: 'Spark Content Strategy',
-    clients: {
-      name: 'Spark Academy'
-    },
-    status: 'paused',
-    priority: 'low',
-    due_date: '2025-08-10',
-    budget: 2000,
-    spent: 400,
-    progress: 20
-  }, {
-    id: 'f5',
-    name: 'Nova Website Revamp',
-    clients: {
-      name: 'Nova Tech'
-    },
-    status: 'active',
-    priority: 'medium',
-    due_date: '2025-08-01',
-    budget: 6000,
-    spent: 1000,
-    progress: 17
-  }];
   function fmtBudget(n) {
     if (!n) return '$0';
     if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
@@ -220,9 +159,10 @@
   }
   function Projects() {
     useLucide();
-    const [projects, setProjects] = React.useState(FALLBACK);
-    const [activeCount, setActiveCount] = React.useState(FALLBACK.filter(p => p.status === 'active').length);
-    const [totalBudget, setTotalBudget] = React.useState(FALLBACK.reduce((s, p) => s + (p.budget || 0), 0));
+    const [projects, setProjects] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [activeCount, setActiveCount] = React.useState(0);
+    const [totalBudget, setTotalBudget] = React.useState(0);
     const [clients, setClients] = React.useState([]);
     const [modalOpen, setModalOpen] = React.useState(false);
     const [saving, setSaving] = React.useState(false);
@@ -241,14 +181,16 @@
       }));
     }
     React.useEffect(() => {
-      if (!window.API) return;
+      if (!window.API) {
+        setLoading(false);
+        return;
+      }
       window.API.getProjects().then(r => {
-        if (r.data && r.data.length > 0) {
-          setProjects(r.data);
-          setActiveCount(r.data.filter(p => p.status === 'active').length);
-          setTotalBudget(r.data.reduce((s, p) => s + (p.budget || 0), 0));
-        }
-      }).catch(() => {});
+        const data = r.data || [];
+        setProjects(data);
+        setActiveCount(data.filter(p => p.status === 'active').length);
+        setTotalBudget(data.reduce((s, p) => s + (p.budget || 0), 0));
+      }).catch(() => {}).finally(() => setLoading(false));
       window.API.getClients().then(r => {
         if (r.data) setClients(r.data);
       }).catch(() => {});
@@ -348,7 +290,38 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "plus",
       size: 16
-    }), " New project")), /*#__PURE__*/React.createElement("div", {
+    }), " New project")), loading && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: 48,
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "Loading…"), !loading && projects.length === 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '60px 24px',
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "folder-kanban",
+      size: 40,
+      style: {
+        color: 'var(--text-subtle)',
+        marginBottom: 12
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-lg)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        marginBottom: 6
+      }
+    }, "No projects yet"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)'
+      }
+    }, "Create your first project to get started.")), !loading && projects.length > 0 && /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
