@@ -73,10 +73,10 @@ function AuthScreen({ onAuth }) {
   });
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: 'var(--font-sans)' }}>
+    <div className="tf-auth-root" style={{ display: 'flex', minHeight: '100vh', height: '100%', fontFamily: 'var(--font-sans)', overflowY: 'auto' }}>
 
       {/* ── Left branding ── */}
-      <div style={{
+      <div className="tf-auth-brand" style={{
         width: '44%', flexShrink: 0,
         background: 'linear-gradient(145deg,#0c1320 0%,#0f2044 45%,#1a3a6e 100%)',
         display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
@@ -88,7 +88,7 @@ function AuthScreen({ onAuth }) {
 
         <div style={{ position:'relative', width:'100%', maxWidth:340 }}>
           {/* Logo mark */}
-          <div style={{ width:64, height:64, borderRadius:18, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)',
+          <div className="tf-auth-logo" style={{ width:64, height:64, borderRadius:18, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)',
             display:'flex', alignItems:'center', justifyContent:'center', marginBottom:28, backdropFilter:'blur(10px)' }}>
             <svg width="34" height="34" viewBox="0 0 36 36" fill="none">
               <path d="M18 3L33 12V24L18 33L3 24V12L18 3Z" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
@@ -97,30 +97,32 @@ function AuthScreen({ onAuth }) {
             </svg>
           </div>
 
-          <h1 style={{ fontSize:30, fontWeight:800, color:'white', letterSpacing:'-0.03em', margin:'0 0 10px', lineHeight:1.1 }}>TechyFuel OS</h1>
-          <p style={{ fontSize:15, color:'rgba(255,255,255,0.55)', margin:'0 0 44px', lineHeight:1.6 }}>
+          <h1 className="tf-auth-title" style={{ fontSize:30, fontWeight:800, color:'white', letterSpacing:'-0.03em', margin:'0 0 10px', lineHeight:1.1 }}>TechyFuel OS</h1>
+          <p className="tf-auth-tagline" style={{ fontSize:15, color:'rgba(255,255,255,0.55)', margin:'0 0 44px', lineHeight:1.6 }}>
             Your complete agency operating system.<br/>Built for modern digital teams.
           </p>
 
-          {[
-            ['layout-dashboard', 'Executive dashboard & live analytics'],
-            ['contact', 'CRM, pipeline & client portal'],
-            ['message-square', 'Team chat, calls & collaboration'],
-            ['zap', 'Automations, AI assistant & more'],
-          ].map(([icon, text]) => (
-            <div key={icon} style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
-              <span style={{ width:34, height:34, borderRadius:9, background:'rgba(255,255,255,0.08)',
-                border:'1px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <Icon name={icon} size={15} style={{ color:'rgba(255,255,255,0.75)' }} />
-              </span>
-              <span style={{ fontSize:13.5, color:'rgba(255,255,255,0.65)', fontWeight:500 }}>{text}</span>
-            </div>
-          ))}
+          <div className="tf-auth-features">
+            {[
+              ['layout-dashboard', 'Executive dashboard & live analytics'],
+              ['contact', 'CRM, pipeline & client portal'],
+              ['message-square', 'Team chat, calls & collaboration'],
+              ['zap', 'Automations, AI assistant & more'],
+            ].map(([icon, text]) => (
+              <div key={icon} style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+                <span style={{ width:34, height:34, borderRadius:9, background:'rgba(255,255,255,0.08)',
+                  border:'1px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <Icon name={icon} size={15} style={{ color:'rgba(255,255,255,0.75)' }} />
+                </span>
+                <span style={{ fontSize:13.5, color:'rgba(255,255,255,0.65)', fontWeight:500 }}>{text}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* ── Right form ── */}
-      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#f1f5f9', padding:'40px 32px' }}>
+      <div className="tf-auth-form-wrap" style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#f1f5f9', padding:'40px 32px' }}>
         <div style={{ width:'100%', maxWidth:420 }}>
 
           {/* Mode tabs */}
@@ -236,7 +238,19 @@ function AuthScreen({ onAuth }) {
         </div>
       </div>
 
-      <style>{`@keyframes tf-spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes tf-spin { to { transform: rotate(360deg); } }
+        @media (max-width: 860px) {
+          .tf-auth-root { flex-direction: column; height: auto; }
+          .tf-auth-brand { width: 100% !important; padding: 32px 24px 26px !important; }
+          .tf-auth-logo { width: 48px !important; height: 48px !important; margin-bottom: 16px !important; }
+          .tf-auth-logo svg { width: 26px; height: 26px; }
+          .tf-auth-title { font-size: 24px !important; }
+          .tf-auth-tagline { margin-bottom: 18px !important; font-size: 13.5px !important; }
+          .tf-auth-features { display: none; }
+          .tf-auth-form-wrap { padding: 28px 20px 40px !important; }
+        }
+      `}</style>
     </div>
   );
 }

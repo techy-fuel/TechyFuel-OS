@@ -106,12 +106,16 @@
       }
     });
     return /*#__PURE__*/React.createElement("div", {
+      className: "tf-auth-root",
       style: {
         display: 'flex',
-        height: '100vh',
-        fontFamily: 'var(--font-sans)'
+        minHeight: '100vh',
+        height: '100%',
+        fontFamily: 'var(--font-sans)',
+        overflowY: 'auto'
       }
     }, /*#__PURE__*/React.createElement("div", {
+      className: "tf-auth-brand",
       style: {
         width: '44%',
         flexShrink: 0,
@@ -161,6 +165,7 @@
         maxWidth: 340
       }
     }, /*#__PURE__*/React.createElement("div", {
+      className: "tf-auth-logo",
       style: {
         width: 64,
         height: 64,
@@ -192,6 +197,7 @@
       r: "5.5",
       fill: "white"
     }))), /*#__PURE__*/React.createElement("h1", {
+      className: "tf-auth-title",
       style: {
         fontSize: 30,
         fontWeight: 800,
@@ -201,13 +207,16 @@
         lineHeight: 1.1
       }
     }, "TechyFuel OS"), /*#__PURE__*/React.createElement("p", {
+      className: "tf-auth-tagline",
       style: {
         fontSize: 15,
         color: 'rgba(255,255,255,0.55)',
         margin: '0 0 44px',
         lineHeight: 1.6
       }
-    }, "Your complete agency operating system.", /*#__PURE__*/React.createElement("br", null), "Built for modern digital teams."), [['layout-dashboard', 'Executive dashboard & live analytics'], ['contact', 'CRM, pipeline & client portal'], ['message-square', 'Team chat, calls & collaboration'], ['zap', 'Automations, AI assistant & more']].map(([icon, text]) => /*#__PURE__*/React.createElement("div", {
+    }, "Your complete agency operating system.", /*#__PURE__*/React.createElement("br", null), "Built for modern digital teams."), /*#__PURE__*/React.createElement("div", {
+      className: "tf-auth-features"
+    }, [['layout-dashboard', 'Executive dashboard & live analytics'], ['contact', 'CRM, pipeline & client portal'], ['message-square', 'Team chat, calls & collaboration'], ['zap', 'Automations, AI assistant & more']].map(([icon, text]) => /*#__PURE__*/React.createElement("div", {
       key: icon,
       style: {
         display: 'flex',
@@ -239,7 +248,8 @@
         color: 'rgba(255,255,255,0.65)',
         fontWeight: 500
       }
-    }, text))))), /*#__PURE__*/React.createElement("div", {
+    }, text)))))), /*#__PURE__*/React.createElement("div", {
+      className: "tf-auth-form-wrap",
       style: {
         flex: 1,
         display: 'flex',
@@ -515,7 +525,19 @@
         fontSize: 11.5,
         color: 'var(--text-subtle)'
       }
-    }, "By signing in you agree to our Terms of Service & Privacy Policy."))), /*#__PURE__*/React.createElement("style", null, `@keyframes tf-spin { to { transform: rotate(360deg); } }`));
+    }, "By signing in you agree to our Terms of Service & Privacy Policy."))), /*#__PURE__*/React.createElement("style", null, `
+        @keyframes tf-spin { to { transform: rotate(360deg); } }
+        @media (max-width: 860px) {
+          .tf-auth-root { flex-direction: column; height: auto; }
+          .tf-auth-brand { width: 100% !important; padding: 32px 24px 26px !important; }
+          .tf-auth-logo { width: 48px !important; height: 48px !important; margin-bottom: 16px !important; }
+          .tf-auth-logo svg { width: 26px; height: 26px; }
+          .tf-auth-title { font-size: 24px !important; }
+          .tf-auth-tagline { margin-bottom: 18px !important; font-size: 13.5px !important; }
+          .tf-auth-features { display: none; }
+          .tf-auth-form-wrap { padding: 28px 20px 40px !important; }
+        }
+      `));
   }
   Object.assign(window, {
     AuthScreen
