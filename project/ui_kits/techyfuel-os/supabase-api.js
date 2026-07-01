@@ -48,12 +48,19 @@
 
     // ── TEAM ─────────────────────────────────────────────
     getTeam: () => client.from('team_members').select('*').eq('status', 'active').order('name'),
+    getAllTeamMembers: () => client.from('team_members').select('*').order('name'),
+    getTeamMemberByEmail: (email) => client.from('team_members').select('*').eq('email', email).maybeSingle(),
     addTeamMember: async (d) => {
       const r = await client.from('team_members').insert(d).select().single();
       if (r.data) logActivity('invited', 'team_member', r.data, 'name');
       return r;
     },
     updateTeamMember: (id, d) => client.from('team_members').update(d).eq('id', id).select().single(),
+    setTeamMemberStatus: async (id, status) => {
+      const r = await client.from('team_members').update({ status }).eq('id', id).select().single();
+      if (r.data) insertActivity(status === 'inactive' ? 'suspended' : 'reactivated', 'team_member', r.data.id, r.data.name);
+      return r;
+    },
 
     // ── CLIENTS ──────────────────────────────────────────
     getClients: () => client.from('clients').select('*').order('name'),

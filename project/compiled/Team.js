@@ -72,7 +72,7 @@
     }
     React.useEffect(() => {
       if (!window.API) return;
-      window.API.getTeam().then(r => {
+      window.API.getAllTeamMembers().then(r => {
         if (r.data && r.data.length > 0) setTeam(r.data);
       }).catch(() => {});
       window.API.getTasks().then(r => {
@@ -125,6 +125,24 @@
         alert('Error: ' + (err.message || JSON.stringify(err)));
       } finally {
         setSaving(false);
+      }
+    }
+    async function toggleStatus(m, e) {
+      e.stopPropagation();
+      const suspending = m.status !== 'inactive';
+      if (suspending) {
+        const warn = m.role === 'owner' ? '\n\nThis member is an Owner — suspending them will block their access too.' : '';
+        if (!window.confirm(`Suspend ${m.name}? They will lose access to TechyFuel OS immediately.${warn}`)) return;
+      }
+      const newStatus = suspending ? 'inactive' : 'active';
+      setTeam(prev => prev.map(t => t.id === m.id ? {
+        ...t,
+        status: newStatus
+      } : t));
+      if (window.API) {
+        try {
+          await window.API.setTeamMemberStatus(m.id, newStatus);
+        } catch {}
       }
     }
     const departments = [...new Set(team.map(m => m.department).filter(Boolean))];
@@ -219,10 +237,14 @@
       const tasks = taskCounts[m.id] || 0;
       const load = maxTasks > 0 ? Math.round(tasks / maxTasks * 100) : 0;
       const tone = DEPT_TONE[m.department] || 'neutral';
+      const suspended = m.status === 'inactive';
       return /*#__PURE__*/React.createElement(Card, {
         key: m.id || i,
         interactive: true,
-        padding: "md"
+        padding: "md",
+        style: suspended ? {
+          opacity: 0.6
+        } : undefined
       }, /*#__PURE__*/React.createElement("div", {
         style: {
           display: 'flex',
@@ -233,18 +255,27 @@
       }, /*#__PURE__*/React.createElement(Avatar, {
         name: m.name,
         size: "lg",
-        status: "online"
+        status: suspended ? 'offline' : 'online'
       }), /*#__PURE__*/React.createElement("div", {
         style: {
           flex: 1
         }
       }, /*#__PURE__*/React.createElement("div", {
         style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
           fontSize: 'var(--text-md)',
           fontWeight: 'var(--fw-bold)',
           color: 'var(--text-strong)'
         }
-      }, m.name), /*#__PURE__*/React.createElement("div", {
+      }, m.name), suspended && /*#__PURE__*/React.createElement(Badge, {
+        tone: "danger",
+        size: "sm"
+      }, "Suspended")), /*#__PURE__*/React.createElement("div", {
         style: {
           fontSize: 'var(--text-xs)',
           color: 'var(--text-muted)'
@@ -282,6 +313,7 @@
       })), /*#__PURE__*/React.createElement("div", {
         style: {
           display: 'flex',
+          alignItems: 'center',
           gap: 16,
           paddingTop: 12,
           borderTop: '1px solid var(--border-subtle)',
@@ -306,7 +338,28 @@
       }, /*#__PURE__*/React.createElement(Icon, {
         name: "mail",
         size: 14
-      }), " ", m.email || '—')));
+      }), " ", m.email || '—'), /*#__PURE__*/React.createElement("button", {
+        onClick: e => toggleStatus(m, e),
+        style: {
+          marginLeft: 'auto',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          height: 26,
+          padding: '0 9px',
+          background: 'transparent',
+          border: `1px solid ${suspended ? 'var(--green-300)' : 'var(--red-200)'}`,
+          borderRadius: 'var(--radius-sm)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-2xs)',
+          fontWeight: 'var(--fw-semibold)',
+          color: suspended ? 'var(--green-600)' : 'var(--red-600)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: suspended ? 'user-check' : 'user-x',
+        size: 12
+      }), " ", suspended ? 'Reactivate' : 'Suspend')));
     })), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
       onClose: () => setModalOpen(false),

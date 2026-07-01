@@ -131,12 +131,36 @@
     );
   }
 
+  /* ── Suspended-account screen ───────────────────────────────── */
+  function SuspendedScreen(props) {
+    React.useEffect(function () { if (window.lucide) window.lucide.createIcons(); });
+    return e('div', { style: { height: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', background: 'linear-gradient(145deg,#0c1320 0%,#0f2044 45%,#1a3a6e 100%)', padding: 24 }},
+      e('div', { style: { textAlign: 'center', maxWidth: 380 } },
+        e('span', { style: { display: 'inline-flex', width: 56, height: 56, borderRadius: '50%',
+            background: 'rgba(239,68,68,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 18 } },
+          e(window.Icon, { name: 'user-x', size: 26, style: { color: '#f87171' } })
+        ),
+        e('h2', { style: { color: '#fff', fontSize: 20, fontWeight: 800, margin: '0 0 8px' } }, 'Account suspended'),
+        e('p', { style: { color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 1.6, margin: '0 0 22px' } },
+          'Your access to TechyFuel OS has been suspended by an administrator. Contact your workspace owner if you believe this is a mistake.'),
+        e('button', {
+          onClick: props.onSignOut,
+          style: { height: 38, padding: '0 20px', background: 'rgba(255,255,255,0.1)', color: '#fff',
+            border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }
+        }, 'Back to sign in')
+      )
+    );
+  }
+
   /* ── Root app ────────────────────────────────────────────── */
   function App() {
     var s1 = React.useState('dashboard'); var active = s1[0], setActive = s1[1];
     var s2 = React.useState(false);       var aiOpen = s2[0], setAiOpen = s2[1];
     var s3 = React.useState(null);        var authUser = s3[0], setAuthUser = s3[1];
     var s4 = React.useState(true);        var authLoading = s4[0], setAuthLoading = s4[1];
+    var s5 = React.useState(false);       var suspended = s5[0], setSuspended = s5[1];
+    var s6 = React.useState(true);        var accessChecked = s6[0], setAccessChecked = s6[1];
 
     React.useEffect(function () { window.TFNavigate = setActive; }, []);
 
@@ -152,12 +176,28 @@
       return function () { try { sub.data.subscription.unsubscribe(); } catch (x) {} };
     }, []);
 
+    // Block access if this user's team_members row has been suspended.
+    React.useEffect(function () {
+      if (!authUser || !window.API) { setAccessChecked(true); return; }
+      setAccessChecked(false);
+      setSuspended(false);
+      window.API.getTeamMemberByEmail(authUser.email).then(function (r) {
+        if (r.data && r.data.status === 'inactive') {
+          setSuspended(true);
+          if (window.db) window.db.auth.signOut();
+        }
+        setAccessChecked(true);
+      }).catch(function () { setAccessChecked(true); });
+    }, [authUser]);
+
     function handleSignOut() {
       if (window.db) window.db.auth.signOut();
       setAuthUser(null);
+      setSuspended(false);
     }
 
-    if (authLoading) return e(LoadingScreen);
+    if (authLoading || (authUser && !accessChecked)) return e(LoadingScreen);
+    if (suspended) return e(SuspendedScreen, { onSignOut: handleSignOut });
     if (!authUser && window.db) return e(window.AuthScreen, { onAuth: setAuthUser });
 
     var route = ROUTES[active];

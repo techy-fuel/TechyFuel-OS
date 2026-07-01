@@ -25,7 +25,7 @@ function Team() {
 
   React.useEffect(() => {
     if (!window.API) return;
-    window.API.getTeam().then(r => {
+    window.API.getAllTeamMembers().then(r => {
       if (r.data && r.data.length > 0) setTeam(r.data);
     }).catch(() => {});
     window.API.getTasks().then(r => {
@@ -66,6 +66,20 @@ function Team() {
     } finally { setSaving(false); }
   }
 
+  async function toggleStatus(m, e) {
+    e.stopPropagation();
+    const suspending = m.status !== 'inactive';
+    if (suspending) {
+      const warn = m.role === 'owner' ? '\n\nThis member is an Owner — suspending them will block their access too.' : '';
+      if (!window.confirm(`Suspend ${m.name}? They will lose access to TechyFuel OS immediately.${warn}`)) return;
+    }
+    const newStatus = suspending ? 'inactive' : 'active';
+    setTeam(prev => prev.map(t => t.id === m.id ? { ...t, status: newStatus } : t));
+    if (window.API) {
+      try { await window.API.setTeamMemberStatus(m.id, newStatus); } catch {}
+    }
+  }
+
   const departments = [...new Set(team.map(m => m.department).filter(Boolean))];
   const maxTasks = Math.max(...team.map(m => taskCounts[m.id] || 0), 1);
 
@@ -96,12 +110,16 @@ function Team() {
           const tasks = taskCounts[m.id] || 0;
           const load = maxTasks > 0 ? Math.round((tasks / maxTasks) * 100) : 0;
           const tone = DEPT_TONE[m.department] || 'neutral';
+          const suspended = m.status === 'inactive';
           return (
-            <Card key={m.id || i} interactive padding="md">
+            <Card key={m.id || i} interactive padding="md" style={suspended ? { opacity: 0.6 } : undefined}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                <Avatar name={m.name} size="lg" status="online" />
+                <Avatar name={m.name} size="lg" status={suspended ? 'offline' : 'online'} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{m.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{m.name}</span>
+                    {suspended && <Badge tone="danger" size="sm">Suspended</Badge>}
+                  </div>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{ROLE_LABEL[m.role] || m.role}</div>
                 </div>
                 <Badge tone={tone} size="sm">{m.department || 'Team'}</Badge>
@@ -113,9 +131,13 @@ function Team() {
                 </div>
                 <ProgressBar value={load} tone={load > 85 ? 'danger' : load > 70 ? 'warning' : 'brand'} size="sm" />
               </div>
-              <div style={{ display: 'flex', gap: 16, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="circle-check-big" size={14} /> {tasks} active tasks</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="mail" size={14} /> {m.email || '—'}</span>
+                <button onClick={e => toggleStatus(m, e)}
+                  style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 9px', background: 'transparent', border: `1px solid ${suspended ? 'var(--green-300)' : 'var(--red-200)'}`, borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-semibold)', color: suspended ? 'var(--green-600)' : 'var(--red-600)', cursor: 'pointer' }}>
+                  <Icon name={suspended ? 'user-check' : 'user-x'} size={12} /> {suspended ? 'Reactivate' : 'Suspend'}
+                </button>
               </div>
             </Card>
           );

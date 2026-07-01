@@ -21,6 +21,7 @@ const ACTION_LABEL = {
   created: 'created', updated: 'updated', deleted: 'deleted',
   uploaded: 'uploaded', invited: 'invited',
   started: 'started', ended: 'ended', sent: 'sent',
+  suspended: 'suspended', reactivated: 'reactivated',
 };
 
 function fmtWhen(ts) {

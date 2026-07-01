@@ -45,7 +45,9 @@
     invited: 'invited',
     started: 'started',
     ended: 'ended',
-    sent: 'sent'
+    sent: 'sent',
+    suspended: 'suspended',
+    reactivated: 'reactivated'
   };
   function fmtWhen(ts) {
     if (!ts) return '';
