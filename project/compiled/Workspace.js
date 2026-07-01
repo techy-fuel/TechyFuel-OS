@@ -167,6 +167,21 @@
       if (!email.trim()) return;
       setSending(true);
       try {
+        // Create the team_members row with the chosen role *before* they sign
+        // up, so the auth trigger links their account to this row (and this
+        // role) instead of defaulting a "no invite found" signup to owner.
+        if (window.API?.addTeamMember) {
+          try {
+            await window.API.addTeamMember({
+              name: email.trim().split('@')[0],
+              email: email.trim(),
+              role,
+              status: 'active'
+            });
+          } catch (e) {
+            // Already invited/exists with this email — fine, they're already set up.
+          }
+        }
         if (window.API?.createWorkspaceInvite) {
           await window.API.createWorkspaceInvite({
             workspace_id: workspaceId,
