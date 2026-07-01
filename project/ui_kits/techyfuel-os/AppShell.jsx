@@ -63,7 +63,7 @@ function SidebarItem({ item, active, onClick }) {
   );
 }
 
-function Sidebar({ active, onNavigate, hiddenIds }) {
+function Sidebar({ active, onNavigate, hiddenIds, mobileOpen, onCloseMobile }) {
   const s0 = readTFSettings();
   const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
   const [logoUrl,    setLogoUrl]    = React.useState(s0.logoUrl || '');
@@ -110,7 +110,9 @@ function Sidebar({ active, onNavigate, hiddenIds }) {
   })).filter(g => g.items.length > 0);
 
   return (
-    <aside style={{
+    <>
+    {mobileOpen && <div className="tf-sidebar-backdrop" onClick={onCloseMobile} />}
+    <aside className={`tf-sidebar${mobileOpen ? ' tf-sidebar-open' : ''}`} style={{
       width: 'var(--sidebar-width)', flex: 'none', height: '100%', boxSizing: 'border-box',
       background: 'var(--slate-0)', borderRight: '1px solid var(--border-subtle)',
       display: 'flex', flexDirection: 'column',
@@ -131,7 +133,7 @@ function Sidebar({ active, onNavigate, hiddenIds }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {section.items.map(it => (
-                <SidebarItem key={it.id} item={it} active={active === it.id} onClick={() => onNavigate(it.id)} />
+                <SidebarItem key={it.id} item={it} active={active === it.id} onClick={() => { onNavigate(it.id); onCloseMobile && onCloseMobile(); }} />
               ))}
             </div>
           </div>
@@ -153,10 +155,11 @@ function Sidebar({ active, onNavigate, hiddenIds }) {
         </div>
       </div>
     </aside>
+    </>
   );
 }
 
-function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut }) {
+function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut, onToggleNav }) {
   const s0 = readTFSettings();
   const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
   const [notifOpen,  setNotifOpen]  = React.useState(false);
@@ -241,14 +244,23 @@ function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut }) {
   };
 
   return (
-    <header style={{
+    <header className="tf-topbar" style={{
       height: 'var(--topbar-height)', flex: 'none', display: 'flex', alignItems: 'center', gap: 16,
       padding: '0 24px', boxSizing: 'border-box',
       background: 'var(--glass-bg-strong)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
       borderBottom: '1px solid var(--border-subtle)', position: 'sticky', top: 0, zIndex: 20,
     }}>
+      {/* Hamburger — mobile only */}
+      <button className="tf-hamburger" onClick={onToggleNav} style={{
+        display: 'none', alignItems: 'center', justifyContent: 'center',
+        width: 36, height: 36, flexShrink: 0, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)',
+        background: 'transparent', cursor: 'pointer', color: 'var(--text-body)',
+      }}>
+        <Icon name="menu" size={18} />
+      </button>
+
       {/* Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+      <div className="tf-topbar-crumb" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <span
           onClick={() => onNavigate && onNavigate('dashboard')}
           style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', cursor: 'pointer' }}
@@ -256,12 +268,12 @@ function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut }) {
           onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}
         >{crumb}</span>
         <Icon name="chevron-right" size={15} style={{ color: 'var(--text-subtle)' }} />
-        <span style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', letterSpacing: '-0.01em' }}>{title}</span>
       </div>
+      <span style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
       <div style={{ flex: 1 }} />
 
       {/* Search → opens AI */}
-      <button onClick={onOpenAI} style={{
+      <button className="tf-topbar-search" onClick={onOpenAI} style={{
         display: 'flex', alignItems: 'center', gap: 8, width: 280, maxWidth: '32vw', height: 36, padding: '0 12px',
         background: 'var(--slate-50)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)',
         cursor: 'pointer', fontFamily: 'var(--font-sans)', textAlign: 'left',
@@ -272,11 +284,11 @@ function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut }) {
       </button>
 
       {/* Ask AI */}
-      <button onClick={onOpenAI} style={{
-        display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 13px', borderRadius: 'var(--radius-md)',
+      <button onClick={onOpenAI} title="Ask AI" style={{
+        display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 13px', borderRadius: 'var(--radius-md)', flexShrink: 0,
         background: 'var(--grad-brand)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: 'var(--shadow-brand)',
         fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)' }}>
-        <Icon name="sparkles" size={16} /> Ask AI
+        <Icon name="sparkles" size={16} /> <span className="tf-topbar-asklabel">Ask AI</span>
       </button>
 
       {/* Bell with dropdown */}
@@ -380,12 +392,21 @@ const FULL_HEIGHT_SCREENS = new Set(['chat', 'docs']);
 
 function AppShell({ active, onNavigate, title, crumb, onOpenAI, children, authUser, onSignOut, hiddenIds }) {
   useLucide();
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const fullH = FULL_HEIGHT_SCREENS.has(active);
+
+  // Close the mobile drawer automatically if the viewport is resized back to desktop.
+  React.useEffect(() => {
+    function onResize() { if (window.innerWidth > 860) setMobileNavOpen(false); }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%', background: 'var(--surface-page)' }}>
-      <Sidebar active={active} onNavigate={onNavigate} hiddenIds={hiddenIds} />
+      <Sidebar active={active} onNavigate={onNavigate} hiddenIds={hiddenIds} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
-        <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onNavigate={onNavigate} authUser={authUser} onSignOut={onSignOut} />
+        <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onNavigate={onNavigate} authUser={authUser} onSignOut={onSignOut} onToggleNav={() => setMobileNavOpen(o => !o)} />
         <main className={fullH ? '' : 'tf-scroll'} style={{ flex: 1, overflowY: fullH ? 'hidden' : 'auto', overflow: fullH ? 'hidden' : undefined }}>{children}</main>
       </div>
     </div>

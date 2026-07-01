@@ -50,3 +50,52 @@ a { color: var(--text-link); text-decoration: none; }
   border: 3px solid transparent; background-clip: padding-box;
 }
 .tf-scroll::-webkit-scrollbar-thumb:hover { background: var(--slate-300); background-clip: padding-box; border: 3px solid transparent; }
+
+/* ============================================================
+   Mobile responsive layer — the app shell itself (sidebar/topbar)
+   has real breakpoint-aware markup (see tf-sidebar/tf-hamburger
+   classes in AppShell.jsx). These rules are a broad safety net so
+   the many fixed multi-column grids/tables used across individual
+   screens don't force horizontal scrolling on narrow viewports.
+   ============================================================ */
+@media (max-width: 860px) {
+  html, body { overflow-x: hidden; }
+
+  /* Sidebar becomes an off-canvas drawer. */
+  .tf-sidebar {
+    position: fixed; top: 0; left: 0; height: 100%; z-index: 500;
+    transform: translateX(-100%);
+    transition: transform var(--dur-normal, 0.2s) var(--ease-out, ease);
+    box-shadow: var(--shadow-xl);
+  }
+  .tf-sidebar.tf-sidebar-open { transform: translateX(0); }
+  .tf-sidebar-backdrop {
+    position: fixed; inset: 0; z-index: 490;
+    background: rgba(15, 23, 42, 0.4);
+  }
+  .tf-hamburger { display: inline-flex !important; }
+  .tf-topbar-search { display: none !important; }
+  .tf-topbar-crumb { display: none !important; }
+  .tf-topbar { padding: 0 12px !important; gap: 8px !important; }
+
+  /* Broad safety net: collapse any inline multi-column grid to a
+     single column so cards/stats stack instead of squeezing. */
+  [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+
+  /* Data tables scroll horizontally within their own card instead of
+     crushing their columns or overflowing the page. */
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  .tf-topbar-asklabel { display: none; }
+}
+
+@media (min-width: 861px) {
+  .tf-hamburger { display: none !important; }
+}

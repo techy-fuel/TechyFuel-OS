@@ -153,7 +153,9 @@
   function Sidebar({
     active,
     onNavigate,
-    hiddenIds
+    hiddenIds,
+    mobileOpen,
+    onCloseMobile
   }) {
     const s0 = readTFSettings();
     const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
@@ -200,7 +202,11 @@
         badge: taskBadge || undefined
       } : it)
     })).filter(g => g.items.length > 0);
-    return /*#__PURE__*/React.createElement("aside", {
+    return /*#__PURE__*/React.createElement(React.Fragment, null, mobileOpen && /*#__PURE__*/React.createElement("div", {
+      className: "tf-sidebar-backdrop",
+      onClick: onCloseMobile
+    }), /*#__PURE__*/React.createElement("aside", {
+      className: `tf-sidebar${mobileOpen ? ' tf-sidebar-open' : ''}`,
       style: {
         width: 'var(--sidebar-width)',
         flex: 'none',
@@ -269,7 +275,10 @@
       key: it.id,
       item: it,
       active: active === it.id,
-      onClick: () => onNavigate(it.id)
+      onClick: () => {
+        onNavigate(it.id);
+        onCloseMobile && onCloseMobile();
+      }
     })))))), /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 12,
@@ -322,7 +331,7 @@
       style: {
         color: 'var(--text-subtle)'
       }
-    }))));
+    })))));
   }
   function TopBar({
     title,
@@ -330,7 +339,8 @@
     onOpenAI,
     onNavigate,
     authUser,
-    onSignOut
+    onSignOut,
+    onToggleNav
   }) {
     const s0 = readTFSettings();
     const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
@@ -423,6 +433,7 @@
       overflow: 'hidden'
     };
     return /*#__PURE__*/React.createElement("header", {
+      className: "tf-topbar",
       style: {
         height: 'var(--topbar-height)',
         flex: 'none',
@@ -439,7 +450,27 @@
         top: 0,
         zIndex: 20
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "tf-hamburger",
+      onClick: onToggleNav,
+      style: {
+        display: 'none',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 36,
+        height: 36,
+        flexShrink: 0,
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-subtle)',
+        background: 'transparent',
+        cursor: 'pointer',
+        color: 'var(--text-body)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "menu",
+      size: 18
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "tf-topbar-crumb",
       style: {
         display: 'flex',
         alignItems: 'center',
@@ -461,18 +492,22 @@
       style: {
         color: 'var(--text-subtle)'
       }
-    }), /*#__PURE__*/React.createElement("span", {
+    })), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 'var(--text-md)',
         fontWeight: 'var(--fw-bold)',
         color: 'var(--text-strong)',
-        letterSpacing: '-0.01em'
+        letterSpacing: '-0.01em',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
       }
-    }, title)), /*#__PURE__*/React.createElement("div", {
+    }, title), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1
       }
     }), /*#__PURE__*/React.createElement("button", {
+      className: "tf-topbar-search",
       onClick: onOpenAI,
       style: {
         display: 'flex',
@@ -513,6 +548,7 @@
       }
     }, "⌘K")), /*#__PURE__*/React.createElement("button", {
       onClick: onOpenAI,
+      title: "Ask AI",
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -520,6 +556,7 @@
         height: 36,
         padding: '0 13px',
         borderRadius: 'var(--radius-md)',
+        flexShrink: 0,
         background: 'var(--grad-brand)',
         color: '#fff',
         border: 'none',
@@ -532,7 +569,9 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "sparkles",
       size: 16
-    }), " Ask AI"), /*#__PURE__*/React.createElement("div", {
+    }), " ", /*#__PURE__*/React.createElement("span", {
+      className: "tf-topbar-asklabel"
+    }, "Ask AI")), /*#__PURE__*/React.createElement("div", {
       ref: notifRef,
       style: {
         position: 'relative'
@@ -858,7 +897,17 @@
     hiddenIds
   }) {
     useLucide();
+    const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
     const fullH = FULL_HEIGHT_SCREENS.has(active);
+
+    // Close the mobile drawer automatically if the viewport is resized back to desktop.
+    React.useEffect(() => {
+      function onResize() {
+        if (window.innerWidth > 860) setMobileNavOpen(false);
+      }
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }, []);
     return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
@@ -869,7 +918,9 @@
     }, /*#__PURE__*/React.createElement(Sidebar, {
       active: active,
       onNavigate: onNavigate,
-      hiddenIds: hiddenIds
+      hiddenIds: hiddenIds,
+      mobileOpen: mobileNavOpen,
+      onCloseMobile: () => setMobileNavOpen(false)
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
@@ -884,7 +935,8 @@
       onOpenAI: onOpenAI,
       onNavigate: onNavigate,
       authUser: authUser,
-      onSignOut: onSignOut
+      onSignOut: onSignOut,
+      onToggleNav: () => setMobileNavOpen(o => !o)
     }), /*#__PURE__*/React.createElement("main", {
       className: fullH ? '' : 'tf-scroll',
       style: {
