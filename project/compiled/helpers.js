@@ -1,26 +1,58 @@
 // Shared helpers — Icon, Modal, form primitives.
+//
+// Icon renders real, React-owned <svg> elements built from lucide's icon
+// data (window.lucide.icons) instead of the classic "render <i data-lucide>
+// then call lucide.createIcons() to mutate it into an <svg>" pattern. That
+// mutation happens outside React's virtual DOM, so whenever a re-render
+// touched the same node afterward, React's reconciler could be asked to
+// remove a child that lucide had already swapped out from under it —
+// surfacing as "NotFoundError: Failed to execute 'removeChild'" crashes,
+// intermittently, anywhere an icon's surrounding list/state changed.
+function tfIconPascalName(name) {
+  return name.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+}
 function Icon({
   name,
   size = 18,
   style,
   strokeWidth = 1.75
 }) {
-  return React.createElement('i', {
-    'data-lucide': name,
+  const nodes = window.lucide && window.lucide.icons && window.lucide.icons[tfIconPascalName(name)];
+  if (!nodes) {
+    return React.createElement('span', {
+      style: {
+        width: size,
+        height: size,
+        display: 'inline-flex',
+        flexShrink: 0,
+        ...style
+      }
+    });
+  }
+  return React.createElement('svg', {
+    xmlns: 'http://www.w3.org/2000/svg',
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
     style: {
-      width: size,
-      height: size,
       display: 'inline-flex',
-      strokeWidth,
+      flexShrink: 0,
       ...style
     }
-  });
+  }, nodes.map(([tag, attrs], i) => React.createElement(tag, {
+    key: i,
+    ...attrs
+  })));
 }
-function useLucide() {
-  React.useEffect(() => {
-    if (window.lucide) window.lucide.createIcons();
-  });
-}
+
+// Kept as a harmless no-op for any lingering callers — Icon no longer
+// depends on lucide.createIcons() to render.
+function useLucide() {}
 
 // ── Generic overlay modal ─────────────────────────────────────
 function Modal({
