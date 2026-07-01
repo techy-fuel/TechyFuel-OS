@@ -135,7 +135,13 @@
     updateInvoice: (id, d) => client.from('invoices').update(d).eq('id', id).select().single(),
     getExpenses: () =>
       client.from('expenses').select('*, projects(name), clients(name)').order('date', { ascending: false }),
-    createExpense: (d) => client.from('expenses').insert(d).select().single(),
+    createExpense: async (d) => {
+      const r = await client.from('expenses').insert(d).select().single();
+      if (r.data) logActivity('created', 'expense', r.data, 'description');
+      return r;
+    },
+    updateExpense: (id, d) => client.from('expenses').update(d).eq('id', id).select().single(),
+    deleteExpense: (id) => client.from('expenses').delete().eq('id', id),
 
     // ── FILES ────────────────────────────────────────────
     getFiles: async (filters = {}) => {

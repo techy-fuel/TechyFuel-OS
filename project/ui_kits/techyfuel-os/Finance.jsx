@@ -1,6 +1,6 @@
 // Finance screen — revenue, invoices, multi-currency, PDF export.
 (() => {
-const { Card, StatCard } = window.TechyFuelOSDesignSystem_be0222;
+const { Card, StatCard, Badge, Tabs } = window.TechyFuelOSDesignSystem_be0222;
 
 const IS = {
   paid:      { tone: 'success', label: 'Paid' },
@@ -8,6 +8,15 @@ const IS = {
   overdue:   { tone: 'danger',  label: 'Overdue' },
   draft:     { tone: 'neutral', label: 'Draft' },
   cancelled: { tone: 'neutral', label: 'Cancelled' },
+};
+
+const EXPENSE_CATEGORIES = {
+  salary:   { tone: 'violet',  label: 'Salary' },
+  tools:    { tone: 'info',    label: 'Tools' },
+  ads:      { tone: 'warning', label: 'Ads' },
+  freelance:{ tone: 'brand',   label: 'Freelance' },
+  office:   { tone: 'teal',    label: 'Office' },
+  other:    { tone: 'neutral', label: 'Other' },
 };
 
 const CURRENCIES = [
@@ -162,8 +171,10 @@ function printInvoicePDF(inv, clients) {
 // ── Main component ────────────────────────────────────────────────
 function Finance() {
   useLucide();
+  const [activeTab, setActiveTab] = React.useState('invoices');
   const [invoices, setInvoices] = React.useState([]);
   const [clients,  setClients]  = React.useState([]);
+  const [projects, setProjects] = React.useState([]);
   const [loading,  setLoading]  = React.useState(true);
   const [search,   setSearch]   = React.useState('');
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -171,19 +182,99 @@ function Finance() {
   const [saving,    setSaving]    = React.useState(false);
   const [form, setForm] = React.useState({ invoice_no: '', client_id: '', amount: '', due_date: '', status: 'draft', currency: 'USD' });
 
+  // ── Expenses state ──────────────────────────────────────────────
+  const [expenses,    setExpenses]    = React.useState([]);
+  const [expLoading,  setExpLoading]  = React.useState(true);
+  const [expSearch,   setExpSearch]   = React.useState('');
+  const [expModalOpen, setExpModalOpen] = React.useState(false);
+  const [editExp,     setEditExp]     = React.useState(null);
+  const [expSaving,   setExpSaving]   = React.useState(false);
+  const [expForm, setExpForm] = React.useState({ description: '', category: 'salary', amount: '', date: new Date().toISOString().slice(0, 10), project_id: '', client_id: '' });
+
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
+  function setEx(k, v) { setExpForm(f => ({ ...f, [k]: v })); }
 
   React.useEffect(() => {
-    if (!window.API) { setLoading(false); return; }
+    if (!window.API) { setLoading(false); setExpLoading(false); return; }
     (async () => {
       try {
-        const [invRes, cliRes] = await Promise.all([window.API.getInvoices(), window.API.getClients()]);
+        const [invRes, cliRes, projRes] = await Promise.all([window.API.getInvoices(), window.API.getClients(), window.API.getProjects()]);
         if (invRes.data) setInvoices(invRes.data);
         if (cliRes.data) setClients(cliRes.data);
+        if (projRes.data) setProjects(projRes.data);
       } catch {}
       finally { setLoading(false); }
     })();
+    (async () => {
+      try {
+        const expRes = await window.API.getExpenses();
+        if (expRes.data) setExpenses(expRes.data);
+      } catch {}
+      finally { setExpLoading(false); }
+    })();
   }, []);
+
+  function openNewExpense() {
+    setEditExp(null);
+    setExpForm({ description: '', category: 'salary', amount: '', date: new Date().toISOString().slice(0, 10), project_id: '', client_id: '' });
+    setExpModalOpen(true);
+  }
+
+  function openEditExpense(exp) {
+    setEditExp(exp);
+    setExpForm({
+      description: exp.description || '',
+      category:    exp.category    || 'other',
+      amount:      exp.amount      ? String(exp.amount) : '',
+      date:        exp.date        ? exp.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      project_id:  exp.project_id  || '',
+      client_id:   exp.client_id   || '',
+    });
+    setExpModalOpen(true);
+  }
+
+  async function handleSaveExpense() {
+    if (!expForm.description.trim() || !expForm.amount) return;
+    setExpSaving(true);
+    try {
+      const payload = { description: expForm.description.trim(), category: expForm.category, amount: Number(expForm.amount), date: expForm.date };
+      if (expForm.project_id) payload.project_id = expForm.project_id;
+      if (expForm.client_id)  payload.client_id  = expForm.client_id;
+      const projObj = projects.find(p => p.id === expForm.project_id);
+      const cliObj  = clients.find(c => c.id === expForm.client_id);
+      const projectsData = projObj ? { name: projObj.name } : null;
+      const clientsData  = cliObj  ? { name: cliObj.company || cliObj.name } : null;
+
+      if (editExp && window.API) {
+        const { data } = await window.API.updateExpense(editExp.id, payload);
+        if (data) setExpenses(prev => prev.map(e => e.id === editExp.id ? { ...data, projects: projectsData || e.projects, clients: clientsData || e.clients } : e));
+      } else if (window.API) {
+        const { data } = await window.API.createExpense(payload);
+        if (data) setExpenses(prev => [{ ...data, projects: projectsData, clients: clientsData }, ...prev]);
+      }
+      setExpModalOpen(false);
+    } catch {}
+    finally { setExpSaving(false); }
+  }
+
+  async function handleDeleteExpense(exp) {
+    if (!window.confirm('Delete this expense?')) return;
+    try { await window.API.deleteExpense(exp.id); } catch {}
+    setExpenses(prev => prev.filter(e => e.id !== exp.id));
+  }
+
+  function handleExportExpensesCSV() {
+    const rows = [
+      ['Description', 'Category', 'Amount', 'Date', 'Project', 'Client'],
+      ...filteredExpenses.map(e => [e.description, (EXPENSE_CATEGORIES[e.category] || {}).label || e.category, e.amount || 0, e.date || '', e.projects?.name || '', e.clients?.name || '']),
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'expenses.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   function openNew() {
     setEditInv(null);
@@ -261,6 +352,16 @@ function Finance() {
   const monthBars    = buildMonthlyBars(invoices);
   const monthName    = new Date().toLocaleDateString('en', { month: 'long', year: 'numeric' });
 
+  const filteredExpenses = expenses.filter(e => {
+    if (!expSearch) return true;
+    const q = expSearch.toLowerCase();
+    return (e.description || '').toLowerCase().includes(q) || (e.category || '').toLowerCase().includes(q);
+  });
+  const curMonthKey    = new Date().toISOString().slice(0, 7);
+  const totalExpenses  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const totalSalaries  = expenses.filter(e => e.category === 'salary').reduce((s, e) => s + Number(e.amount || 0), 0);
+  const monthExpenses  = expenses.filter(e => (e.date || '').slice(0, 7) === curMonthKey).reduce((s, e) => s + Number(e.amount || 0), 0);
+
   const selectStyle = { height: 26, padding: '0 6px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', background: 'var(--slate-0)', cursor: 'pointer' };
 
   return (
@@ -270,11 +371,20 @@ function Finance() {
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Finance</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{monthName} · {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={openNew} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
-          <Icon name="plus" size={16} /> New invoice
+        <button onClick={activeTab === 'invoices' ? openNew : openNewExpense} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+          <Icon name="plus" size={16} /> {activeTab === 'invoices' ? 'New invoice' : 'Add expense'}
         </button>
       </div>
 
+      <div style={{ marginBottom: 16 }}>
+        <Tabs value={activeTab} onChange={setActiveTab} tabs={[
+          { id: 'invoices', label: 'Invoices', icon: <Icon name="receipt" size={16} />, count: invoices.length },
+          { id: 'expenses', label: 'Expenses', icon: <Icon name="wallet" size={16} />, count: expenses.length },
+        ]} />
+      </div>
+
+      {activeTab === 'invoices' && (
+      <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
         <StatCard label="Revenue (paid, USD)" value={fmtAmt(paidRevenue, 'USD')} delta="—" icon={<Icon name="trending-up" />} tone="success" />
         <StatCard label="Total invoiced (USD)" value={fmtAmt(totalAmount, 'USD')} delta="—" icon={<Icon name="receipt" />} tone="brand" />
@@ -358,6 +468,74 @@ function Finance() {
           )}
         </Card>
       </div>
+      </>
+      )}
+
+      {activeTab === 'expenses' && (
+      <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
+        <StatCard label="Total expenses"      value={fmtAmt(totalExpenses, 'USD')} delta="—" icon={<Icon name="wallet" />}       tone="warning" />
+        <StatCard label="Salaries"            value={fmtAmt(totalSalaries, 'USD')} delta="—" icon={<Icon name="user-plus" />}   tone="violet" />
+        <StatCard label="This month"          value={fmtAmt(monthExpenses, 'USD')} delta="—" icon={<Icon name="calendar" />}     tone="info" />
+        <StatCard label="Entries"             value={String(expenses.length)}      delta="—" icon={<Icon name="receipt" />}      tone="brand" />
+      </div>
+
+      <Card padding="none">
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', flex: 1 }}>Expenses</h3>
+          <div style={{ position: 'relative' }}>
+            <Icon name="search" size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <input value={expSearch} onChange={e => setExpSearch(e.target.value)} placeholder="Search expenses…" style={{ height: 32, padding: '0 10px 0 28px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--text-body)', background: 'var(--slate-50)', outline: 'none', width: 200 }} />
+          </div>
+          <button onClick={handleExportExpensesCSV} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 11px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
+            <Icon name="download" size={13} /> CSV
+          </button>
+        </div>
+
+        {expLoading && <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading…</div>}
+
+        {!expLoading && filteredExpenses.length === 0 && (
+          <div style={{ padding: '40px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
+            {expSearch ? 'No expenses match your search.' : 'No expenses yet. Log your first one — salaries, tools, ads, and more.'}
+          </div>
+        )}
+
+        {!expLoading && filteredExpenses.length > 0 && (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr>
+              {['Description', 'Category', 'Amount', 'Date', 'Project / Client', ''].map((h, i) => (
+                <th key={i} style={{ textAlign: i === 2 ? 'right' : 'left', padding: '10px 16px', fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', letterSpacing: 'var(--tracking-wide)', textTransform: 'uppercase', color: 'var(--text-subtle)' }}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {filteredExpenses.map((exp, i) => {
+                const cat = EXPENSE_CATEGORIES[exp.category] || EXPENSE_CATEGORIES.other;
+                return (
+                  <tr key={exp.id || i} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '10px 16px', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{exp.description}</td>
+                    <td style={{ padding: '10px 16px' }}><Badge tone={cat.tone} size="sm">{cat.label}</Badge></td>
+                    <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>{fmtAmt(exp.amount, 'USD')}</td>
+                    <td style={{ padding: '10px 16px', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>{fmtDate(exp.date)}</td>
+                    <td style={{ padding: '10px 16px', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{exp.projects?.name || exp.clients?.name || '—'}</td>
+                    <td style={{ padding: '10px 16px' }}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => openEditExpense(exp)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 27, padding: '0 9px', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                          <Icon name="pencil" size={11} /> Edit
+                        </button>
+                        <button onClick={() => handleDeleteExpense(exp)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 27, padding: '0 9px', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--red-600)', cursor: 'pointer' }}>
+                          <Icon name="trash-2" size={11} /> Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </Card>
+      </>
+      )}
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editInv ? 'Edit invoice' : 'New invoice'} onSubmit={handleSave} loading={saving} submitLabel={editInv ? 'Save changes' : 'Create invoice'}>
         <div style={FF.row2}>
@@ -392,6 +570,39 @@ function Finance() {
         </div>
         <FormRow label="Due date">
           <input style={FF.input} type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+        </FormRow>
+      </Modal>
+
+      <Modal open={expModalOpen} onClose={() => setExpModalOpen(false)} title={editExp ? 'Edit expense' : 'Add expense'} onSubmit={handleSaveExpense} loading={expSaving} submitLabel={editExp ? 'Save changes' : 'Add expense'}>
+        <FormRow label="Description" required>
+          <input style={FF.input} placeholder="e.g. July salary — Ali Raza" value={expForm.description} onChange={e => setEx('description', e.target.value)} />
+        </FormRow>
+        <div style={FF.row2}>
+          <FormRow label="Category">
+            <select style={FF.select} value={expForm.category} onChange={e => setEx('category', e.target.value)}>
+              {Object.entries(EXPENSE_CATEGORIES).map(([id, c]) => <option key={id} value={id}>{c.label}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Amount (USD)" required>
+            <input style={FF.input} type="number" placeholder="0" value={expForm.amount} onChange={e => setEx('amount', e.target.value)} />
+          </FormRow>
+        </div>
+        <div style={FF.row2}>
+          <FormRow label="Date">
+            <input style={FF.input} type="date" value={expForm.date} onChange={e => setEx('date', e.target.value)} />
+          </FormRow>
+          <FormRow label="Project (optional)">
+            <select style={FF.select} value={expForm.project_id} onChange={e => setEx('project_id', e.target.value)}>
+              <option value="">No project</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </FormRow>
+        </div>
+        <FormRow label="Client (optional)">
+          <select style={FF.select} value={expForm.client_id} onChange={e => setEx('client_id', e.target.value)}>
+            <option value="">No client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
+          </select>
         </FormRow>
       </Modal>
     </div>

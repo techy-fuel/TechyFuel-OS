@@ -2,7 +2,9 @@
 (() => {
   const {
     Card,
-    StatCard
+    StatCard,
+    Badge,
+    Tabs
   } = window.TechyFuelOSDesignSystem_be0222;
   const IS = {
     paid: {
@@ -24,6 +26,32 @@
     cancelled: {
       tone: 'neutral',
       label: 'Cancelled'
+    }
+  };
+  const EXPENSE_CATEGORIES = {
+    salary: {
+      tone: 'violet',
+      label: 'Salary'
+    },
+    tools: {
+      tone: 'info',
+      label: 'Tools'
+    },
+    ads: {
+      tone: 'warning',
+      label: 'Ads'
+    },
+    freelance: {
+      tone: 'brand',
+      label: 'Freelance'
+    },
+    office: {
+      tone: 'teal',
+      label: 'Office'
+    },
+    other: {
+      tone: 'neutral',
+      label: 'Other'
     }
   };
   const CURRENCIES = [{
@@ -228,8 +256,10 @@
   // ── Main component ────────────────────────────────────────────────
   function Finance() {
     useLucide();
+    const [activeTab, setActiveTab] = React.useState('invoices');
     const [invoices, setInvoices] = React.useState([]);
     const [clients, setClients] = React.useState([]);
+    const [projects, setProjects] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [search, setSearch] = React.useState('');
     const [modalOpen, setModalOpen] = React.useState(false);
@@ -243,8 +273,30 @@
       status: 'draft',
       currency: 'USD'
     });
+
+    // ── Expenses state ──────────────────────────────────────────────
+    const [expenses, setExpenses] = React.useState([]);
+    const [expLoading, setExpLoading] = React.useState(true);
+    const [expSearch, setExpSearch] = React.useState('');
+    const [expModalOpen, setExpModalOpen] = React.useState(false);
+    const [editExp, setEditExp] = React.useState(null);
+    const [expSaving, setExpSaving] = React.useState(false);
+    const [expForm, setExpForm] = React.useState({
+      description: '',
+      category: 'salary',
+      amount: '',
+      date: new Date().toISOString().slice(0, 10),
+      project_id: '',
+      client_id: ''
+    });
     function set(k, v) {
       setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
+    function setEx(k, v) {
+      setExpForm(f => ({
         ...f,
         [k]: v
       }));
@@ -252,18 +304,116 @@
     React.useEffect(() => {
       if (!window.API) {
         setLoading(false);
+        setExpLoading(false);
         return;
       }
       (async () => {
         try {
-          const [invRes, cliRes] = await Promise.all([window.API.getInvoices(), window.API.getClients()]);
+          const [invRes, cliRes, projRes] = await Promise.all([window.API.getInvoices(), window.API.getClients(), window.API.getProjects()]);
           if (invRes.data) setInvoices(invRes.data);
           if (cliRes.data) setClients(cliRes.data);
+          if (projRes.data) setProjects(projRes.data);
         } catch {} finally {
           setLoading(false);
         }
       })();
+      (async () => {
+        try {
+          const expRes = await window.API.getExpenses();
+          if (expRes.data) setExpenses(expRes.data);
+        } catch {} finally {
+          setExpLoading(false);
+        }
+      })();
     }, []);
+    function openNewExpense() {
+      setEditExp(null);
+      setExpForm({
+        description: '',
+        category: 'salary',
+        amount: '',
+        date: new Date().toISOString().slice(0, 10),
+        project_id: '',
+        client_id: ''
+      });
+      setExpModalOpen(true);
+    }
+    function openEditExpense(exp) {
+      setEditExp(exp);
+      setExpForm({
+        description: exp.description || '',
+        category: exp.category || 'other',
+        amount: exp.amount ? String(exp.amount) : '',
+        date: exp.date ? exp.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+        project_id: exp.project_id || '',
+        client_id: exp.client_id || ''
+      });
+      setExpModalOpen(true);
+    }
+    async function handleSaveExpense() {
+      if (!expForm.description.trim() || !expForm.amount) return;
+      setExpSaving(true);
+      try {
+        const payload = {
+          description: expForm.description.trim(),
+          category: expForm.category,
+          amount: Number(expForm.amount),
+          date: expForm.date
+        };
+        if (expForm.project_id) payload.project_id = expForm.project_id;
+        if (expForm.client_id) payload.client_id = expForm.client_id;
+        const projObj = projects.find(p => p.id === expForm.project_id);
+        const cliObj = clients.find(c => c.id === expForm.client_id);
+        const projectsData = projObj ? {
+          name: projObj.name
+        } : null;
+        const clientsData = cliObj ? {
+          name: cliObj.company || cliObj.name
+        } : null;
+        if (editExp && window.API) {
+          const {
+            data
+          } = await window.API.updateExpense(editExp.id, payload);
+          if (data) setExpenses(prev => prev.map(e => e.id === editExp.id ? {
+            ...data,
+            projects: projectsData || e.projects,
+            clients: clientsData || e.clients
+          } : e));
+        } else if (window.API) {
+          const {
+            data
+          } = await window.API.createExpense(payload);
+          if (data) setExpenses(prev => [{
+            ...data,
+            projects: projectsData,
+            clients: clientsData
+          }, ...prev]);
+        }
+        setExpModalOpen(false);
+      } catch {} finally {
+        setExpSaving(false);
+      }
+    }
+    async function handleDeleteExpense(exp) {
+      if (!window.confirm('Delete this expense?')) return;
+      try {
+        await window.API.deleteExpense(exp.id);
+      } catch {}
+      setExpenses(prev => prev.filter(e => e.id !== exp.id));
+    }
+    function handleExportExpensesCSV() {
+      const rows = [['Description', 'Category', 'Amount', 'Date', 'Project', 'Client'], ...filteredExpenses.map(e => [e.description, (EXPENSE_CATEGORIES[e.category] || {}).label || e.category, e.amount || 0, e.date || '', e.projects?.name || '', e.clients?.name || ''])];
+      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {
+        type: 'text/csv'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'expenses.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
     function openNew() {
       setEditInv(null);
       setForm({
@@ -365,6 +515,15 @@
       month: 'long',
       year: 'numeric'
     });
+    const filteredExpenses = expenses.filter(e => {
+      if (!expSearch) return true;
+      const q = expSearch.toLowerCase();
+      return (e.description || '').toLowerCase().includes(q) || (e.category || '').toLowerCase().includes(q);
+    });
+    const curMonthKey = new Date().toISOString().slice(0, 7);
+    const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const totalSalaries = expenses.filter(e => e.category === 'salary').reduce((s, e) => s + Number(e.amount || 0), 0);
+    const monthExpenses = expenses.filter(e => (e.date || '').slice(0, 7) === curMonthKey).reduce((s, e) => s + Number(e.amount || 0), 0);
     const selectStyle = {
       height: 26,
       padding: '0 6px',
@@ -405,7 +564,7 @@
         marginTop: 2
       }
     }, monthName, " · ", invoices.length, " invoice", invoices.length !== 1 ? 's' : '')), /*#__PURE__*/React.createElement("button", {
-      onClick: openNew,
+      onClick: activeTab === 'invoices' ? openNew : openNewExpense,
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -425,7 +584,31 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "plus",
       size: 16
-    }), " New invoice")), /*#__PURE__*/React.createElement("div", {
+    }), " ", activeTab === 'invoices' ? 'New invoice' : 'Add expense')), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 16
+      }
+    }, /*#__PURE__*/React.createElement(Tabs, {
+      value: activeTab,
+      onChange: setActiveTab,
+      tabs: [{
+        id: 'invoices',
+        label: 'Invoices',
+        icon: /*#__PURE__*/React.createElement(Icon, {
+          name: "receipt",
+          size: 16
+        }),
+        count: invoices.length
+      }, {
+        id: 'expenses',
+        label: 'Expenses',
+        icon: /*#__PURE__*/React.createElement(Icon, {
+          name: "wallet",
+          size: 16
+        }),
+        count: expenses.length
+      }]
+    })), activeTab === 'invoices' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
@@ -709,6 +892,234 @@
         name: "file-down",
         size: 11
       }), " PDF"))));
+    })))))), activeTab === 'expenses' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 16,
+        marginBottom: 16
+      }
+    }, /*#__PURE__*/React.createElement(StatCard, {
+      label: "Total expenses",
+      value: fmtAmt(totalExpenses, 'USD'),
+      delta: "—",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "wallet"
+      }),
+      tone: "warning"
+    }), /*#__PURE__*/React.createElement(StatCard, {
+      label: "Salaries",
+      value: fmtAmt(totalSalaries, 'USD'),
+      delta: "—",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "user-plus"
+      }),
+      tone: "violet"
+    }), /*#__PURE__*/React.createElement(StatCard, {
+      label: "This month",
+      value: fmtAmt(monthExpenses, 'USD'),
+      delta: "—",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "calendar"
+      }),
+      tone: "info"
+    }), /*#__PURE__*/React.createElement(StatCard, {
+      label: "Entries",
+      value: String(expenses.length),
+      delta: "—",
+      icon: /*#__PURE__*/React.createElement(Icon, {
+        name: "receipt"
+      }),
+      tone: "brand"
+    })), /*#__PURE__*/React.createElement(Card, {
+      padding: "none"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '14px 18px',
+        borderBottom: '1px solid var(--border-subtle)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement("h3", {
+      style: {
+        fontSize: 'var(--text-lg)',
+        fontWeight: 'var(--fw-bold)',
+        flex: 1
+      }
+    }, "Expenses"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'relative'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "search",
+      size: 14,
+      style: {
+        position: 'absolute',
+        left: 8,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        color: 'var(--text-muted)',
+        pointerEvents: 'none'
+      }
+    }), /*#__PURE__*/React.createElement("input", {
+      value: expSearch,
+      onChange: e => setExpSearch(e.target.value),
+      placeholder: "Search expenses…",
+      style: {
+        height: 32,
+        padding: '0 10px 0 28px',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-body)',
+        background: 'var(--slate-50)',
+        outline: 'none',
+        width: 200
+      }
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: handleExportExpensesCSV,
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        height: 32,
+        padding: '0 11px',
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "download",
+      size: 13
+    }), " CSV")), expLoading && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: 32,
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, "Loading…"), !expLoading && filteredExpenses.length === 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '40px 24px',
+        textAlign: 'center',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }
+    }, expSearch ? 'No expenses match your search.' : 'No expenses yet. Log your first one — salaries, tools, ads, and more.'), !expLoading && filteredExpenses.length > 0 && /*#__PURE__*/React.createElement("table", {
+      style: {
+        width: '100%',
+        borderCollapse: 'collapse'
+      }
+    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, ['Description', 'Category', 'Amount', 'Date', 'Project / Client', ''].map((h, i) => /*#__PURE__*/React.createElement("th", {
+      key: i,
+      style: {
+        textAlign: i === 2 ? 'right' : 'left',
+        padding: '10px 16px',
+        fontSize: 'var(--text-2xs)',
+        fontWeight: 'var(--fw-bold)',
+        letterSpacing: 'var(--tracking-wide)',
+        textTransform: 'uppercase',
+        color: 'var(--text-subtle)'
+      }
+    }, h)))), /*#__PURE__*/React.createElement("tbody", null, filteredExpenses.map((exp, i) => {
+      const cat = EXPENSE_CATEGORIES[exp.category] || EXPENSE_CATEGORIES.other;
+      return /*#__PURE__*/React.createElement("tr", {
+        key: exp.id || i,
+        style: {
+          borderTop: '1px solid var(--border-subtle)'
+        }
+      }, /*#__PURE__*/React.createElement("td", {
+        style: {
+          padding: '10px 16px',
+          fontSize: 'var(--text-sm)',
+          fontWeight: 'var(--fw-semibold)',
+          color: 'var(--text-strong)'
+        }
+      }, exp.description), /*#__PURE__*/React.createElement("td", {
+        style: {
+          padding: '10px 16px'
+        }
+      }, /*#__PURE__*/React.createElement(Badge, {
+        tone: cat.tone,
+        size: "sm"
+      }, cat.label)), /*#__PURE__*/React.createElement("td", {
+        style: {
+          padding: '10px 16px',
+          textAlign: 'right',
+          fontSize: 'var(--text-sm)',
+          fontWeight: 'var(--fw-bold)',
+          color: 'var(--text-strong)',
+          fontVariantNumeric: 'tabular-nums'
+        }
+      }, fmtAmt(exp.amount, 'USD')), /*#__PURE__*/React.createElement("td", {
+        style: {
+          padding: '10px 16px',
+          fontSize: 'var(--text-sm)',
+          color: 'var(--text-muted)'
+        }
+      }, fmtDate(exp.date)), /*#__PURE__*/React.createElement("td", {
+        style: {
+          padding: '10px 16px',
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-muted)'
+        }
+      }, exp.projects?.name || exp.clients?.name || '—'), /*#__PURE__*/React.createElement("td", {
+        style: {
+          padding: '10px 16px'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          gap: 6
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => openEditExpense(exp),
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          height: 27,
+          padding: '0 9px',
+          background: 'transparent',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-sm)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-xs)',
+          fontWeight: 'var(--fw-semibold)',
+          color: 'var(--text-muted)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "pencil",
+        size: 11
+      }), " Edit"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => handleDeleteExpense(exp),
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          height: 27,
+          padding: '0 9px',
+          background: 'transparent',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-sm)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-xs)',
+          fontWeight: 'var(--fw-semibold)',
+          color: 'var(--red-600)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "trash-2",
+        size: 11
+      }), " Delete"))));
     }))))), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
       onClose: () => setModalOpen(false),
@@ -779,7 +1190,73 @@
       type: "date",
       value: form.due_date,
       onChange: e => set('due_date', e.target.value)
-    }))));
+    }))), /*#__PURE__*/React.createElement(Modal, {
+      open: expModalOpen,
+      onClose: () => setExpModalOpen(false),
+      title: editExp ? 'Edit expense' : 'Add expense',
+      onSubmit: handleSaveExpense,
+      loading: expSaving,
+      submitLabel: editExp ? 'Save changes' : 'Add expense'
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Description",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "e.g. July salary — Ali Raza",
+      value: expForm.description,
+      onChange: e => setEx('description', e.target.value)
+    })), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Category"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: expForm.category,
+      onChange: e => setEx('category', e.target.value)
+    }, Object.entries(EXPENSE_CATEGORIES).map(([id, c]) => /*#__PURE__*/React.createElement("option", {
+      key: id,
+      value: id
+    }, c.label)))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Amount (USD)",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      placeholder: "0",
+      value: expForm.amount,
+      onChange: e => setEx('amount', e.target.value)
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Date"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "date",
+      value: expForm.date,
+      onChange: e => setEx('date', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Project (optional)"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: expForm.project_id,
+      onChange: e => setEx('project_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "No project"), projects.map(p => /*#__PURE__*/React.createElement("option", {
+      key: p.id,
+      value: p.id
+    }, p.name))))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Client (optional)"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: expForm.client_id,
+      onChange: e => setEx('client_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "No client"), clients.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.company || c.name))))));
   }
   Object.assign(window, {
     Finance

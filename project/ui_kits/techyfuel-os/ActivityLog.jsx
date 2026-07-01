@@ -5,17 +5,17 @@ const { Card, Badge } = window.TechyFuelOSDesignSystem_be0222;
 const ENTITY_ICON = {
   task: 'circle-check-big', project: 'folder-kanban', client: 'contact',
   document: 'file-text', file: 'paperclip', team_member: 'user-plus',
-  call: 'phone', message: 'message-square',
+  call: 'phone', message: 'message-square', expense: 'wallet',
 };
 const ENTITY_LABEL = {
   task: 'Task', project: 'Project', client: 'Client',
   document: 'Document', file: 'File', team_member: 'Team member',
-  call: 'Call', message: 'Message',
+  call: 'Call', message: 'Message', expense: 'Expense',
 };
 const ENTITY_TONE = {
   task: 'brand', project: 'info', client: 'success',
   document: 'violet', file: 'teal', team_member: 'warning',
-  call: 'danger', message: 'neutral',
+  call: 'danger', message: 'neutral', expense: 'warning',
 };
 const ACTION_LABEL = {
   created: 'created', updated: 'updated', deleted: 'deleted',

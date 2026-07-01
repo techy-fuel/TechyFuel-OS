@@ -12,7 +12,8 @@
     file: 'paperclip',
     team_member: 'user-plus',
     call: 'phone',
-    message: 'message-square'
+    message: 'message-square',
+    expense: 'wallet'
   };
   const ENTITY_LABEL = {
     task: 'Task',
@@ -22,7 +23,8 @@
     file: 'File',
     team_member: 'Team member',
     call: 'Call',
-    message: 'Message'
+    message: 'Message',
+    expense: 'Expense'
   };
   const ENTITY_TONE = {
     task: 'brand',
@@ -32,7 +34,8 @@
     file: 'teal',
     team_member: 'warning',
     call: 'danger',
-    message: 'neutral'
+    message: 'neutral',
+    expense: 'warning'
   };
   const ACTION_LABEL = {
     created: 'created',
