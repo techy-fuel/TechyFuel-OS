@@ -152,7 +152,8 @@
   }
   function Sidebar({
     active,
-    onNavigate
+    onNavigate,
+    hiddenIds
   }) {
     const s0 = readTFSettings();
     const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
@@ -194,11 +195,11 @@
     const displayName = agencyName || 'My Agency';
     const navWithBadge = TF_NAV.map(g => ({
       ...g,
-      items: g.items.map(it => it.id === 'tasks' ? {
+      items: g.items.filter(it => !(hiddenIds || []).includes(it.id)).map(it => it.id === 'tasks' ? {
         ...it,
         badge: taskBadge || undefined
       } : it)
-    }));
+    })).filter(g => g.items.length > 0);
     return /*#__PURE__*/React.createElement("aside", {
       style: {
         width: 'var(--sidebar-width)',
@@ -853,7 +854,8 @@
     onOpenAI,
     children,
     authUser,
-    onSignOut
+    onSignOut,
+    hiddenIds
   }) {
     useLucide();
     const fullH = FULL_HEIGHT_SCREENS.has(active);
@@ -866,7 +868,8 @@
       }
     }, /*#__PURE__*/React.createElement(Sidebar, {
       active: active,
-      onNavigate: onNavigate
+      onNavigate: onNavigate,
+      hiddenIds: hiddenIds
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,

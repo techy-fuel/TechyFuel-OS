@@ -63,7 +63,7 @@ function SidebarItem({ item, active, onClick }) {
   );
 }
 
-function Sidebar({ active, onNavigate }) {
+function Sidebar({ active, onNavigate, hiddenIds }) {
   const s0 = readTFSettings();
   const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
   const [logoUrl,    setLogoUrl]    = React.useState(s0.logoUrl || '');
@@ -104,10 +104,10 @@ function Sidebar({ active, onNavigate }) {
 
   const navWithBadge = TF_NAV.map(g => ({
     ...g,
-    items: g.items.map(it =>
-      it.id === 'tasks' ? { ...it, badge: taskBadge || undefined } : it
-    ),
-  }));
+    items: g.items
+      .filter(it => !(hiddenIds || []).includes(it.id))
+      .map(it => it.id === 'tasks' ? { ...it, badge: taskBadge || undefined } : it),
+  })).filter(g => g.items.length > 0);
 
   return (
     <aside style={{
@@ -378,12 +378,12 @@ function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut }) {
 
 const FULL_HEIGHT_SCREENS = new Set(['chat', 'docs']);
 
-function AppShell({ active, onNavigate, title, crumb, onOpenAI, children, authUser, onSignOut }) {
+function AppShell({ active, onNavigate, title, crumb, onOpenAI, children, authUser, onSignOut, hiddenIds }) {
   useLucide();
   const fullH = FULL_HEIGHT_SCREENS.has(active);
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%', background: 'var(--surface-page)' }}>
-      <Sidebar active={active} onNavigate={onNavigate} />
+      <Sidebar active={active} onNavigate={onNavigate} hiddenIds={hiddenIds} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
         <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onNavigate={onNavigate} authUser={authUser} onSignOut={onSignOut} />
         <main className={fullH ? '' : 'tf-scroll'} style={{ flex: 1, overflowY: fullH ? 'hidden' : 'auto', overflow: fullH ? 'hidden' : undefined }}>{children}</main>
