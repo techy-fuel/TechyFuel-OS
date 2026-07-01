@@ -794,6 +794,7 @@
     }
   }
   function TasksBoard() {
+    useLucide();
     const [activeTab, setActiveTab] = React.useState('kanban');
     const [taskMap, setTaskMap] = React.useState(EMPTY_TASKS);
     const [allTasks, setAllTasks] = React.useState([]);
