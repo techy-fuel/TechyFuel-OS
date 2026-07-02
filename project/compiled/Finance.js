@@ -95,8 +95,8 @@
     return (CURRENCIES.find(c => c.code === code) || CURRENCIES[0]).symbol;
   }
   function fmtAmt(n, currency) {
-    if (!n && n !== 0) return getCurrencySymbol(currency || 'USD') + '0';
-    const sym = getCurrencySymbol(currency || 'USD');
+    if (!n && n !== 0) return getCurrencySymbol(currency || 'PKR') + '0';
+    const sym = getCurrencySymbol(currency || 'PKR');
     const num = Number(n).toLocaleString('en', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2
@@ -141,11 +141,11 @@
     });
     for (const inv of invoices) {
       if (inv.status !== 'paid') continue;
-      const usd = convertCurrency(inv.amount, inv.currency || 'USD', 'USD', rates);
-      if (usd === null) continue;
+      const pkr = convertCurrency(inv.amount, inv.currency || 'PKR', 'PKR', rates);
+      if (pkr === null) continue;
       const key = (inv.due_date || inv.created_at || '').slice(0, 7);
       const m = months.find(x => x.key === key);
-      if (m) m.val += usd;
+      if (m) m.val += pkr;
     }
     return months.map(m => m.val);
   }
@@ -162,7 +162,7 @@
     const agencyName = saved.agencyName || 'TechyFuel OS';
     const agencyEmail = saved.agencyEmail || '';
     const clientName = inv.clients?.name || '—';
-    const currency = inv.currency || 'USD';
+    const currency = inv.currency || 'PKR';
     const sym = getCurrencySymbol(currency);
     const amount = fmtAmt(inv.amount, currency);
     const status = IS[inv.status] || {
@@ -294,7 +294,7 @@
       amount: '',
       due_date: '',
       status: 'draft',
-      currency: 'USD'
+      currency: 'PKR'
     });
     const [fxRates, setFxRates] = React.useState(null); // { base: 'USD', rates: { PKR: 278.5, ... }, fetchedAt }
     const [previewCurrency, setPreviewCurrency] = React.useState('PKR');
@@ -310,10 +310,12 @@
       description: '',
       category: 'salary',
       amount: '',
+      currency: 'PKR',
       date: new Date().toISOString().slice(0, 10),
       project_id: '',
       client_id: ''
     });
+    const [expPreviewCurrency, setExpPreviewCurrency] = React.useState('USD');
     function set(k, v) {
       setForm(f => ({
         ...f,
@@ -361,15 +363,21 @@
     // currency the invoice itself is already in.
     React.useEffect(() => {
       if (form.currency === previewCurrency) {
-        setPreviewCurrency(form.currency === 'USD' ? 'PKR' : 'USD');
+        setPreviewCurrency(form.currency === 'PKR' ? 'USD' : 'PKR');
       }
     }, [form.currency]);
+    React.useEffect(() => {
+      if (expForm.currency === expPreviewCurrency) {
+        setExpPreviewCurrency(expForm.currency === 'PKR' ? 'USD' : 'PKR');
+      }
+    }, [expForm.currency]);
     function openNewExpense() {
       setEditExp(null);
       setExpForm({
         description: '',
         category: 'salary',
         amount: '',
+        currency: 'PKR',
         date: new Date().toISOString().slice(0, 10),
         project_id: '',
         client_id: ''
@@ -382,6 +390,7 @@
         description: exp.description || '',
         category: exp.category || 'other',
         amount: exp.amount ? String(exp.amount) : '',
+        currency: exp.currency || 'PKR',
         date: exp.date ? exp.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
         project_id: exp.project_id || '',
         client_id: exp.client_id || ''
@@ -396,6 +405,7 @@
           description: expForm.description.trim(),
           category: expForm.category,
           amount: Number(expForm.amount),
+          currency: expForm.currency,
           date: expForm.date
         };
         if (expForm.project_id) payload.project_id = expForm.project_id;
@@ -440,7 +450,7 @@
       setExpenses(prev => prev.filter(e => e.id !== exp.id));
     }
     function handleExportExpensesCSV() {
-      const rows = [['Description', 'Category', 'Amount', 'Date', 'Project', 'Client'], ...filteredExpenses.map(e => [e.description, (EXPENSE_CATEGORIES[e.category] || {}).label || e.category, e.amount || 0, e.date || '', e.projects?.name || '', e.clients?.name || ''])];
+      const rows = [['Description', 'Category', 'Amount', 'Currency', 'Date', 'Project', 'Client'], ...filteredExpenses.map(e => [e.description, (EXPENSE_CATEGORIES[e.category] || {}).label || e.category, e.amount || 0, e.currency || 'PKR', e.date || '', e.projects?.name || '', e.clients?.name || ''])];
       const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
       const blob = new Blob([csv], {
         type: 'text/csv'
@@ -472,7 +482,7 @@
         amount: inv.amount ? String(inv.amount) : '',
         due_date: inv.due_date ? inv.due_date.slice(0, 10) : '',
         status: inv.status || 'draft',
-        currency: inv.currency || 'USD'
+        currency: inv.currency || 'PKR'
       });
       setModalOpen(true);
     }
@@ -527,7 +537,7 @@
       } catch {}
     }
     function handleExportCSV() {
-      const rows = [['Invoice #', 'Client', 'Amount', 'Currency', 'Status', 'Due Date'], ...filtered.map(inv => [inv.invoice_no, inv.clients?.name || '', inv.amount || 0, inv.currency || 'USD', inv.status, inv.due_date || ''])];
+      const rows = [['Invoice #', 'Client', 'Amount', 'Currency', 'Status', 'Due Date'], ...filtered.map(inv => [inv.invoice_no, inv.clients?.name || '', inv.amount || 0, inv.currency || 'PKR', inv.status, inv.due_date || ''])];
       const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
       const blob = new Blob([csv], {
         type: 'text/csv'
@@ -545,10 +555,10 @@
       return (inv.invoice_no || '').toLowerCase().includes(q) || (inv.clients?.name || '').toLowerCase().includes(q);
     });
     const rates = fxRates && fxRates.rates;
-    const toUSD = (amount, currency) => convertCurrency(amount, currency || 'USD', 'USD', rates) || 0;
-    const paidRevenue = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
-    const outstanding = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
-    const totalAmount = invoices.reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
+    const toPKR = (amount, currency) => convertCurrency(amount, currency || 'PKR', 'PKR', rates) || 0;
+    const paidRevenue = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + toPKR(i.amount, i.currency), 0);
+    const outstanding = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + toPKR(i.amount, i.currency), 0);
+    const totalAmount = invoices.reduce((s, i) => s + toPKR(i.amount, i.currency), 0);
     const monthBars = buildMonthlyBars(invoices, rates);
     const monthName = new Date().toLocaleDateString('en', {
       month: 'long',
@@ -560,9 +570,9 @@
       return (e.description || '').toLowerCase().includes(q) || (e.category || '').toLowerCase().includes(q);
     });
     const curMonthKey = new Date().toISOString().slice(0, 7);
-    const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-    const totalSalaries = expenses.filter(e => e.category === 'salary').reduce((s, e) => s + Number(e.amount || 0), 0);
-    const monthExpenses = expenses.filter(e => (e.date || '').slice(0, 7) === curMonthKey).reduce((s, e) => s + Number(e.amount || 0), 0);
+    const totalExpenses = expenses.reduce((s, e) => s + toPKR(e.amount, e.currency), 0);
+    const totalSalaries = expenses.filter(e => e.category === 'salary').reduce((s, e) => s + toPKR(e.amount, e.currency), 0);
+    const monthExpenses = expenses.filter(e => (e.date || '').slice(0, 7) === curMonthKey).reduce((s, e) => s + toPKR(e.amount, e.currency), 0);
     const selectStyle = {
       height: 26,
       padding: '0 6px',
@@ -659,16 +669,16 @@
         marginBottom: 16
       }
     }, /*#__PURE__*/React.createElement(StatCard, {
-      label: "Revenue (paid, USD)",
-      value: fmtAmt(paidRevenue, 'USD'),
+      label: "Revenue (paid, PKR)",
+      value: fmtAmt(paidRevenue, 'PKR'),
       delta: "—",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "trending-up"
       }),
       tone: "success"
     }), /*#__PURE__*/React.createElement(StatCard, {
-      label: "Total invoiced (USD)",
-      value: fmtAmt(totalAmount, 'USD'),
+      label: "Total invoiced (PKR)",
+      value: fmtAmt(totalAmount, 'PKR'),
       delta: "—",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "receipt"
@@ -676,7 +686,7 @@
       tone: "brand"
     }), /*#__PURE__*/React.createElement(StatCard, {
       label: "Outstanding",
-      value: fmtAmt(outstanding, 'USD'),
+      value: fmtAmt(outstanding, 'PKR'),
       delta: "—",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "clock"
@@ -704,7 +714,7 @@
         fontWeight: 'var(--fw-bold)',
         marginBottom: 4
       }
-    }, "Paid revenue (USD)"), /*#__PURE__*/React.createElement("div", {
+    }, "Paid revenue (PKR)"), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'baseline',
@@ -718,7 +728,7 @@
         letterSpacing: '-0.02em',
         fontVariantNumeric: 'tabular-nums'
       }
-    }, fmtAmt(paidRevenue, 'USD'))), /*#__PURE__*/React.createElement(Bars, {
+    }, fmtAmt(paidRevenue, 'PKR'))), /*#__PURE__*/React.createElement(Bars, {
       data: monthBars,
       color: "var(--green-400)",
       highlight: "var(--green-600)",
@@ -844,7 +854,7 @@
           color: 'var(--text-muted)',
           marginTop: 2
         }
-      }, inv.currency || 'USD')), /*#__PURE__*/React.createElement("td", {
+      }, inv.currency || 'PKR')), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '10px 16px',
           fontSize: 'var(--text-sm)',
@@ -860,14 +870,14 @@
           color: 'var(--text-strong)',
           fontVariantNumeric: 'tabular-nums'
         }
-      }, fmtAmt(inv.amount, inv.currency), (inv.currency || 'USD') !== 'USD' && rates && /*#__PURE__*/React.createElement("div", {
+      }, fmtAmt(inv.amount, inv.currency), (inv.currency || 'PKR') !== 'PKR' && rates && /*#__PURE__*/React.createElement("div", {
         style: {
           fontSize: 'var(--text-2xs)',
           color: 'var(--text-muted)',
           fontWeight: 'var(--fw-medium)',
           marginTop: 2
         }
-      }, "≈ ", fmtAmt(toUSD(inv.amount, inv.currency), 'USD'))), /*#__PURE__*/React.createElement("td", {
+      }, "≈ ", fmtAmt(toPKR(inv.amount, inv.currency), 'PKR'))), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '10px 16px'
         }
@@ -950,24 +960,24 @@
         marginBottom: 16
       }
     }, /*#__PURE__*/React.createElement(StatCard, {
-      label: "Total expenses",
-      value: fmtAmt(totalExpenses, 'USD'),
+      label: "Total expenses (PKR)",
+      value: fmtAmt(totalExpenses, 'PKR'),
       delta: "—",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "wallet"
       }),
       tone: "warning"
     }), /*#__PURE__*/React.createElement(StatCard, {
-      label: "Salaries",
-      value: fmtAmt(totalSalaries, 'USD'),
+      label: "Salaries (PKR)",
+      value: fmtAmt(totalSalaries, 'PKR'),
       delta: "—",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "user-plus"
       }),
       tone: "violet"
     }), /*#__PURE__*/React.createElement(StatCard, {
-      label: "This month",
-      value: fmtAmt(monthExpenses, 'USD'),
+      label: "This month (PKR)",
+      value: fmtAmt(monthExpenses, 'PKR'),
       delta: "—",
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "calendar"
@@ -1108,7 +1118,14 @@
           color: 'var(--text-strong)',
           fontVariantNumeric: 'tabular-nums'
         }
-      }, fmtAmt(exp.amount, 'USD')), /*#__PURE__*/React.createElement("td", {
+      }, fmtAmt(exp.amount, exp.currency || 'PKR'), (exp.currency || 'PKR') !== 'PKR' && rates && /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-2xs)',
+          color: 'var(--text-muted)',
+          fontWeight: 'var(--fw-medium)',
+          marginTop: 2
+        }
+      }, "≈ ", fmtAmt(toPKR(exp.amount, exp.currency), 'PKR'))), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '10px 16px',
           fontSize: 'var(--text-sm)',
@@ -1293,7 +1310,7 @@
       key: id,
       value: id
     }, c.label)))), /*#__PURE__*/React.createElement(FormRow, {
-      label: "Amount (USD)",
+      label: "Amount",
       required: true
     }, /*#__PURE__*/React.createElement("input", {
       style: FF.input,
@@ -1301,7 +1318,42 @@
       placeholder: "0",
       value: expForm.amount,
       onChange: e => setEx('amount', e.target.value)
-    }))), /*#__PURE__*/React.createElement("div", {
+    }))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Currency"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: expForm.currency,
+      onChange: e => setEx('currency', e.target.value)
+    }, CURRENCIES.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.code,
+      value: c.code
+    }, c.symbol, " ", c.name, " (", c.code, ")")))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Convert to (preview only — doesn't change the expense)"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement("select", {
+      style: {
+        ...FF.select,
+        flex: '0 0 auto',
+        width: 100
+      },
+      value: expPreviewCurrency,
+      onChange: e => setExpPreviewCurrency(e.target.value)
+    }, CURRENCIES.filter(c => c.code !== expForm.currency).map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.code,
+      value: c.code
+    }, c.code))), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, expForm.amount ? rates ? fmtAmt(convertCurrency(expForm.amount, expForm.currency, expPreviewCurrency, rates), expPreviewCurrency) : 'Rates loading…' : '—'))), /*#__PURE__*/React.createElement("div", {
       style: FF.row2
     }, /*#__PURE__*/React.createElement(FormRow, {
       label: "Date"

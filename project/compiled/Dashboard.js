@@ -44,11 +44,15 @@
       }
     }, children);
   }
+
+  // Home/reporting currency is PKR — getDashboardStats() already converts
+  // every invoice into PKR (via live FX rates) before summing, regardless of
+  // what currency the client actually paid in.
   function fmtMoney(n) {
-    if (!n) return '$0';
-    if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
-    if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
-    return '$' + Math.round(n);
+    if (!n) return '₨0';
+    if (n >= 1000000) return '₨' + (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return '₨' + (n / 1000).toFixed(1) + 'K';
+    return '₨' + Math.round(n);
   }
   function fmtDueDate(ds) {
     if (!ds) return '—';
@@ -601,7 +605,7 @@
         marginBottom: 16
       }
     }, /*#__PURE__*/React.createElement(StatCard, {
-      label: "Revenue (paid)",
+      label: "Revenue (paid, PKR)",
       value: revenueDisplay,
       icon: /*#__PURE__*/React.createElement(Icon, {
         name: "dollar-sign"

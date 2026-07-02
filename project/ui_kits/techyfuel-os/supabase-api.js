@@ -27,17 +27,33 @@
     insertActivity(action, entityType, row && row.id, row && (row[nameField] || row.name || row.title));
   }
 
+  // The agency's home/reporting currency is PKR — clients pay in USD, PKR,
+  // SAR, OMR etc, so any figure that sums across invoices/expenses has to
+  // convert each one into PKR first using the live FX rates (USD-based:
+  // rates.PKR == how many PKR per 1 USD) before adding them up.
+  function fxToPKR(amount, currency, rates) {
+    const n = Number(amount);
+    if (!n) return 0;
+    if (!currency || currency === 'PKR') return n;
+    if (!rates) return 0; // rates not loaded yet — don't misreport a wrong total
+    const usd = currency === 'USD' ? n : (rates[currency] ? n / rates[currency] : null);
+    if (usd === null) return 0;
+    return rates.PKR ? usd * rates.PKR : 0;
+  }
+
   // Convenience: expose typed query helpers on window.API
   window.API = {
     // ── DASHBOARD ────────────────────────────────────────
     getDashboardStats: async () => {
-      const [clients, projects, tasks, invoices] = await Promise.all([
+      const [clients, projects, tasks, invoices, fx] = await Promise.all([
         client.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         client.from('projects').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         client.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'done'),
-        client.from('invoices').select('amount').eq('status', 'paid'),
+        client.from('invoices').select('amount, currency').eq('status', 'paid'),
+        window.API.getFxRates().catch(() => null),
       ]);
-      const revenue = invoices.data?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
+      const rates = fx && fx.rates;
+      const revenue = (invoices.data || []).reduce((s, r) => s + fxToPKR(r.amount, r.currency, rates), 0);
       return {
         activeClients:  clients.count  ?? 0,
         activeProjects: projects.count ?? 0,

@@ -14,11 +14,14 @@ function LinkBtn({ children, onClick }) {
   return <button onClick={onClick} style={{ background: 'none', border: 'none', color: 'var(--text-link)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer', padding: 0 }}>{children}</button>;
 }
 
+// Home/reporting currency is PKR — getDashboardStats() already converts
+// every invoice into PKR (via live FX rates) before summing, regardless of
+// what currency the client actually paid in.
 function fmtMoney(n) {
-  if (!n) return '$0';
-  if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000)    return '$' + (n / 1000).toFixed(1) + 'K';
-  return '$' + Math.round(n);
+  if (!n) return '₨0';
+  if (n >= 1000000) return '₨' + (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return '₨' + (n / 1000).toFixed(1) + 'K';
+  return '₨' + Math.round(n);
 }
 
 function fmtDueDate(ds) {
@@ -282,7 +285,7 @@ function ExecutiveDashboard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
-        <StatCard label="Revenue (paid)" value={revenueDisplay} icon={<Icon name="dollar-sign" />} tone="success" />
+        <StatCard label="Revenue (paid, PKR)" value={revenueDisplay} icon={<Icon name="dollar-sign" />} tone="success" />
         <StatCard label="Active projects" value={String(stats.activeProjects)} icon={<Icon name="folder-kanban" />} tone="brand" />
         <StatCard label="Open tasks" value={String(stats.openTasks)} icon={<Icon name="circle-check-big" />} tone="warning" />
         <StatCard label="Active clients" value={String(stats.activeClients)} icon={<Icon name="users" />} tone="violet" />

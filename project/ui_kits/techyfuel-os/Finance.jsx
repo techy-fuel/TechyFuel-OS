@@ -36,8 +36,8 @@ function getCurrencySymbol(code) {
 }
 
 function fmtAmt(n, currency) {
-  if (!n && n !== 0) return (getCurrencySymbol(currency || 'USD')) + '0';
-  const sym = getCurrencySymbol(currency || 'USD');
+  if (!n && n !== 0) return (getCurrencySymbol(currency || 'PKR')) + '0';
+  const sym = getCurrencySymbol(currency || 'PKR');
   const num = Number(n).toLocaleString('en', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   return sym + num;
 }
@@ -71,11 +71,11 @@ function buildMonthlyBars(invoices, rates) {
   });
   for (const inv of invoices) {
     if (inv.status !== 'paid') continue;
-    const usd = convertCurrency(inv.amount, inv.currency || 'USD', 'USD', rates);
-    if (usd === null) continue;
+    const pkr = convertCurrency(inv.amount, inv.currency || 'PKR', 'PKR', rates);
+    if (pkr === null) continue;
     const key = (inv.due_date || inv.created_at || '').slice(0, 7);
     const m = months.find(x => x.key === key);
-    if (m) m.val += usd;
+    if (m) m.val += pkr;
   }
   return months.map(m => m.val);
 }
@@ -86,7 +86,7 @@ function printInvoicePDF(inv, clients) {
   const agencyName  = saved.agencyName  || 'TechyFuel OS';
   const agencyEmail = saved.agencyEmail || '';
   const clientName  = inv.clients?.name || '—';
-  const currency    = inv.currency || 'USD';
+  const currency    = inv.currency || 'PKR';
   const sym         = getCurrencySymbol(currency);
   const amount      = fmtAmt(inv.amount, currency);
   const status      = IS[inv.status] || { label: inv.status };
@@ -199,7 +199,7 @@ function Finance() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editInv,   setEditInv]   = React.useState(null);
   const [saving,    setSaving]    = React.useState(false);
-  const [form, setForm] = React.useState({ invoice_no: '', client_id: '', amount: '', due_date: '', status: 'draft', currency: 'USD' });
+  const [form, setForm] = React.useState({ invoice_no: '', client_id: '', amount: '', due_date: '', status: 'draft', currency: 'PKR' });
   const [fxRates, setFxRates] = React.useState(null); // { base: 'USD', rates: { PKR: 278.5, ... }, fetchedAt }
   const [previewCurrency, setPreviewCurrency] = React.useState('PKR');
 
@@ -210,7 +210,8 @@ function Finance() {
   const [expModalOpen, setExpModalOpen] = React.useState(false);
   const [editExp,     setEditExp]     = React.useState(null);
   const [expSaving,   setExpSaving]   = React.useState(false);
-  const [expForm, setExpForm] = React.useState({ description: '', category: 'salary', amount: '', date: new Date().toISOString().slice(0, 10), project_id: '', client_id: '' });
+  const [expForm, setExpForm] = React.useState({ description: '', category: 'salary', amount: '', currency: 'PKR', date: new Date().toISOString().slice(0, 10), project_id: '', client_id: '' });
+  const [expPreviewCurrency, setExpPreviewCurrency] = React.useState('USD');
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
   function setEx(k, v) { setExpForm(f => ({ ...f, [k]: v })); }
@@ -242,13 +243,19 @@ function Finance() {
   // currency the invoice itself is already in.
   React.useEffect(() => {
     if (form.currency === previewCurrency) {
-      setPreviewCurrency(form.currency === 'USD' ? 'PKR' : 'USD');
+      setPreviewCurrency(form.currency === 'PKR' ? 'USD' : 'PKR');
     }
   }, [form.currency]);
 
+  React.useEffect(() => {
+    if (expForm.currency === expPreviewCurrency) {
+      setExpPreviewCurrency(expForm.currency === 'PKR' ? 'USD' : 'PKR');
+    }
+  }, [expForm.currency]);
+
   function openNewExpense() {
     setEditExp(null);
-    setExpForm({ description: '', category: 'salary', amount: '', date: new Date().toISOString().slice(0, 10), project_id: '', client_id: '' });
+    setExpForm({ description: '', category: 'salary', amount: '', currency: 'PKR', date: new Date().toISOString().slice(0, 10), project_id: '', client_id: '' });
     setExpModalOpen(true);
   }
 
@@ -258,6 +265,7 @@ function Finance() {
       description: exp.description || '',
       category:    exp.category    || 'other',
       amount:      exp.amount      ? String(exp.amount) : '',
+      currency:    exp.currency    || 'PKR',
       date:        exp.date        ? exp.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
       project_id:  exp.project_id  || '',
       client_id:   exp.client_id   || '',
@@ -269,7 +277,7 @@ function Finance() {
     if (!expForm.description.trim() || !expForm.amount) return;
     setExpSaving(true);
     try {
-      const payload = { description: expForm.description.trim(), category: expForm.category, amount: Number(expForm.amount), date: expForm.date };
+      const payload = { description: expForm.description.trim(), category: expForm.category, amount: Number(expForm.amount), currency: expForm.currency, date: expForm.date };
       if (expForm.project_id) payload.project_id = expForm.project_id;
       if (expForm.client_id)  payload.client_id  = expForm.client_id;
       const projObj = projects.find(p => p.id === expForm.project_id);
@@ -297,8 +305,8 @@ function Finance() {
 
   function handleExportExpensesCSV() {
     const rows = [
-      ['Description', 'Category', 'Amount', 'Date', 'Project', 'Client'],
-      ...filteredExpenses.map(e => [e.description, (EXPENSE_CATEGORIES[e.category] || {}).label || e.category, e.amount || 0, e.date || '', e.projects?.name || '', e.clients?.name || '']),
+      ['Description', 'Category', 'Amount', 'Currency', 'Date', 'Project', 'Client'],
+      ...filteredExpenses.map(e => [e.description, (EXPENSE_CATEGORIES[e.category] || {}).label || e.category, e.amount || 0, e.currency || 'PKR', e.date || '', e.projects?.name || '', e.clients?.name || '']),
     ];
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -322,7 +330,7 @@ function Finance() {
       amount:     inv.amount     ? String(inv.amount) : '',
       due_date:   inv.due_date   ? inv.due_date.slice(0, 10) : '',
       status:     inv.status     || 'draft',
-      currency:   inv.currency   || 'USD',
+      currency:   inv.currency   || 'PKR',
     });
     setModalOpen(true);
   }
@@ -361,7 +369,7 @@ function Finance() {
   function handleExportCSV() {
     const rows = [
       ['Invoice #', 'Client', 'Amount', 'Currency', 'Status', 'Due Date'],
-      ...filtered.map(inv => [inv.invoice_no, inv.clients?.name || '', inv.amount || 0, inv.currency || 'USD', inv.status, inv.due_date || '']),
+      ...filtered.map(inv => [inv.invoice_no, inv.clients?.name || '', inv.amount || 0, inv.currency || 'PKR', inv.status, inv.due_date || '']),
     ];
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -378,10 +386,10 @@ function Finance() {
   });
 
   const rates = fxRates && fxRates.rates;
-  const toUSD = (amount, currency) => convertCurrency(amount, currency || 'USD', 'USD', rates) || 0;
-  const paidRevenue  = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
-  const outstanding  = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
-  const totalAmount  = invoices.reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
+  const toPKR = (amount, currency) => convertCurrency(amount, currency || 'PKR', 'PKR', rates) || 0;
+  const paidRevenue  = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + toPKR(i.amount, i.currency), 0);
+  const outstanding  = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + toPKR(i.amount, i.currency), 0);
+  const totalAmount  = invoices.reduce((s, i) => s + toPKR(i.amount, i.currency), 0);
   const monthBars    = buildMonthlyBars(invoices, rates);
   const monthName    = new Date().toLocaleDateString('en', { month: 'long', year: 'numeric' });
 
@@ -391,9 +399,9 @@ function Finance() {
     return (e.description || '').toLowerCase().includes(q) || (e.category || '').toLowerCase().includes(q);
   });
   const curMonthKey    = new Date().toISOString().slice(0, 7);
-  const totalExpenses  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const totalSalaries  = expenses.filter(e => e.category === 'salary').reduce((s, e) => s + Number(e.amount || 0), 0);
-  const monthExpenses  = expenses.filter(e => (e.date || '').slice(0, 7) === curMonthKey).reduce((s, e) => s + Number(e.amount || 0), 0);
+  const totalExpenses  = expenses.reduce((s, e) => s + toPKR(e.amount, e.currency), 0);
+  const totalSalaries  = expenses.filter(e => e.category === 'salary').reduce((s, e) => s + toPKR(e.amount, e.currency), 0);
+  const monthExpenses  = expenses.filter(e => (e.date || '').slice(0, 7) === curMonthKey).reduce((s, e) => s + toPKR(e.amount, e.currency), 0);
 
   const selectStyle = { height: 26, padding: '0 6px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', background: 'var(--slate-0)', cursor: 'pointer' };
 
@@ -422,17 +430,17 @@ function Finance() {
       {activeTab === 'invoices' && (
       <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
-        <StatCard label="Revenue (paid, USD)" value={fmtAmt(paidRevenue, 'USD')} delta="—" icon={<Icon name="trending-up" />} tone="success" />
-        <StatCard label="Total invoiced (USD)" value={fmtAmt(totalAmount, 'USD')} delta="—" icon={<Icon name="receipt" />} tone="brand" />
-        <StatCard label="Outstanding"          value={fmtAmt(outstanding, 'USD')} delta="—" icon={<Icon name="clock" />}   tone="warning" />
+        <StatCard label="Revenue (paid, PKR)" value={fmtAmt(paidRevenue, 'PKR')} delta="—" icon={<Icon name="trending-up" />} tone="success" />
+        <StatCard label="Total invoiced (PKR)" value={fmtAmt(totalAmount, 'PKR')} delta="—" icon={<Icon name="receipt" />} tone="brand" />
+        <StatCard label="Outstanding"          value={fmtAmt(outstanding, 'PKR')} delta="—" icon={<Icon name="clock" />}   tone="warning" />
         <StatCard label="Invoices"             value={String(invoices.length)}    delta="—" icon={<Icon name="file-text" />} tone="violet" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
         <Card padding="lg">
-          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4 }}>Paid revenue (USD)</h3>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4 }}>Paid revenue (PKR)</h3>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{fmtAmt(paidRevenue, 'USD')}</span>
+            <span style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{fmtAmt(paidRevenue, 'PKR')}</span>
           </div>
           <Bars data={monthBars} color="var(--green-400)" highlight="var(--green-600)" height={140} />
         </Card>
@@ -472,14 +480,14 @@ function Finance() {
                     <tr key={inv.id || i} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '10px 16px' }}>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-body)' }}>{inv.invoice_no}</div>
-                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 2 }}>{inv.currency || 'USD'}</div>
+                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 2 }}>{inv.currency || 'PKR'}</div>
                       </td>
                       <td style={{ padding: '10px 16px', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{clientName}</td>
                       <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>
                         {fmtAmt(inv.amount, inv.currency)}
-                        {(inv.currency || 'USD') !== 'USD' && rates && (
+                        {(inv.currency || 'PKR') !== 'PKR' && rates && (
                           <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', fontWeight: 'var(--fw-medium)', marginTop: 2 }}>
-                            ≈ {fmtAmt(toUSD(inv.amount, inv.currency), 'USD')}
+                            ≈ {fmtAmt(toPKR(inv.amount, inv.currency), 'PKR')}
                           </div>
                         )}
                       </td>
@@ -517,9 +525,9 @@ function Finance() {
       {activeTab === 'expenses' && (
       <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
-        <StatCard label="Total expenses"      value={fmtAmt(totalExpenses, 'USD')} delta="—" icon={<Icon name="wallet" />}       tone="warning" />
-        <StatCard label="Salaries"            value={fmtAmt(totalSalaries, 'USD')} delta="—" icon={<Icon name="user-plus" />}   tone="violet" />
-        <StatCard label="This month"          value={fmtAmt(monthExpenses, 'USD')} delta="—" icon={<Icon name="calendar" />}     tone="info" />
+        <StatCard label="Total expenses (PKR)" value={fmtAmt(totalExpenses, 'PKR')} delta="—" icon={<Icon name="wallet" />}       tone="warning" />
+        <StatCard label="Salaries (PKR)"       value={fmtAmt(totalSalaries, 'PKR')} delta="—" icon={<Icon name="user-plus" />}   tone="violet" />
+        <StatCard label="This month (PKR)"     value={fmtAmt(monthExpenses, 'PKR')} delta="—" icon={<Icon name="calendar" />}     tone="info" />
         <StatCard label="Entries"             value={String(expenses.length)}      delta="—" icon={<Icon name="receipt" />}      tone="brand" />
       </div>
 
@@ -557,7 +565,14 @@ function Finance() {
                   <tr key={exp.id || i} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                     <td style={{ padding: '10px 16px', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{exp.description}</td>
                     <td style={{ padding: '10px 16px' }}><Badge tone={cat.tone} size="sm">{cat.label}</Badge></td>
-                    <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>{fmtAmt(exp.amount, 'USD')}</td>
+                    <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmtAmt(exp.amount, exp.currency || 'PKR')}
+                      {(exp.currency || 'PKR') !== 'PKR' && rates && (
+                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', fontWeight: 'var(--fw-medium)', marginTop: 2 }}>
+                          ≈ {fmtAmt(toPKR(exp.amount, exp.currency), 'PKR')}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ padding: '10px 16px', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>{fmtDate(exp.date)}</td>
                     <td style={{ padding: '10px 16px', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{exp.projects?.name || exp.clients?.name || '—'}</td>
                     <td style={{ padding: '10px 16px' }}>
@@ -640,10 +655,29 @@ function Finance() {
               {Object.entries(EXPENSE_CATEGORIES).map(([id, c]) => <option key={id} value={id}>{c.label}</option>)}
             </select>
           </FormRow>
-          <FormRow label="Amount (USD)" required>
+          <FormRow label="Amount" required>
             <input style={FF.input} type="number" placeholder="0" value={expForm.amount} onChange={e => setEx('amount', e.target.value)} />
           </FormRow>
         </div>
+        <FormRow label="Currency">
+          <select style={FF.select} value={expForm.currency} onChange={e => setEx('currency', e.target.value)}>
+            {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.symbol} {c.name} ({c.code})</option>)}
+          </select>
+        </FormRow>
+        <FormRow label="Convert to (preview only — doesn't change the expense)">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <select style={{ ...FF.select, flex: '0 0 auto', width: 100 }} value={expPreviewCurrency} onChange={e => setExpPreviewCurrency(e.target.value)}>
+              {CURRENCIES.filter(c => c.code !== expForm.currency).map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+            </select>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>
+              {expForm.amount
+                ? (rates
+                    ? fmtAmt(convertCurrency(expForm.amount, expForm.currency, expPreviewCurrency, rates), expPreviewCurrency)
+                    : 'Rates loading…')
+                : '—'}
+            </span>
+          </div>
+        </FormRow>
         <div style={FF.row2}>
           <FormRow label="Date">
             <input style={FF.input} type="date" value={expForm.date} onChange={e => setEx('date', e.target.value)} />

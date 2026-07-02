@@ -66,7 +66,7 @@
       CAD: 'CA$',
       AUD: 'A$'
     };
-    return (syms[currency || 'USD'] || '$') + Number(n || 0).toLocaleString();
+    return (syms[currency || 'PKR'] || '₨') + Number(n || 0).toLocaleString();
   }
   function getSaved() {
     try {
@@ -74,6 +74,18 @@
     } catch {
       return {};
     }
+  }
+
+  // Home/reporting currency is PKR — every invoice total in these reports
+  // converts through live FX rates before summing, same as the Finance screen.
+  function toPKR(amount, currency, rates) {
+    const n = Number(amount);
+    if (!n) return 0;
+    if (!currency || currency === 'PKR') return n;
+    if (!rates) return 0;
+    const usd = currency === 'USD' ? n : rates[currency] ? n / rates[currency] : null;
+    if (usd === null) return 0;
+    return rates.PKR ? usd * rates.PKR : 0;
   }
 
   /* ── PDF print window ──────────────────────────────────────────── */
@@ -137,12 +149,13 @@ ${bodyHtml}
 
   /* ── Report data fetchers ──────────────────────────────────────── */
   async function runClients(fmt) {
-    const [cr, pr, ir] = await Promise.all([window.API.getClients(), window.API.getProjects(), window.API.getInvoices()]);
+    const [cr, pr, ir, fx] = await Promise.all([window.API.getClients(), window.API.getProjects(), window.API.getInvoices(), window.API.getFxRates().catch(() => null)]);
     const clients = cr.data || [],
       projects = pr.data || [],
       invoices = ir.data || [];
+    const rates = fx && fx.rates;
     const rows = clients.map(c => {
-      const paid = invoices.filter(i => i.client_id === c.id && i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
+      const paid = invoices.filter(i => i.client_id === c.id && i.status === 'paid').reduce((s, i) => s + toPKR(i.amount, i.currency, rates), 0);
       return {
         name: c.company || c.name,
         status: c.status || 'active',
@@ -151,20 +164,21 @@ ${bodyHtml}
         paid
       };
     });
-    if (fmt === 'csv') return downloadCSV('client-performance.csv', ['Client', 'Status', 'Projects', 'Invoices', 'Paid Revenue'], rows.map(r => [r.name, r.status, r.proj, r.inv, r.paid]));
+    if (fmt === 'csv') return downloadCSV('client-performance.csv', ['Client', 'Status', 'Projects', 'Invoices', 'Paid Revenue (PKR)'], rows.map(r => [r.name, r.status, r.proj, r.inv, r.paid]));
     const sc = {
       active: 'bs',
       inactive: 'bn',
       churned: 'bd'
     };
+    const totalInvoicedPKR = invoices.reduce((s, i) => s + toPKR(i.amount, i.currency, rates), 0);
     openPDF('Client Performance Report', `<div class="grid">
       <div class="box"><label>Clients</label><div class="v">${clients.length}</div></div>
       <div class="box"><label>Active</label><div class="v">${clients.filter(c => c.status === 'active').length}</div></div>
       <div class="box"><label>Projects</label><div class="v">${projects.length}</div></div>
-      <div class="box"><label>Total invoiced</label><div class="v">$${invoices.reduce((s, i) => s + Number(i.amount || 0), 0).toLocaleString()}</div></div>
+      <div class="box"><label>Total invoiced (PKR)</label><div class="v">₨${Math.round(totalInvoicedPKR).toLocaleString()}</div></div>
     </div>
-    <table><thead><tr><th>Client</th><th>Status</th><th class="r">Projects</th><th class="r">Invoices</th><th class="r">Paid Revenue</th></tr></thead><tbody>
-    ${rows.map(r => `<tr><td>${r.name}</td><td><span class="b ${sc[r.status] || 'bn'}">${r.status}</span></td><td class="r">${r.proj}</td><td class="r">${r.inv}</td><td class="r">$${r.paid.toLocaleString()}</td></tr>`).join('')}
+    <table><thead><tr><th>Client</th><th>Status</th><th class="r">Projects</th><th class="r">Invoices</th><th class="r">Paid Revenue (PKR)</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${r.name}</td><td><span class="b ${sc[r.status] || 'bn'}">${r.status}</span></td><td class="r">${r.proj}</td><td class="r">${r.inv}</td><td class="r">₨${Math.round(r.paid).toLocaleString()}</td></tr>`).join('')}
     </tbody></table>`);
   }
   async function runTeam(fmt) {
@@ -190,11 +204,13 @@ ${bodyHtml}
     </tbody></table>`);
   }
   async function runRevenue(fmt) {
-    const ir = await window.API.getInvoices();
+    const [ir, fx] = await Promise.all([window.API.getInvoices(), window.API.getFxRates().catch(() => null)]);
     const invoices = ir.data || [];
-    const paid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
-    const outstanding = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount || 0), 0);
-    if (fmt === 'csv') return downloadCSV('revenue-report.csv', ['Invoice #', 'Client', 'Amount', 'Currency', 'Status', 'Due Date'], invoices.map(i => [i.invoice_no, i.clients?.name || '—', i.amount || 0, i.currency || 'USD', i.status, i.due_date || '']));
+    const rates = fx && fx.rates;
+    const totalInvoicedPKR = invoices.reduce((s, i) => s + toPKR(i.amount, i.currency, rates), 0);
+    const paid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + toPKR(i.amount, i.currency, rates), 0);
+    const outstanding = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + toPKR(i.amount, i.currency, rates), 0);
+    if (fmt === 'csv') return downloadCSV('revenue-report.csv', ['Invoice #', 'Client', 'Amount', 'Currency', 'Amount (PKR)', 'Status', 'Due Date'], invoices.map(i => [i.invoice_no, i.clients?.name || '—', i.amount || 0, i.currency || 'PKR', Math.round(toPKR(i.amount, i.currency, rates)), i.status, i.due_date || '']));
     const sc = {
       paid: 'bs',
       sent: 'bn',
@@ -203,9 +219,9 @@ ${bodyHtml}
       cancelled: 'bn'
     };
     openPDF('Revenue & Profit Report', `<div class="grid">
-      <div class="box"><label>Total Invoiced</label><div class="v">$${invoices.reduce((s, i) => s + Number(i.amount || 0), 0).toLocaleString()}</div></div>
-      <div class="box"><label>Paid Revenue</label><div class="v">$${paid.toLocaleString()}</div></div>
-      <div class="box"><label>Outstanding</label><div class="v">$${outstanding.toLocaleString()}</div></div>
+      <div class="box"><label>Total Invoiced (PKR)</label><div class="v">₨${Math.round(totalInvoicedPKR).toLocaleString()}</div></div>
+      <div class="box"><label>Paid Revenue (PKR)</label><div class="v">₨${Math.round(paid).toLocaleString()}</div></div>
+      <div class="box"><label>Outstanding (PKR)</label><div class="v">₨${Math.round(outstanding).toLocaleString()}</div></div>
       <div class="box"><label>Invoices</label><div class="v">${invoices.length}</div></div>
     </div>
     <table><thead><tr><th>Invoice #</th><th>Client</th><th class="r">Amount</th><th>Status</th><th>Due Date</th></tr></thead><tbody>
