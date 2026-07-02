@@ -343,6 +343,10 @@ function Finance() {
       if (form.client_id) payload.client_id = form.client_id;
       if (form.amount)    payload.amount    = Number(form.amount);
       if (form.due_date)  payload.due_date  = form.due_date;
+      // Track when it was actually marked paid, so Dashboard's "This month"
+      // revenue filter has a real date to go on instead of just due_date.
+      if (form.status === 'paid' && editInv?.status !== 'paid') payload.paid_at = new Date().toISOString();
+      else if (form.status !== 'paid' && editInv?.status === 'paid') payload.paid_at = null;
       const clientObj = clients.find(c => c.id === form.client_id);
       const clientsData = clientObj ? { name: clientObj.company || clientObj.name } : null;
 
@@ -360,9 +364,12 @@ function Finance() {
 
   async function handleStatusChange(inv, newStatus) {
     if (!window.API) return;
+    const changes = { status: newStatus };
+    if (newStatus === 'paid' && inv.status !== 'paid') changes.paid_at = new Date().toISOString();
+    else if (newStatus !== 'paid' && inv.status === 'paid') changes.paid_at = null;
     try {
-      await window.API.updateInvoice(inv.id, { status: newStatus });
-      setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: newStatus } : i));
+      await window.API.updateInvoice(inv.id, changes);
+      setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, ...changes } : i));
     } catch {}
   }
 

@@ -24,6 +24,14 @@ function fmtMoney(n) {
   return '₨' + Math.round(n);
 }
 
+const PERIODS = [
+  { id: 'month',      label: 'This month' },
+  { id: 'last_month', label: 'Last month' },
+  { id: 'quarter',    label: 'This quarter' },
+  { id: 'year',       label: 'This year' },
+  { id: 'all',        label: 'All time' },
+];
+
 function fmtDueDate(ds) {
   if (!ds) return '—';
   const d = new Date(ds);
@@ -193,17 +201,34 @@ function ExecutiveDashboard() {
   const [saving,    setSaving]    = React.useState(false);
   const [statsLoaded, setStatsLoaded] = React.useState(false);
   const [form, setForm] = React.useState({ name: '', client_id: '', budget: '', due_date: '', priority: 'medium', status: 'active' });
+  const [period, setPeriod] = React.useState('month');
+  const [periodOpen, setPeriodOpen] = React.useState(false);
+  const periodRef = React.useRef(null);
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+  React.useEffect(() => {
+    function onClickOutside(e) { if (periodRef.current && !periodRef.current.contains(e.target)) setPeriodOpen(false); }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  // Revenue is the only figure that's period-scoped — refetch it whenever
+  // the period picker changes.
+  React.useEffect(() => {
+    if (!window.API) return;
+    (async () => {
+      try {
+        const s = await window.API.getDashboardStats(period);
+        if (s) { setStats(s); setStatsLoaded(true); }
+      } catch {}
+    })();
+  }, [period]);
 
   React.useEffect(() => {
     if (!window.API) return;
 
     (async () => {
-      try {
-        const s = await window.API.getDashboardStats();
-        if (s) { setStats(s); setStatsLoaded(true); }
-      } catch {}
       try {
         const r = await window.API.getTasks();
         if (r.data) {
@@ -275,8 +300,22 @@ function ExecutiveDashboard() {
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Executive dashboard</h1>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 36, padding: '0 12px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)' }}>
-            <Icon name="calendar" size={16} style={{ color: 'var(--text-muted)' }} /> This month <Icon name="chevron-down" size={15} style={{ color: 'var(--text-subtle)' }} />
+          <div ref={periodRef} style={{ position: 'relative' }}>
+            <button onClick={() => setPeriodOpen(o => !o)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 36, padding: '0 12px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
+              <Icon name="calendar" size={16} style={{ color: 'var(--text-muted)' }} /> {(PERIODS.find(p => p.id === period) || PERIODS[0]).label} <Icon name="chevron-down" size={15} style={{ color: 'var(--text-subtle)' }} />
+            </button>
+            {periodOpen && (
+              <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200, background: 'var(--slate-0)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-xl)', minWidth: 160, overflow: 'hidden' }}>
+                {PERIODS.map(p => (
+                  <div key={p.id} onClick={() => { setPeriod(p.id); setPeriodOpen(false); }}
+                    style={{ padding: '9px 14px', fontSize: 'var(--text-sm)', fontWeight: p.id === period ? 'var(--fw-bold)' : 'var(--fw-medium)', color: p.id === period ? 'var(--blue-600)' : 'var(--text-body)', background: p.id === period ? 'var(--blue-50)' : 'transparent', cursor: 'pointer' }}
+                    onMouseEnter={e => { if (p.id !== period) e.currentTarget.style.background = 'var(--slate-50)'; }}
+                    onMouseLeave={e => { if (p.id !== period) e.currentTarget.style.background = 'transparent'; }}>
+                    {p.label}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
             <Icon name="plus" size={16} /> New project
@@ -296,7 +335,7 @@ function ExecutiveDashboard() {
           <SectionHead title="Revenue (paid invoices)" />
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
             <span style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{revenueDisplay}</span>
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>total collected</span>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>collected · {(PERIODS.find(p => p.id === period) || PERIODS[0]).label.toLowerCase()}</span>
           </div>
           {statsLoaded && stats.revenue === 0 ? (
             <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>No paid invoices yet</div>

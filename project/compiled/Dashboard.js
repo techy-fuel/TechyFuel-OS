@@ -54,6 +54,22 @@
     if (n >= 1000) return '₨' + (n / 1000).toFixed(1) + 'K';
     return '₨' + Math.round(n);
   }
+  const PERIODS = [{
+    id: 'month',
+    label: 'This month'
+  }, {
+    id: 'last_month',
+    label: 'Last month'
+  }, {
+    id: 'quarter',
+    label: 'This quarter'
+  }, {
+    id: 'year',
+    label: 'This year'
+  }, {
+    id: 'all',
+    label: 'All time'
+  }];
   function fmtDueDate(ds) {
     if (!ds) return '—';
     const d = new Date(ds);
@@ -414,6 +430,9 @@
       priority: 'medium',
       status: 'active'
     });
+    const [period, setPeriod] = React.useState('month');
+    const [periodOpen, setPeriodOpen] = React.useState(false);
+    const periodRef = React.useRef(null);
     function set(k, v) {
       setForm(f => ({
         ...f,
@@ -421,15 +440,30 @@
       }));
     }
     React.useEffect(() => {
+      function onClickOutside(e) {
+        if (periodRef.current && !periodRef.current.contains(e.target)) setPeriodOpen(false);
+      }
+      document.addEventListener('mousedown', onClickOutside);
+      return () => document.removeEventListener('mousedown', onClickOutside);
+    }, []);
+
+    // Revenue is the only figure that's period-scoped — refetch it whenever
+    // the period picker changes.
+    React.useEffect(() => {
       if (!window.API) return;
       (async () => {
         try {
-          const s = await window.API.getDashboardStats();
+          const s = await window.API.getDashboardStats(period);
           if (s) {
             setStats(s);
             setStatsLoaded(true);
           }
         } catch {}
+      })();
+    }, [period]);
+    React.useEffect(() => {
+      if (!window.API) return;
+      (async () => {
         try {
           const r = await window.API.getTasks();
           if (r.data) {
@@ -551,6 +585,12 @@
         gap: 8
       }
     }, /*#__PURE__*/React.createElement("div", {
+      ref: periodRef,
+      style: {
+        position: 'relative'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setPeriodOpen(o => !o),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -560,9 +600,11 @@
         background: 'var(--slate-0)',
         border: '1px solid var(--border-default)',
         borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
         fontSize: 'var(--text-sm)',
         fontWeight: 'var(--fw-semibold)',
-        color: 'var(--text-body)'
+        color: 'var(--text-body)',
+        cursor: 'pointer'
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "calendar",
@@ -570,13 +612,46 @@
       style: {
         color: 'var(--text-muted)'
       }
-    }), " This month ", /*#__PURE__*/React.createElement(Icon, {
+    }), " ", (PERIODS.find(p => p.id === period) || PERIODS[0]).label, " ", /*#__PURE__*/React.createElement(Icon, {
       name: "chevron-down",
       size: 15,
       style: {
         color: 'var(--text-subtle)'
       }
-    })), /*#__PURE__*/React.createElement("button", {
+    })), periodOpen && /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'absolute',
+        top: 'calc(100% + 6px)',
+        left: 0,
+        zIndex: 200,
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-xl)',
+        minWidth: 160,
+        overflow: 'hidden'
+      }
+    }, PERIODS.map(p => /*#__PURE__*/React.createElement("div", {
+      key: p.id,
+      onClick: () => {
+        setPeriod(p.id);
+        setPeriodOpen(false);
+      },
+      style: {
+        padding: '9px 14px',
+        fontSize: 'var(--text-sm)',
+        fontWeight: p.id === period ? 'var(--fw-bold)' : 'var(--fw-medium)',
+        color: p.id === period ? 'var(--blue-600)' : 'var(--text-body)',
+        background: p.id === period ? 'var(--blue-50)' : 'transparent',
+        cursor: 'pointer'
+      },
+      onMouseEnter: e => {
+        if (p.id !== period) e.currentTarget.style.background = 'var(--slate-50)';
+      },
+      onMouseLeave: e => {
+        if (p.id !== period) e.currentTarget.style.background = 'transparent';
+      }
+    }, p.label)))), /*#__PURE__*/React.createElement("button", {
       onClick: () => setModalOpen(true),
       style: {
         display: 'inline-flex',
@@ -662,7 +737,7 @@
         fontSize: 'var(--text-sm)',
         color: 'var(--text-muted)'
       }
-    }, "total collected")), statsLoaded && stats.revenue === 0 ? /*#__PURE__*/React.createElement("div", {
+    }, "collected · ", (PERIODS.find(p => p.id === period) || PERIODS[0]).label.toLowerCase())), statsLoaded && stats.revenue === 0 ? /*#__PURE__*/React.createElement("div", {
       style: {
         padding: '32px 0',
         textAlign: 'center',

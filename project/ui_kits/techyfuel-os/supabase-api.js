@@ -41,19 +41,41 @@
     return rates.PKR ? usd * rates.PKR : 0;
   }
 
+  // "This month" / "Last month" / etc for the dashboard's revenue figure.
+  // Invoices don't reliably have paid_at set on older data, so fall back to
+  // due_date/created_at rather than silently dropping them from every period.
+  function getPeriodRange(period) {
+    const now = new Date();
+    if (period === 'last_month') {
+      return { start: new Date(now.getFullYear(), now.getMonth() - 1, 1), end: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59) };
+    }
+    if (period === 'quarter') {
+      return { start: new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1), end: now };
+    }
+    if (period === 'year') return { start: new Date(now.getFullYear(), 0, 1), end: now };
+    if (period === 'all')  return { start: null, end: now };
+    return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now }; // 'month' (default)
+  }
+
   // Convenience: expose typed query helpers on window.API
   window.API = {
     // ── DASHBOARD ────────────────────────────────────────
-    getDashboardStats: async () => {
+    getDashboardStats: async (period = 'month') => {
       const [clients, projects, tasks, invoices, fx] = await Promise.all([
         client.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         client.from('projects').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         client.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'done'),
-        client.from('invoices').select('amount, currency').eq('status', 'paid'),
+        client.from('invoices').select('amount, currency, paid_at, due_date, created_at').eq('status', 'paid'),
         window.API.getFxRates().catch(() => null),
       ]);
       const rates = fx && fx.rates;
-      const revenue = (invoices.data || []).reduce((s, r) => s + fxToPKR(r.amount, r.currency, rates), 0);
+      const range = getPeriodRange(period);
+      const inRange = (inv) => {
+        if (!range.start) return true;
+        const d = new Date(inv.paid_at || inv.due_date || inv.created_at);
+        return d >= range.start && d <= range.end;
+      };
+      const revenue = (invoices.data || []).filter(inRange).reduce((s, r) => s + fxToPKR(r.amount, r.currency, rates), 0);
       return {
         activeClients:  clients.count  ?? 0,
         activeProjects: projects.count ?? 0,
