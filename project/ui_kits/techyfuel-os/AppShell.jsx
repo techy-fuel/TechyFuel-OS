@@ -405,9 +405,9 @@ function AppShell({ active, onNavigate, title, crumb, onOpenAI, children, authUs
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%', background: 'var(--surface-page)' }}>
       <Sidebar active={active} onNavigate={onNavigate} hiddenIds={hiddenIds} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, height: '100%' }}>
         <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onNavigate={onNavigate} authUser={authUser} onSignOut={onSignOut} onToggleNav={() => setMobileNavOpen(o => !o)} />
-        <main className={fullH ? '' : 'tf-scroll'} style={{ flex: 1, overflowY: fullH ? 'hidden' : 'auto', overflow: fullH ? 'hidden' : undefined }}>{children}</main>
+        <main className={fullH ? '' : 'tf-scroll'} style={{ flex: 1, minHeight: 0, overflowY: fullH ? 'hidden' : 'auto', overflowX: fullH ? 'hidden' : 'visible' }}>{children}</main>
       </div>
     </div>
   );

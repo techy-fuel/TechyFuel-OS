@@ -927,6 +927,7 @@
         display: 'flex',
         flexDirection: 'column',
         minWidth: 0,
+        minHeight: 0,
         height: '100%'
       }
     }, /*#__PURE__*/React.createElement(TopBar, {
@@ -941,8 +942,9 @@
       className: fullH ? '' : 'tf-scroll',
       style: {
         flex: 1,
+        minHeight: 0,
         overflowY: fullH ? 'hidden' : 'auto',
-        overflow: fullH ? 'hidden' : undefined
+        overflowX: fullH ? 'hidden' : 'visible'
       }
     }, children)));
   }
