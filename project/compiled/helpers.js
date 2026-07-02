@@ -252,6 +252,26 @@ function loadScriptOnce(src) {
     document.head.appendChild(s);
   });
 }
+
+// Cached in memory only (never persisted to disk) — survives client-side
+// navigation within the same tab so the OAuth popup only shows once per
+// session instead of on every single "Google Drive" click, but disappears
+// on a full page reload / new tab.
+let _driveTokenCache = null; // { accessToken, expiresAt, clientId }
+
+function openDrivePicker(accessToken, apiKey) {
+  return new Promise((resolve, reject) => {
+    try {
+      const view = new window.google.picker.DocsView().setIncludeFolders(true).setSelectFolderEnabled(false);
+      const picker = new window.google.picker.PickerBuilder().addView(view).setOAuthToken(accessToken).setDeveloperKey(apiKey).setCallback(data => {
+        if (data.action === window.google.picker.Action.PICKED) resolve(data.docs || []);else if (data.action === window.google.picker.Action.CANCEL) resolve([]);
+      }).build();
+      picker.setVisible(true);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
 async function pickFilesFromGoogleDrive({
   clientId,
   apiKey
@@ -261,23 +281,28 @@ async function pickFilesFromGoogleDrive({
     callback: resolve,
     onerror: reject
   }));
+  const cached = _driveTokenCache;
+  if (cached && cached.clientId === clientId && cached.expiresAt > Date.now() + 60000) {
+    return openDrivePicker(cached.accessToken, apiKey);
+  }
   return new Promise((resolve, reject) => {
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       // drive.file: only files the user opens/creates through this app —
       // no request for blanket access to their whole Drive.
       scope: 'https://www.googleapis.com/auth/drive.file',
-      callback: resp => {
+      callback: async resp => {
         if (resp.error) {
           reject(new Error(resp.error_description || resp.error));
           return;
         }
+        _driveTokenCache = {
+          accessToken: resp.access_token,
+          expiresAt: Date.now() + Number(resp.expires_in || 3600) * 1000,
+          clientId
+        };
         try {
-          const view = new window.google.picker.DocsView().setIncludeFolders(true).setSelectFolderEnabled(false);
-          const picker = new window.google.picker.PickerBuilder().addView(view).setOAuthToken(resp.access_token).setDeveloperKey(apiKey).setCallback(data => {
-            if (data.action === window.google.picker.Action.PICKED) resolve(data.docs || []);else if (data.action === window.google.picker.Action.CANCEL) resolve([]);
-          }).build();
-          picker.setVisible(true);
+          resolve(await openDrivePicker(resp.access_token, apiKey));
         } catch (err) {
           reject(err);
         }
@@ -286,6 +311,18 @@ async function pickFilesFromGoogleDrive({
     tokenClient.requestAccessToken();
   });
 }
+
+// A file counts as "Drive-origin" if it's a native Google format (Doc/Sheet/
+// Slide) or its link points at drive.google.com — covers regular files
+// (photos, PDFs, etc) picked from Drive too, since the Picker always hands
+// back a drive.google.com viewer link for those rather than raw file bytes.
+// Those links only work as a normal browser navigation, not as the src of
+// an <img>/<video>/<iframe>, so screens must not try to embed them directly.
+function isDriveFile(f) {
+  const mime = f.mime_type || f.file_type || '';
+  const link = f.file_path || f.url || '';
+  return mime.startsWith('application/vnd.google-apps') || /drive\.google\.com/.test(link);
+}
 Object.assign(window, {
   Icon,
   useLucide,
@@ -293,5 +330,6 @@ Object.assign(window, {
   FormRow,
   FF,
   readIntegrationsCfg,
-  pickFilesFromGoogleDrive
+  pickFilesFromGoogleDrive,
+  isDriveFile
 });

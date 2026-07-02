@@ -431,7 +431,7 @@
         color
       } = mimeIcon(f.mime_type);
       const uploaderName = f.team_members ? f.team_members.name : '—';
-      const isDrive = (f.mime_type || '').startsWith('application/vnd.google-apps') || /drive\.google\.com/.test(f.file_path || f.url || '');
+      const isDrive = isDriveFile(f);
       return /*#__PURE__*/React.createElement("div", {
         key: f.id || i,
         onClick: () => f.url && window.open(f.url, '_blank'),

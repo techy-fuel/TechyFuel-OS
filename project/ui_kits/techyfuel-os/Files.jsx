@@ -199,7 +199,7 @@ function Files() {
         {!loading && files.map((f, i) => {
           const { icon, color } = mimeIcon(f.mime_type);
           const uploaderName = f.team_members ? f.team_members.name : '—';
-          const isDrive = (f.mime_type || '').startsWith('application/vnd.google-apps') || /drive\.google\.com/.test(f.file_path || f.url || '');
+          const isDrive = isDriveFile(f);
           return (
             <div key={f.id || i} onClick={() => f.url && window.open(f.url, '_blank')}
               style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 18px', borderTop: '1px solid var(--border-subtle)', cursor: f.url ? 'pointer' : 'default' }}>

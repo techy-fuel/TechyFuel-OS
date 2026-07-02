@@ -887,9 +887,13 @@
   }) {
     const t = file.file_type || '';
     const n = file.name || '';
-    const isImg = t.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(n);
-    const isPdf = t === 'application/pdf' || /\.pdf$/i.test(n);
-    const isVid = t.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(n);
+    const drive = isDriveFile(file);
+    // Drive files only give us a drive.google.com viewer link, not raw file
+    // bytes — that can't be embedded as <img>/<video>/<iframe> src, it has to
+    // be opened as a normal page (Drive's own viewer renders it there).
+    const isImg = !drive && (t.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(n));
+    const isPdf = !drive && (t === 'application/pdf' || /\.pdf$/i.test(n));
+    const isVid = !drive && (t.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(n));
     return /*#__PURE__*/React.createElement("div", {
       style: {
         position: 'fixed',
@@ -974,7 +978,37 @@
         maxHeight: '72vh',
         borderRadius: 8
       }
-    }), !isImg && !isPdf && !isVid && /*#__PURE__*/React.createElement("div", {
+    }), drive && /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center',
+        padding: 48
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "hard-drive",
+      size: 52,
+      style: {
+        color: '#0F9D58'
+      }
+    }), /*#__PURE__*/React.createElement("p", {
+      style: {
+        color: 'var(--text-muted)',
+        margin: '14px 0 18px',
+        fontSize: 15
+      }
+    }, "Opens in Google Drive's own viewer"), /*#__PURE__*/React.createElement("a", {
+      href: file.url,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: {
+        color: '#0F9D58',
+        fontWeight: 600,
+        fontSize: 14,
+        textDecoration: 'none',
+        background: '#0F9D5815',
+        padding: '8px 18px',
+        borderRadius: 8
+      }
+    }, "Open in Google Drive ↗")), !drive && !isImg && !isPdf && !isVid && /*#__PURE__*/React.createElement("div", {
       style: {
         textAlign: 'center',
         padding: 48
@@ -1565,7 +1599,7 @@
         gap: 10
       }
     }, filtered.map(f => {
-      const isImg = f.file_type?.startsWith('image/');
+      const isImg = f.file_type?.startsWith('image/') && !isDriveFile(f);
       return /*#__PURE__*/React.createElement("div", {
         key: f.id,
         onClick: () => setPreview(f),
