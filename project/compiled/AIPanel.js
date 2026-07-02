@@ -1,202 +1,121 @@
 // AI Assistant — real chat connected to Supabase workspace data.
 (() => {
   const SUGGESTIONS = ['Summarize this week', 'Detect deadline risks', 'How\'s our revenue?', 'Draft 6 captions'];
-  function fmtDate(ds) {
-    if (!ds) return '—';
-    return new Date(ds).toLocaleDateString('en', {
-      month: 'short',
-      day: 'numeric'
-    });
+
+  // Home/reporting currency is PKR — same conversion the Finance screen uses,
+  // so the AI reasons in one consistent currency no matter what a client paid in.
+  function toPKR(amount, currency, rates) {
+    const n = Number(amount);
+    if (!n) return 0;
+    if (!currency || currency === 'PKR') return n;
+    if (!rates) return null;
+    const usd = currency === 'USD' ? n : rates[currency] ? n / rates[currency] : null;
+    if (usd === null) return null;
+    return rates.PKR ? usd * rates.PKR : null;
   }
 
-  /* ── AI response engine (reads real Supabase data) ─────────────── */
-  async function getResponse(msg) {
-    const q = msg.toLowerCase();
+  /* ── Build a compact, real snapshot of what this signed-in user can see ──
+     Every window.API call below is the same RLS-scoped Supabase client the
+     rest of the app uses, so a "member" role only ever hands the AI the same
+     data they're allowed to see themselves — the AI can't see more than the
+     user already can. */
+  async function buildWorkspaceSnapshot() {
     const api = window.API;
-
-    /* ── Summarize week ── */
-    if (q.includes('summarize') || q.includes('this week') || q.includes('summary') || q.includes('overview') || q.includes('snapshot')) {
-      if (!api) return {
-        text: 'No API connection — running in demo mode.'
-      };
-      const [tr, pr, cr, ir] = await Promise.all([api.getTasks(), api.getProjects(), api.getClients(), api.getInvoices()]);
-      const tasks = tr.data || [],
-        projects = pr.data || [],
-        clients = cr.data || [],
-        invoices = ir.data || [];
-      const open = tasks.filter(t => t.status !== 'done').length;
-      const done = tasks.filter(t => t.status === 'done').length;
-      const active = projects.filter(p => p.status === 'active').length;
-      const paid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
-      const weekEnd = new Date(Date.now() + 7 * 86400000);
-      const dueSoon = tasks.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) <= weekEnd);
-      const cards = dueSoon.slice(0, 3).map(t => ({
-        icon: new Date(t.due_date) < new Date() ? 'clock' : 'alert-triangle',
-        tone: new Date(t.due_date) < new Date() ? 'danger' : 'warning',
-        title: t.title || t.name || 'Task',
-        body: `${t.status} · due ${fmtDate(t.due_date)}${t.projects?.name ? ' · ' + t.projects.name : ''}`
-      }));
-      return {
-        text: `Workspace snapshot: ${open} open tasks, ${done} done across ${active} active projects. ${clients.filter(c => c.status === 'active').length} active clients. Paid revenue: $${paid.toLocaleString()}.${dueSoon.length > 0 ? ` ${dueSoon.length} task${dueSoon.length > 1 ? 's' : ''} due this week:` : ' No tasks due this week — great work!'}`,
-        cards: dueSoon.length > 0 ? cards : undefined
-      };
-    }
-
-    /* ── Deadline risks / overdue ── */
-    if (q.includes('risk') || q.includes('overdue') || q.includes('deadline') || q.includes('urgent') || q.includes('late') || q.includes('at risk')) {
-      if (!api) return {
-        text: 'No API connection.'
-      };
-      const r = await api.getTasks();
-      const tasks = r.data || [];
-      const now = new Date(),
-        soon = new Date(Date.now() + 48 * 3600000);
-      const overdue = tasks.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) < now);
-      const dueSoon = tasks.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) >= now && new Date(t.due_date) <= soon);
-      if (overdue.length === 0 && dueSoon.length === 0) return {
-        text: 'All clear — no overdue tasks and nothing due in the next 48 hours. '
-      };
-      const cards = [...overdue.slice(0, 3).map(t => ({
-        icon: 'clock',
-        tone: 'danger',
-        title: t.title || t.name || 'Task',
-        body: `Overdue since ${fmtDate(t.due_date)}${t.projects?.name ? ' · ' + t.projects.name : ''}`
-      })), ...dueSoon.slice(0, 2).map(t => ({
-        icon: 'alert-triangle',
-        tone: 'warning',
-        title: t.title || t.name || 'Task',
-        body: `Due ${fmtDate(t.due_date)} · ${t.status}${t.projects?.name ? ' · ' + t.projects.name : ''}`
-      }))];
-      return {
-        text: `Found ${overdue.length} overdue and ${dueSoon.length} due within 48 hours:`,
-        cards
-      };
-    }
-
-    /* ── Revenue / finance ── */
-    if (q.includes('revenue') || q.includes('money') || q.includes('invoice') || q.includes('paid') || q.includes('finance') || q.includes('outstanding')) {
-      if (!api) return {
-        text: 'No API connection.'
-      };
-      const r = await api.getInvoices();
-      const invoices = r.data || [];
-      const paid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
-      const outstanding = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount || 0), 0);
-      const overdue = invoices.filter(i => i.status === 'overdue');
-      return {
-        text: `Finance: $${paid.toLocaleString()} collected from ${invoices.filter(i => i.status === 'paid').length} paid invoices. $${outstanding.toLocaleString()} outstanding.${overdue.length > 0 ? ` ⚠️ ${overdue.length} overdue invoice${overdue.length > 1 ? 's' : ''}.` : ' No overdue invoices.'}`
-      };
-    }
-
-    /* ── Clients ── */
-    if (q.includes('client') || q.includes('customer')) {
-      if (!api) return {
-        text: 'No API connection.'
-      };
-      const r = await api.getClients();
-      const clients = r.data || [];
-      const active = clients.filter(c => c.status === 'active').length;
-      return {
-        text: `${clients.length} clients total — ${active} active${clients.length > active ? ', ' + (clients.length - active) + ' inactive' : ''}. Check Client CRM for details.`
-      };
-    }
-
-    /* ── Tasks ── */
-    if (q.includes('task') || q.includes('todo') || q.includes('open task')) {
-      if (!api) return {
-        text: 'No API connection.'
-      };
-      const r = await api.getTasks();
-      const tasks = r.data || [];
-      const todo = tasks.filter(t => t.status === 'todo').length;
-      const inp = tasks.filter(t => t.status === 'in_progress').length;
-      const rev = tasks.filter(t => t.status === 'review').length;
-      const done = tasks.filter(t => t.status === 'done').length;
-      return {
-        text: `Task breakdown: ${todo} to-do, ${inp} in progress, ${rev} in review, ${done} done. Total: ${tasks.length}.`
-      };
-    }
-
-    /* ── Team ── */
-    if (q.includes('team') || q.includes('member') || q.includes('staff') || q.includes('who is')) {
-      if (!api) return {
-        text: 'No API connection.'
-      };
-      const r = await api.getTeam();
-      const team = r.data || [];
-      return {
-        text: `Team has ${team.length} member${team.length !== 1 ? 's' : ''}: ${team.map(m => m.name).join(', ')}.`
-      };
-    }
-
-    /* ── Projects ── */
-    if (q.includes('project')) {
-      if (!api) return {
-        text: 'No API connection.'
-      };
-      const r = await api.getProjects();
-      const projects = r.data || [];
-      const active = projects.filter(p => p.status === 'active').length;
-      return {
-        text: `${projects.length} projects total — ${active} active. Check the Projects screen for task breakdowns.`
-      };
-    }
-
-    /* ── Campaigns / ads ── */
-    if (q.includes('campaign') || q.includes('ads') || q.includes('meta') || q.includes('spend') || q.includes('cpl') || q.includes('leads')) {
-      if (!api) return {
-        text: 'No API connection.'
-      };
-      const r = await api.getAdCampaigns();
-      const camps = r.data || [];
-      const active = camps.filter(c => c.status === 'active').length;
-      const spend = camps.reduce((s, c) => s + (c.spent || 0), 0);
-      const leads = camps.reduce((s, c) => s + (c.conversions || 0), 0);
-      return {
-        text: `${camps.length} ad campaign${camps.length !== 1 ? 's' : ''} — ${active} active. Total spend: $${spend.toLocaleString()}. Total leads: ${leads}${leads > 0 ? '. Avg CPL: $' + (spend / leads).toFixed(2) : ''}.`
-      };
-    }
-
-    /* ── Draft captions ── */
-    if (q.includes('caption') || q.includes('social media') || q.includes('draft') || q.includes('post idea')) {
-      return {
-        text: 'Here are 3 ready-to-use social media captions:',
-        cards: [{
-          icon: 'instagram',
-          tone: 'warning',
-          title: 'Instagram',
-          body: '✨ Behind the scenes of our latest campaign. Results speak louder than promises. DM us to start yours. #AgencyLife #MarketingResults'
-        }, {
-          icon: 'linkedin',
-          tone: 'info',
-          title: 'LinkedIn',
-          body: 'We helped a client increase leads by 47% in 90 days. The strategy? Clear messaging + consistent CTAs. Happy to share the playbook.'
-        }, {
-          icon: 'twitter',
-          tone: 'neutral',
-          title: 'Twitter / X',
-          body: 'Hot take: agencies spending 80% on acquisition, 20% on retention are leaving money on the table. Flip it. 🔁'
-        }]
-      };
-    }
-
-    /* ── Generate proposal ── */
-    if (q.includes('proposal') || q.includes('quote') || q.includes('pitch')) {
-      return {
-        text: 'Proposal template:\n\n📄 DIGITAL MARKETING PROPOSAL\n\nScope: Social media management + content creation\n\nDeliverables:\n• Content calendar\n• 12 posts/month (IG + LinkedIn)\n• Monthly analytics report\n• Ad campaign management (up to $2K/month)\n\nInvestment: $1,500/month\nTerm: 3-month minimum\nOnboarding: First week free\n\nCustomize client name, scope, and pricing in the Finance screen.'
-      };
-    }
-
-    /* ── Hello ── */
-    if (q.match(/^(hi|hello|hey|help|what can you do)/)) {
-      return {
-        text: 'Hi! I\'m connected to your live workspace data. Ask me:\n• "Summarize this week"\n• "What\'s at risk?"\n• "How\'s our revenue?"\n• "How many clients do we have?"\n• "Draft 6 captions"\n• "Generate proposal"'
-      };
-    }
-
-    /* ── Default ── */
+    if (!api) return null;
+    // Supabase's query builder is a "thenable", not a real Promise — it has
+    // .then() but not .catch(), so wrap each call in Promise.resolve() first.
+    const safe = call => Promise.resolve(call()).catch(() => ({
+      data: []
+    }));
+    const [tr, pr, cr, ir, er, teamR, adR, fx] = await Promise.all([safe(() => api.getTasks()), safe(() => api.getProjects()), safe(() => api.getClients()), safe(() => api.getInvoices()), api.getExpenses ? safe(() => api.getExpenses()) : Promise.resolve({
+      data: []
+    }), safe(() => api.getTeam()), api.getAdCampaigns ? safe(() => api.getAdCampaigns()) : Promise.resolve({
+      data: []
+    }), api.getFxRates ? api.getFxRates().catch(() => null) : Promise.resolve(null)]);
+    const rates = fx && fx.rates;
+    const tasks = tr.data || [],
+      projects = pr.data || [],
+      clients = cr.data || [],
+      invoices = ir.data || [],
+      expenses = er.data || [],
+      team = teamR.data || [],
+      campaigns = adR.data || [];
     return {
-      text: 'I can help with workspace data. Try: "Summarize this week", "Detect deadline risks", "How\'s our revenue?", "How many clients?", or tap a suggestion below.'
+      today: new Date().toISOString().slice(0, 10),
+      home_currency: 'PKR',
+      tasks: tasks.slice(0, 80).map(t => ({
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        due_date: t.due_date,
+        assigned_to: t.team_members ? t.team_members.name : null,
+        project: t.projects ? t.projects.name : null
+      })),
+      projects: projects.slice(0, 60).map(p => ({
+        name: p.name,
+        status: p.status
+      })),
+      clients: clients.slice(0, 60).map(c => ({
+        name: c.company || c.name,
+        status: c.status
+      })),
+      invoices: invoices.slice(0, 80).map(i => ({
+        invoice_no: i.invoice_no,
+        client: i.clients ? i.clients.name : null,
+        status: i.status,
+        due_date: i.due_date,
+        amount: i.amount,
+        currency: i.currency || 'PKR',
+        amount_pkr: toPKR(i.amount, i.currency, rates)
+      })),
+      expenses: expenses.slice(0, 80).map(e => ({
+        description: e.description,
+        category: e.category,
+        date: e.date,
+        amount: e.amount,
+        currency: e.currency || 'PKR',
+        amount_pkr: toPKR(e.amount, e.currency, rates)
+      })),
+      team: team.map(m => ({
+        name: m.name,
+        role: m.role
+      })),
+      ad_campaigns: campaigns.slice(0, 40).map(c => ({
+        name: c.name,
+        client: c.clients ? c.clients.name : null,
+        platform: c.platform,
+        status: c.status,
+        spent: c.spent,
+        impressions: c.impressions,
+        clicks: c.clicks,
+        conversions: c.conversions
+      }))
+    };
+  }
+
+  /* ── AI response — calls the real LLM backend (Vercel AI Gateway) ────── */
+  async function getResponse(msg) {
+    if (!window.API) return {
+      text: 'No API connection — running in demo mode.'
+    };
+    const context = await buildWorkspaceSnapshot();
+    const res = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: msg,
+        context
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'AI request failed');
+    }
+    const data = await res.json();
+    return {
+      text: data.reply || 'Sorry, I got an empty response. Please try again.'
     };
   }
 
@@ -245,13 +164,6 @@
         send();
       }
     }
-    const toneColors = {
-      warning: ['var(--amber-50)', 'var(--amber-600)'],
-      danger: ['var(--red-50)', 'var(--red-600)'],
-      success: ['var(--green-50)', 'var(--green-600)'],
-      info: ['var(--blue-50)', 'var(--blue-600)'],
-      neutral: ['var(--slate-100)', 'var(--slate-600)']
-    };
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, `@keyframes tfDot{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}`), /*#__PURE__*/React.createElement("div", {
       onClick: onClose,
       style: {
@@ -446,49 +358,7 @@
         boxShadow: 'var(--shadow-xs)',
         whiteSpace: 'pre-wrap'
       }
-    }, m.text), m.cards && m.cards.map((c, j) => {
-      const [bg, fg] = toneColors[c.tone] || toneColors.neutral;
-      return /*#__PURE__*/React.createElement("div", {
-        key: j,
-        style: {
-          display: 'flex',
-          gap: 10,
-          background: 'var(--slate-0)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 11,
-          boxShadow: 'var(--shadow-xs)'
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          width: 28,
-          height: 28,
-          flex: 'none',
-          borderRadius: 'var(--radius-md)',
-          background: bg,
-          color: fg,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }
-      }, /*#__PURE__*/React.createElement(Icon, {
-        name: c.icon,
-        size: 15
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        style: {
-          fontSize: 'var(--text-sm)',
-          fontWeight: 'var(--fw-semibold)',
-          color: 'var(--text-strong)'
-        }
-      }, c.title), /*#__PURE__*/React.createElement("div", {
-        style: {
-          fontSize: 'var(--text-xs)',
-          color: 'var(--text-muted)',
-          marginTop: 1,
-          lineHeight: 1.4
-        }
-      }, c.body)));
-    }))), loading && /*#__PURE__*/React.createElement("div", {
+    }, m.text))), loading && /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         gap: 9,
