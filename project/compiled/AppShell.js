@@ -376,8 +376,7 @@
       async function checkUnread() {
         if (!window.API) return;
         try {
-          const myId = localStorage.getItem('tf_chat_member');
-          const count = await window.API.getUnreadCount(myId || undefined);
+          const count = await window.API.getUnreadCount(window.TFMyMemberId || undefined);
           setUnreadCount(count);
         } catch {}
       }
@@ -391,7 +390,7 @@
       if (!notifOpen && window.API) {
         (async () => {
           try {
-            const myId = localStorage.getItem('tf_chat_member');
+            const myId = window.TFMyMemberId;
             // Real notifications from DB
             const {
               data: dbNotifs

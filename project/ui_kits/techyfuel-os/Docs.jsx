@@ -624,7 +624,7 @@ function Docs() {
   React.useEffect(() => {
     if (!doc || !window.db) return;
     const myId = (() => { let id = localStorage.getItem('_tf_doc_uid'); if (!id) { id = uid(); localStorage.setItem('_tf_doc_uid', id); } return id; })();
-    const myName = localStorage.getItem('tf_chat_member') || 'Someone';
+    const myName = window.TFMyName || 'Someone';
     const ch = window.db.channel(`doc:${doc.id}`)
       .on('broadcast', { event: 'edit' }, ({ payload }) => {
         if (payload.uid !== myId) {

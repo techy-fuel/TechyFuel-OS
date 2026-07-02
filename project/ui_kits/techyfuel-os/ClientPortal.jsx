@@ -214,8 +214,7 @@ function ClientPortal() {
   async function addNote() {
     if (!noteText.trim() || !clientId || !window.API?.createClientNote) return;
     try {
-      const myId = localStorage.getItem('tf_chat_member');
-      const { data } = await window.API.createClientNote({ client_id: clientId, project_id: project?.id, content: noteText.trim(), created_by: myId || undefined });
+      const { data } = await window.API.createClientNote({ client_id: clientId, project_id: project?.id, content: noteText.trim(), created_by: window.TFMyMemberId || undefined });
       if (data) setNotes(prev => [data, ...prev]);
       setNoteText('');
     } catch {}

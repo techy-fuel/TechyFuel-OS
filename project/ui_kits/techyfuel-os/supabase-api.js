@@ -13,7 +13,7 @@
   // Fire-and-forget activity log entry — never blocks or throws into callers.
   function insertActivity(action, entityType, entityId, entityName) {
     try {
-      const actorId = localStorage.getItem('tf_chat_member') || null;
+      const actorId = window.TFMyMemberId || null;
       client.from('activity_log').insert({
         actor_id: actorId,
         action,

@@ -1801,7 +1801,7 @@
         }
         return id;
       })();
-      const myName = localStorage.getItem('tf_chat_member') || 'Someone';
+      const myName = window.TFMyName || 'Someone';
       const ch = window.db.channel(`doc:${doc.id}`).on('broadcast', {
         event: 'edit'
       }, ({
