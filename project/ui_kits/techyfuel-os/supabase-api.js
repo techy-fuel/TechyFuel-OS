@@ -399,6 +399,26 @@
       if (filters.entityType) q = q.eq('entity_type', filters.entityType);
       return q.order('created_at', { ascending: false }).limit(filters.limit || 100);
     },
+
+    // ── FX RATES (multi-currency invoices) ─────────────────
+    // Cached in localStorage for an hour so we don't refetch on every
+    // navigation — the upstream rates only move a few times a day anyway.
+    getFxRates: async () => {
+      try {
+        const cached = JSON.parse(localStorage.getItem('tf_fx_rates') || 'null');
+        if (cached && Date.now() - cached.fetchedAt < 60 * 60 * 1000) return cached;
+        const r = await fetch('/api/fx-rates');
+        if (!r.ok) throw new Error('fx-rates request failed: ' + r.status);
+        const data = await r.json();
+        const payload = { base: data.base || 'USD', rates: data.rates || {}, fetchedAt: Date.now() };
+        localStorage.setItem('tf_fx_rates', JSON.stringify(payload));
+        return payload;
+      } catch (err) {
+        console.error('[TechyFuel OS] FX rates fetch failed:', err);
+        const cached = JSON.parse(localStorage.getItem('tf_fx_rates') || 'null');
+        return cached || { base: 'USD', rates: {}, fetchedAt: 0 };
+      }
+    },
   };
 
   console.log('[TechyFuel OS] Supabase connected:', window.__SUPABASE_URL);

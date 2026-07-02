@@ -22,7 +22,7 @@ function AreaLine({ data, width = 520, height = 160, color = 'var(--blue-600)', 
 }
 
 function Bars({ data, labels, width = 520, height = 160, color = 'var(--blue-500)', highlight = 'var(--blue-600)' }) {
-  const max = Math.max(...data) * 1.1, pad = 6, gap = 10;
+  const max = Math.max(...data) * 1.1 || 1, pad = 6, gap = 10;
   const bw = (width - pad * 2 - gap * (data.length - 1)) / data.length;
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ display: 'block' }}>

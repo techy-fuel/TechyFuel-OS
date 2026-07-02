@@ -75,6 +75,10 @@
     symbol: 'SAR',
     name: 'Saudi Riyal'
   }, {
+    code: 'OMR',
+    symbol: 'OMR',
+    name: 'Omani Rial'
+  }, {
     code: 'PKR',
     symbol: '₨',
     name: 'Pakistani Rupee'
@@ -99,6 +103,23 @@
     });
     return sym + num;
   }
+
+  // Convert an amount between any two supported currencies using USD-based
+  // rates ({ PKR: 278.5, SAR: 3.75, ... } == 1 USD in that currency). Returns
+  // null when a required rate hasn't loaded yet, so callers can show a
+  // friendly "—" instead of a wrong number.
+  function convertCurrency(amount, from, to, rates) {
+    if (amount === '' || amount === null || amount === undefined || isNaN(Number(amount))) return null;
+    from = from || 'USD';
+    to = to || 'USD';
+    const n = Number(amount);
+    if (from === to) return n;
+    if (!rates) return null;
+    const usd = from === 'USD' ? n : rates[from] ? n / rates[from] : null;
+    if (usd === null) return null;
+    if (to === 'USD') return usd;
+    return rates[to] ? usd * rates[to] : null;
+  }
   function fmtDate(ds) {
     if (!ds) return '—';
     return new Date(ds).toLocaleDateString('en', {
@@ -107,7 +128,7 @@
       year: 'numeric'
     });
   }
-  function buildMonthlyBars(invoices) {
+  function buildMonthlyBars(invoices, rates) {
     const months = Array.from({
       length: 12
     }, (_, i) => {
@@ -119,10 +140,12 @@
       };
     });
     for (const inv of invoices) {
-      if (inv.status !== 'paid' || inv.currency !== 'USD') continue;
+      if (inv.status !== 'paid') continue;
+      const usd = convertCurrency(inv.amount, inv.currency || 'USD', 'USD', rates);
+      if (usd === null) continue;
       const key = (inv.due_date || inv.created_at || '').slice(0, 7);
       const m = months.find(x => x.key === key);
-      if (m) m.val += Number(inv.amount || 0);
+      if (m) m.val += usd;
     }
     return months.map(m => m.val);
   }
@@ -273,6 +296,8 @@
       status: 'draft',
       currency: 'USD'
     });
+    const [fxRates, setFxRates] = React.useState(null); // { base: 'USD', rates: { PKR: 278.5, ... }, fetchedAt }
+    const [previewCurrency, setPreviewCurrency] = React.useState('PKR');
 
     // ── Expenses state ──────────────────────────────────────────────
     const [expenses, setExpenses] = React.useState([]);
@@ -325,7 +350,20 @@
           setExpLoading(false);
         }
       })();
+      if (window.API.getFxRates) {
+        window.API.getFxRates().then(r => {
+          if (r && r.rates) setFxRates(r);
+        }).catch(() => {});
+      }
     }, []);
+
+    // Keep the "convert to" preview currency from pointing at whatever
+    // currency the invoice itself is already in.
+    React.useEffect(() => {
+      if (form.currency === previewCurrency) {
+        setPreviewCurrency(form.currency === 'USD' ? 'PKR' : 'USD');
+      }
+    }, [form.currency]);
     function openNewExpense() {
       setEditExp(null);
       setExpForm({
@@ -506,11 +544,12 @@
       const q = search.toLowerCase();
       return (inv.invoice_no || '').toLowerCase().includes(q) || (inv.clients?.name || '').toLowerCase().includes(q);
     });
-    const usdInvoices = invoices.filter(i => !i.currency || i.currency === 'USD');
-    const paidRevenue = usdInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
-    const outstanding = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount || 0), 0);
-    const totalAmount = usdInvoices.reduce((s, i) => s + Number(i.amount || 0), 0);
-    const monthBars = buildMonthlyBars(invoices);
+    const rates = fxRates && fxRates.rates;
+    const toUSD = (amount, currency) => convertCurrency(amount, currency || 'USD', 'USD', rates) || 0;
+    const paidRevenue = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
+    const outstanding = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
+    const totalAmount = invoices.reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
+    const monthBars = buildMonthlyBars(invoices, rates);
     const monthName = new Date().toLocaleDateString('en', {
       month: 'long',
       year: 'numeric'
@@ -563,7 +602,11 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, monthName, " · ", invoices.length, " invoice", invoices.length !== 1 ? 's' : '')), /*#__PURE__*/React.createElement("button", {
+    }, monthName, " · ", invoices.length, " invoice", invoices.length !== 1 ? 's' : '', rates && /*#__PURE__*/React.createElement("span", {
+      style: {
+        marginLeft: 6
+      }
+    }, "· live FX rates loaded"))), /*#__PURE__*/React.createElement("button", {
       onClick: activeTab === 'invoices' ? openNew : openNewExpense,
       style: {
         display: 'inline-flex',
@@ -676,7 +719,7 @@
         fontVariantNumeric: 'tabular-nums'
       }
     }, fmtAmt(paidRevenue, 'USD'))), /*#__PURE__*/React.createElement(Bars, {
-      data: monthBars.some(v => v > 0) ? monthBars : Array(12).fill(0),
+      data: monthBars,
       color: "var(--green-400)",
       highlight: "var(--green-600)",
       height: 140
@@ -817,7 +860,14 @@
           color: 'var(--text-strong)',
           fontVariantNumeric: 'tabular-nums'
         }
-      }, fmtAmt(inv.amount, inv.currency)), /*#__PURE__*/React.createElement("td", {
+      }, fmtAmt(inv.amount, inv.currency), (inv.currency || 'USD') !== 'USD' && rates && /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 'var(--text-2xs)',
+          color: 'var(--text-muted)',
+          fontWeight: 'var(--fw-medium)',
+          marginTop: 2
+        }
+      }, "≈ ", fmtAmt(toUSD(inv.amount, inv.currency), 'USD'))), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: '10px 16px'
         }
@@ -1184,6 +1234,32 @@
       key: c.code,
       value: c.code
     }, c.symbol, " ", c.name, " (", c.code, ")"))))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Convert to (preview only — doesn't change the invoice)"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement("select", {
+      style: {
+        ...FF.select,
+        flex: '0 0 auto',
+        width: 100
+      },
+      value: previewCurrency,
+      onChange: e => setPreviewCurrency(e.target.value)
+    }, CURRENCIES.filter(c => c.code !== form.currency).map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.code,
+      value: c.code
+    }, c.code))), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, form.amount ? rates ? fmtAmt(convertCurrency(form.amount, form.currency, previewCurrency, rates), previewCurrency) : 'Rates loading…' : '—'))), /*#__PURE__*/React.createElement(FormRow, {
       label: "Due date"
     }, /*#__PURE__*/React.createElement("input", {
       style: FF.input,

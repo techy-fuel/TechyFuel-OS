@@ -74,7 +74,7 @@ function Bars({
   color = 'var(--blue-500)',
   highlight = 'var(--blue-600)'
 }) {
-  const max = Math.max(...data) * 1.1,
+  const max = Math.max(...data) * 1.1 || 1,
     pad = 6,
     gap = 10;
   const bw = (width - pad * 2 - gap * (data.length - 1)) / data.length;

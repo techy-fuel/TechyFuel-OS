@@ -25,6 +25,7 @@ const CURRENCIES = [
   { code: 'GBP', symbol: '£',   name: 'British Pound' },
   { code: 'AED', symbol: 'AED', name: 'UAE Dirham' },
   { code: 'SAR', symbol: 'SAR', name: 'Saudi Riyal' },
+  { code: 'OMR', symbol: 'OMR', name: 'Omani Rial' },
   { code: 'PKR', symbol: '₨',   name: 'Pakistani Rupee' },
   { code: 'CAD', symbol: 'CA$', name: 'Canadian Dollar' },
   { code: 'AUD', symbol: 'A$',  name: 'Australian Dollar' },
@@ -41,22 +42,40 @@ function fmtAmt(n, currency) {
   return sym + num;
 }
 
+// Convert an amount between any two supported currencies using USD-based
+// rates ({ PKR: 278.5, SAR: 3.75, ... } == 1 USD in that currency). Returns
+// null when a required rate hasn't loaded yet, so callers can show a
+// friendly "—" instead of a wrong number.
+function convertCurrency(amount, from, to, rates) {
+  if (amount === '' || amount === null || amount === undefined || isNaN(Number(amount))) return null;
+  from = from || 'USD'; to = to || 'USD';
+  const n = Number(amount);
+  if (from === to) return n;
+  if (!rates) return null;
+  const usd = from === 'USD' ? n : (rates[from] ? n / rates[from] : null);
+  if (usd === null) return null;
+  if (to === 'USD') return usd;
+  return rates[to] ? usd * rates[to] : null;
+}
+
 function fmtDate(ds) {
   if (!ds) return '—';
   return new Date(ds).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function buildMonthlyBars(invoices) {
+function buildMonthlyBars(invoices, rates) {
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = new Date();
     d.setMonth(d.getMonth() - (11 - i));
     return { key: d.toISOString().slice(0, 7), val: 0 };
   });
   for (const inv of invoices) {
-    if (inv.status !== 'paid' || inv.currency !== 'USD') continue;
+    if (inv.status !== 'paid') continue;
+    const usd = convertCurrency(inv.amount, inv.currency || 'USD', 'USD', rates);
+    if (usd === null) continue;
     const key = (inv.due_date || inv.created_at || '').slice(0, 7);
     const m = months.find(x => x.key === key);
-    if (m) m.val += Number(inv.amount || 0);
+    if (m) m.val += usd;
   }
   return months.map(m => m.val);
 }
@@ -181,6 +200,8 @@ function Finance() {
   const [editInv,   setEditInv]   = React.useState(null);
   const [saving,    setSaving]    = React.useState(false);
   const [form, setForm] = React.useState({ invoice_no: '', client_id: '', amount: '', due_date: '', status: 'draft', currency: 'USD' });
+  const [fxRates, setFxRates] = React.useState(null); // { base: 'USD', rates: { PKR: 278.5, ... }, fetchedAt }
+  const [previewCurrency, setPreviewCurrency] = React.useState('PKR');
 
   // ── Expenses state ──────────────────────────────────────────────
   const [expenses,    setExpenses]    = React.useState([]);
@@ -212,7 +233,18 @@ function Finance() {
       } catch {}
       finally { setExpLoading(false); }
     })();
+    if (window.API.getFxRates) {
+      window.API.getFxRates().then(r => { if (r && r.rates) setFxRates(r); }).catch(() => {});
+    }
   }, []);
+
+  // Keep the "convert to" preview currency from pointing at whatever
+  // currency the invoice itself is already in.
+  React.useEffect(() => {
+    if (form.currency === previewCurrency) {
+      setPreviewCurrency(form.currency === 'USD' ? 'PKR' : 'USD');
+    }
+  }, [form.currency]);
 
   function openNewExpense() {
     setEditExp(null);
@@ -345,11 +377,12 @@ function Finance() {
     return (inv.invoice_no || '').toLowerCase().includes(q) || (inv.clients?.name || '').toLowerCase().includes(q);
   });
 
-  const usdInvoices  = invoices.filter(i => !i.currency || i.currency === 'USD');
-  const paidRevenue  = usdInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
-  const outstanding  = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount || 0), 0);
-  const totalAmount  = usdInvoices.reduce((s, i) => s + Number(i.amount || 0), 0);
-  const monthBars    = buildMonthlyBars(invoices);
+  const rates = fxRates && fxRates.rates;
+  const toUSD = (amount, currency) => convertCurrency(amount, currency || 'USD', 'USD', rates) || 0;
+  const paidRevenue  = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
+  const outstanding  = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
+  const totalAmount  = invoices.reduce((s, i) => s + toUSD(i.amount, i.currency), 0);
+  const monthBars    = buildMonthlyBars(invoices, rates);
   const monthName    = new Date().toLocaleDateString('en', { month: 'long', year: 'numeric' });
 
   const filteredExpenses = expenses.filter(e => {
@@ -369,7 +402,10 @@ function Finance() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Finance</h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{monthName} · {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>
+            {monthName} · {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
+            {rates && <span style={{ marginLeft: 6 }}>· live FX rates loaded</span>}
+          </p>
         </div>
         <button onClick={activeTab === 'invoices' ? openNew : openNewExpense} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
           <Icon name="plus" size={16} /> {activeTab === 'invoices' ? 'New invoice' : 'Add expense'}
@@ -398,7 +434,7 @@ function Finance() {
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{fmtAmt(paidRevenue, 'USD')}</span>
           </div>
-          <Bars data={monthBars.some(v => v > 0) ? monthBars : Array(12).fill(0)} color="var(--green-400)" highlight="var(--green-600)" height={140} />
+          <Bars data={monthBars} color="var(--green-400)" highlight="var(--green-600)" height={140} />
         </Card>
 
         <Card padding="none">
@@ -439,7 +475,14 @@ function Finance() {
                         <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 2 }}>{inv.currency || 'USD'}</div>
                       </td>
                       <td style={{ padding: '10px 16px', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{clientName}</td>
-                      <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>{fmtAmt(inv.amount, inv.currency)}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>
+                        {fmtAmt(inv.amount, inv.currency)}
+                        {(inv.currency || 'USD') !== 'USD' && rates && (
+                          <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', fontWeight: 'var(--fw-medium)', marginTop: 2 }}>
+                            ≈ {fmtAmt(toUSD(inv.amount, inv.currency), 'USD')}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: '10px 16px' }}>
                         <select value={inv.status} onChange={e => handleStatusChange(inv, e.target.value)} style={selectStyle}>
                           <option value="draft">Draft</option>
@@ -568,6 +611,20 @@ function Finance() {
             </select>
           </FormRow>
         </div>
+        <FormRow label="Convert to (preview only — doesn't change the invoice)">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <select style={{ ...FF.select, flex: '0 0 auto', width: 100 }} value={previewCurrency} onChange={e => setPreviewCurrency(e.target.value)}>
+              {CURRENCIES.filter(c => c.code !== form.currency).map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+            </select>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>
+              {form.amount
+                ? (rates
+                    ? fmtAmt(convertCurrency(form.amount, form.currency, previewCurrency, rates), previewCurrency)
+                    : 'Rates loading…')
+                : '—'}
+            </span>
+          </div>
+        </FormRow>
         <FormRow label="Due date">
           <input style={FF.input} type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
         </FormRow>
