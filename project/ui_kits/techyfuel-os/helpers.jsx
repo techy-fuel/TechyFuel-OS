@@ -96,4 +96,58 @@ const FF = {
   row2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
 };
 
-Object.assign(window, { Icon, useLucide, Modal, FormRow, FF });
+// ── Google Drive picker (OAuth via Google Identity Services + Picker API) ──
+// Shared by any screen that wants to attach real Drive files (Docs & Files,
+// the legacy Files screen, etc). Needs a Client ID + API key configured on
+// the Integrations screen first — nothing loads or runs until a screen
+// actually calls pickFilesFromGoogleDrive().
+function readIntegrationsCfg() {
+  try { return JSON.parse(localStorage.getItem('tf_integrations') || '{}'); } catch { return {}; }
+}
+
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) return resolve();
+    const s = document.createElement('script');
+    s.src = src; s.async = true; s.defer = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Failed to load ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function pickFilesFromGoogleDrive({ clientId, apiKey }) {
+  await Promise.all([
+    loadScriptOnce('https://accounts.google.com/gsi/client'),
+    loadScriptOnce('https://apis.google.com/js/api.js'),
+  ]);
+  await new Promise((resolve, reject) => window.gapi.load('picker', { callback: resolve, onerror: reject }));
+
+  return new Promise((resolve, reject) => {
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      // drive.file: only files the user opens/creates through this app —
+      // no request for blanket access to their whole Drive.
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      callback: (resp) => {
+        if (resp.error) { reject(new Error(resp.error_description || resp.error)); return; }
+        try {
+          const view = new window.google.picker.DocsView().setIncludeFolders(true).setSelectFolderEnabled(false);
+          const picker = new window.google.picker.PickerBuilder()
+            .addView(view)
+            .setOAuthToken(resp.access_token)
+            .setDeveloperKey(apiKey)
+            .setCallback(data => {
+              if (data.action === window.google.picker.Action.PICKED) resolve(data.docs || []);
+              else if (data.action === window.google.picker.Action.CANCEL) resolve([]);
+            })
+            .build();
+          picker.setVisible(true);
+        } catch (err) { reject(err); }
+      },
+    });
+    tokenClient.requestAccessToken();
+  });
+}
+
+Object.assign(window, { Icon, useLucide, Modal, FormRow, FF, readIntegrationsCfg, pickFilesFromGoogleDrive });

@@ -75,8 +75,12 @@ const INTEGRATIONS = [
   {
     id: 'gdrive', name: 'Google Drive', category: 'File Storage',
     icon: '🗂️', color: '#0F9D58',
-    desc: 'Attach and create Drive files directly from project file storage.',
-    fields: [{ key: 'driveClientId', label: 'OAuth Client ID', placeholder: 'xxx.apps.googleusercontent.com' }],
+    desc: "Pick real files straight from your Drive using Google's file picker — from the Files screen.",
+    fields: [
+      { key: 'driveClientId', label: 'OAuth Client ID', placeholder: 'xxx.apps.googleusercontent.com' },
+      { key: 'driveApiKey',   label: 'API Key (for Picker)', placeholder: 'AIza...' },
+    ],
+    note: 'In Google Cloud Console: enable the "Google Drive API" and "Google Picker API", create an OAuth 2.0 Client ID (Web application — add your site\'s URL under Authorized JavaScript origins), and create an API key restricted to the Picker API. Once saved here, use "Connect Google Drive" on the Files screen.',
   },
 ];
 
@@ -291,6 +295,11 @@ function IntegrationCard({ integ, cfg, onChange }) {
                 />
               </div>
             ))}
+            {integ.note && (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, margin: '0 0 12px', background: 'white', border: '1px solid var(--slate-200)', borderRadius: 8, padding: '10px 12px' }}>
+                {integ.note}
+              </p>
+            )}
             {testResult && (
               <div style={{ padding: '8px 12px', borderRadius: 7, background: testResult === 'success' ? '#dcfce7' : '#fee2e2', color: testResult === 'success' ? '#15803d' : '#dc2626', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
                 {testResult === 'success' ? '✅ Connection successful!' : '❌ Connection failed. Check your credentials.'}

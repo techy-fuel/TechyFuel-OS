@@ -374,6 +374,36 @@ function FilesBrowser({ projectId }) {
     setUploading(false); load();
   }
 
+  const [drivePicking, setDrivePicking] = React.useState(false);
+  async function connectDrive() {
+    const gdrive = readIntegrationsCfg().gdrive || {};
+    if (!gdrive.driveClientId || !gdrive.driveApiKey) {
+      alert('Connect Google Drive first: go to Integrations → Google Drive and add your OAuth Client ID + API Key.');
+      if (window.TFNavigate) window.TFNavigate('integrations');
+      return;
+    }
+    setDrivePicking(true);
+    try {
+      const docs = await pickFilesFromGoogleDrive({ clientId: gdrive.driveClientId, apiKey: gdrive.driveApiKey });
+      for (const doc of docs) {
+        const rec = {
+          name: doc.name,
+          file_path: doc.url || `https://drive.google.com/file/d/${doc.id}/view`,
+          mime_type: doc.mimeType || 'application/vnd.google-apps.file',
+          file_size: doc.sizeBytes ? Number(doc.sizeBytes) : null,
+          folder_id: currentFolder,
+        };
+        if (projectId) rec.project_id = projectId;
+        try { await window.API.createFile(rec); } catch (err) { console.error('[Drive attach error]', err); }
+      }
+      if (docs.length) load();
+    } catch (err) {
+      alert('Could not connect to Google Drive: ' + (err.message || err));
+    } finally {
+      setDrivePicking(false);
+    }
+  }
+
   async function createFolder() {
     if (!newName.trim() || !window.API) return;
     try { await window.API.createFolder({ name: newName.trim(), project_id: projectId, parent_id: currentFolder }); setNewName(''); setShowNew(false); load(); } catch {}
@@ -390,6 +420,10 @@ function FilesBrowser({ projectId }) {
   }
   function FileIco({ file }) {
     const t = file.file_type || '';
+    if (t.startsWith('application/vnd.google-apps.document'))     return <Icon name="file-text"   size={22} style={{ color: '#4285F4' }} />;
+    if (t.startsWith('application/vnd.google-apps.spreadsheet'))  return <Icon name="table"       size={22} style={{ color: '#0F9D58' }} />;
+    if (t.startsWith('application/vnd.google-apps.presentation')) return <Icon name="presentation" size={22} style={{ color: '#F4B400' }} />;
+    if (t.startsWith('application/vnd.google-apps'))              return <Icon name="hard-drive"   size={22} style={{ color: '#0F9D58' }} />;
     if (t.startsWith('image/')) return <Icon name="image" size={22} style={{ color: '#3b82f6' }} />;
     if (t === 'application/pdf') return <Icon name="file-text" size={22} style={{ color: '#ef4444' }} />;
     if (t.startsWith('video/')) return <Icon name="video" size={22} style={{ color: '#8b5cf6' }} />;
@@ -411,6 +445,9 @@ function FilesBrowser({ projectId }) {
         </button>
         <button onClick={() => setShowNew(true)} style={{ height: 36, padding: '0 14px', border: '1px solid var(--slate-200)', borderRadius: 8, background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontFamily: 'var(--font-sans)', color: 'var(--text-body)' }}>
           <Icon name="folder-plus" size={15} /> New folder
+        </button>
+        <button onClick={connectDrive} disabled={drivePicking} style={{ height: 36, padding: '0 14px', border: '1px solid var(--slate-200)', borderRadius: 8, background: 'white', color: '#0F9D58', cursor: drivePicking ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-sans)', opacity: drivePicking ? 0.7 : 1 }}>
+          <Icon name={drivePicking ? 'loader' : 'hard-drive'} size={15} /> {drivePicking ? 'Connecting…' : 'Google Drive'}
         </button>
         <label style={{ height: 36, padding: '0 16px', background: 'var(--blue-600)', color: 'white', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600 }}>
           <Icon name="upload" size={15} /> Upload

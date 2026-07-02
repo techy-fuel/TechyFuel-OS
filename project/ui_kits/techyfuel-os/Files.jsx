@@ -11,6 +11,11 @@ const FOLDERS = [
 
 function mimeIcon(mime) {
   if (!mime) return { icon: 'file', color: 'var(--slate-400)' };
+  if (mime.startsWith('application/vnd.google-apps.document'))     return { icon: 'file-text',    color: '#4285F4' };
+  if (mime.startsWith('application/vnd.google-apps.spreadsheet'))  return { icon: 'sheet',         color: '#0F9D58' };
+  if (mime.startsWith('application/vnd.google-apps.presentation')) return { icon: 'presentation',  color: '#F4B400' };
+  if (mime.startsWith('application/vnd.google-apps.folder'))       return { icon: 'folder',        color: '#0F9D58' };
+  if (mime.startsWith('application/vnd.google-apps'))              return { icon: 'hard-drive',     color: '#0F9D58' };
   if (mime.includes('pdf'))    return { icon: 'file-text',     color: 'var(--red-500)' };
   if (mime.includes('image'))  return { icon: 'image',         color: 'var(--violet-500)' };
   if (mime.includes('video'))  return { icon: 'video',         color: 'var(--teal-500)' };
@@ -45,6 +50,7 @@ function Files() {
   const [files, setFiles]     = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [uploading, setUploading] = React.useState(false);
+  const [drivePicking, setDrivePicking] = React.useState(false);
   const fileInputRef = React.useRef();
 
   React.useEffect(() => {
@@ -101,6 +107,38 @@ function Files() {
     e.target.value = '';
   }
 
+  async function handleConnectDrive() {
+    const gdrive = readIntegrationsCfg().gdrive || {};
+    if (!gdrive.driveClientId || !gdrive.driveApiKey) {
+      alert('Connect Google Drive first: go to Integrations → Google Drive and add your OAuth Client ID + API Key.');
+      if (window.TFNavigate) window.TFNavigate('integrations');
+      return;
+    }
+    setDrivePicking(true);
+    try {
+      const docs = await pickFilesFromGoogleDrive({ clientId: gdrive.driveClientId, apiKey: gdrive.driveApiKey });
+      for (const doc of docs) {
+        const payload = {
+          name: doc.name,
+          file_path: doc.url || `https://drive.google.com/file/d/${doc.id}/view`,
+          mime_type: doc.mimeType || 'application/vnd.google-apps.file',
+          file_size: doc.sizeBytes ? Number(doc.sizeBytes) : null,
+        };
+        if (window.API) {
+          try {
+            const result = await window.API.createFile(payload);
+            if (result && result.data) { setFiles(prev => [{ ...result.data, team_members: null }, ...prev]); continue; }
+          } catch (_) {}
+        }
+        setFiles(prev => [{ id: 'drive_' + doc.id, ...payload, created_at: new Date().toISOString(), team_members: null }, ...prev]);
+      }
+    } catch (err) {
+      alert('Could not connect to Google Drive: ' + (err.message || err));
+    } finally {
+      setDrivePicking(false);
+    }
+  }
+
   function folderCount(f) {
     return files.filter(file => f.mimeKeys.some(k => (file.mime_type || '').toLowerCase().includes(k))).length;
   }
@@ -116,10 +154,16 @@ function Files() {
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--fw-extrabold)', letterSpacing: '-0.02em' }}>Files</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 2 }}>{files.length} files · Shared workspace</p>
         </div>
-        <button onClick={() => fileInputRef.current.click()} disabled={uploading}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }}>
-          <Icon name={uploading ? 'loader' : 'upload'} size={16} /> {uploading ? 'Uploading…' : 'Upload'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={handleConnectDrive} disabled={drivePicking}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: '#fff', color: '#0F9D58', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: drivePicking ? 'not-allowed' : 'pointer', opacity: drivePicking ? 0.7 : 1 }}>
+            <Icon name={drivePicking ? 'loader' : 'hard-drive'} size={16} /> {drivePicking ? 'Connecting…' : 'Connect Google Drive'}
+          </button>
+          <button onClick={() => fileInputRef.current.click()} disabled={uploading}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }}>
+            <Icon name={uploading ? 'loader' : 'upload'} size={16} /> {uploading ? 'Uploading…' : 'Upload'}
+          </button>
+        </div>
         <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={handleFileSelect} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
@@ -155,15 +199,21 @@ function Files() {
         {!loading && files.map((f, i) => {
           const { icon, color } = mimeIcon(f.mime_type);
           const uploaderName = f.team_members ? f.team_members.name : '—';
+          const isDrive = (f.mime_type || '').startsWith('application/vnd.google-apps') || /drive\.google\.com/.test(f.file_path || f.url || '');
           return (
-            <div key={f.id || i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 18px', borderTop: '1px solid var(--border-subtle)' }}>
+            <div key={f.id || i} onClick={() => f.url && window.open(f.url, '_blank')}
+              style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 18px', borderTop: '1px solid var(--border-subtle)', cursor: f.url ? 'pointer' : 'default' }}>
               <span style={{ width: 34, height: 34, flex: 'none', borderRadius: 'var(--radius-md)', background: 'var(--slate-50)', border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: color }}><Icon name={icon} size={17} /></span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</div>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{uploaderName} · {fmtWhen(f.created_at)}</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                  {isDrive ? <span style={{ color: '#0F9D58', fontWeight: 'var(--fw-semibold)' }}>Google Drive</span> : uploaderName} · {fmtWhen(f.created_at)}
+                </div>
               </div>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-subtle)', width: 64, textAlign: 'right' }}>{fmtSize(f.file_size)}</span>
-              <Icon name="download" size={17} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} />
+              <Icon name={isDrive ? 'external-link' : 'download'} size={17}
+                onClick={e => { e.stopPropagation(); if (f.url) window.open(f.url, '_blank'); }}
+                style={{ color: 'var(--text-muted)', cursor: 'pointer' }} />
               <Icon name="more-vertical" size={17} style={{ color: 'var(--text-subtle)', cursor: 'pointer' }} />
             </div>
           );

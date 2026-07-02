@@ -1073,6 +1073,42 @@
       setUploading(false);
       load();
     }
+    const [drivePicking, setDrivePicking] = React.useState(false);
+    async function connectDrive() {
+      const gdrive = readIntegrationsCfg().gdrive || {};
+      if (!gdrive.driveClientId || !gdrive.driveApiKey) {
+        alert('Connect Google Drive first: go to Integrations → Google Drive and add your OAuth Client ID + API Key.');
+        if (window.TFNavigate) window.TFNavigate('integrations');
+        return;
+      }
+      setDrivePicking(true);
+      try {
+        const docs = await pickFilesFromGoogleDrive({
+          clientId: gdrive.driveClientId,
+          apiKey: gdrive.driveApiKey
+        });
+        for (const doc of docs) {
+          const rec = {
+            name: doc.name,
+            file_path: doc.url || `https://drive.google.com/file/d/${doc.id}/view`,
+            mime_type: doc.mimeType || 'application/vnd.google-apps.file',
+            file_size: doc.sizeBytes ? Number(doc.sizeBytes) : null,
+            folder_id: currentFolder
+          };
+          if (projectId) rec.project_id = projectId;
+          try {
+            await window.API.createFile(rec);
+          } catch (err) {
+            console.error('[Drive attach error]', err);
+          }
+        }
+        if (docs.length) load();
+      } catch (err) {
+        alert('Could not connect to Google Drive: ' + (err.message || err));
+      } finally {
+        setDrivePicking(false);
+      }
+    }
     async function createFolder() {
       if (!newName.trim() || !window.API) return;
       try {
@@ -1098,6 +1134,34 @@
       file
     }) {
       const t = file.file_type || '';
+      if (t.startsWith('application/vnd.google-apps.document')) return /*#__PURE__*/React.createElement(Icon, {
+        name: "file-text",
+        size: 22,
+        style: {
+          color: '#4285F4'
+        }
+      });
+      if (t.startsWith('application/vnd.google-apps.spreadsheet')) return /*#__PURE__*/React.createElement(Icon, {
+        name: "table",
+        size: 22,
+        style: {
+          color: '#0F9D58'
+        }
+      });
+      if (t.startsWith('application/vnd.google-apps.presentation')) return /*#__PURE__*/React.createElement(Icon, {
+        name: "presentation",
+        size: 22,
+        style: {
+          color: '#F4B400'
+        }
+      });
+      if (t.startsWith('application/vnd.google-apps')) return /*#__PURE__*/React.createElement(Icon, {
+        name: "hard-drive",
+        size: 22,
+        style: {
+          color: '#0F9D58'
+        }
+      });
       if (t.startsWith('image/')) return /*#__PURE__*/React.createElement(Icon, {
         name: "image",
         size: 22,
@@ -1219,7 +1283,29 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "folder-plus",
       size: 15
-    }), " New folder"), /*#__PURE__*/React.createElement("label", {
+    }), " New folder"), /*#__PURE__*/React.createElement("button", {
+      onClick: connectDrive,
+      disabled: drivePicking,
+      style: {
+        height: 36,
+        padding: '0 14px',
+        border: '1px solid var(--slate-200)',
+        borderRadius: 8,
+        background: 'white',
+        color: '#0F9D58',
+        cursor: drivePicking ? 'not-allowed' : 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 13,
+        fontWeight: 600,
+        fontFamily: 'var(--font-sans)',
+        opacity: drivePicking ? 0.7 : 1
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: drivePicking ? 'loader' : 'hard-drive',
+      size: 15
+    }), " ", drivePicking ? 'Connecting…' : 'Google Drive'), /*#__PURE__*/React.createElement("label", {
       style: {
         height: 36,
         padding: '0 16px',
