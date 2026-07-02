@@ -89,7 +89,10 @@
   }
   function TaskCard({
     task,
-    onEdit
+    onEdit,
+    onDragStart,
+    onDragEnd,
+    dragging
   }) {
     const [hover, setHover] = React.useState(false);
     const p = TF_PRIORITY[task.priority] || TF_PRIORITY.medium;
@@ -99,14 +102,22 @@
       onMouseEnter: () => setHover(true),
       onMouseLeave: () => setHover(false),
       onClick: () => onEdit && onEdit(task),
+      draggable: true,
+      onDragStart: e => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', task.id);
+        onDragStart && onDragStart(task);
+      },
+      onDragEnd: () => onDragEnd && onDragEnd(),
       style: {
         background: 'var(--slate-0)',
         border: `1px solid ${hover ? 'var(--slate-200)' : 'var(--border-subtle)'}`,
         borderRadius: 'var(--radius-lg)',
         padding: 12,
         boxShadow: hover ? 'var(--shadow-md)' : 'var(--shadow-xs)',
-        cursor: 'pointer',
-        transform: hover ? 'translateY(-1px)' : 'none',
+        cursor: dragging ? 'grabbing' : 'pointer',
+        opacity: dragging ? 0.4 : 1,
+        transform: hover && !dragging ? 'translateY(-1px)' : 'none',
         transition: 'all var(--dur-fast) var(--ease-out)'
       }
     }, /*#__PURE__*/React.createElement("div", {
@@ -828,6 +839,10 @@
     const [editForm, setEditForm] = React.useState({});
     const [editSaving, setEditSaving] = React.useState(false);
     const [editAttachments, setEditAttachments] = React.useState([]);
+
+    // Kanban drag-and-drop
+    const [draggedId, setDraggedId] = React.useState(null);
+    const [dragOverCol, setDragOverCol] = React.useState(null);
     function openEdit(task) {
       setEditTask(task);
       setEditForm({
@@ -846,8 +861,8 @@
         [k]: v
       }));
     }
-    async function toggleTaskDone(task) {
-      const newStatus = task.status === 'done' ? 'todo' : 'done';
+    async function moveTask(task, newStatus) {
+      if (!task || task.status === newStatus) return;
       const updated = {
         ...task,
         status: newStatus,
@@ -862,7 +877,10 @@
         next[newStatus] = [...(next[newStatus] || []), updated];
         return next;
       });
-      setTotalOpen(prev => newStatus === 'done' ? Math.max(0, prev - 1) : prev + 1);
+      const wasOpen = task.status !== 'done',
+        isOpen = newStatus !== 'done';
+      if (wasOpen && !isOpen) setTotalOpen(prev => Math.max(0, prev - 1));
+      if (!wasOpen && isOpen) setTotalOpen(prev => prev + 1);
       if (window.API && task.id && !String(task.id).startsWith('f')) {
         try {
           await window.API.updateTask(task.id, {
@@ -870,6 +888,9 @@
           });
         } catch {}
       }
+    }
+    function toggleTaskDone(task) {
+      return moveTask(task, task.status === 'done' ? 'todo' : 'done');
     }
     async function handleUpdateTask() {
       if (!editTask || !editForm.title?.trim()) return;
@@ -1212,19 +1233,42 @@
           cursor: 'pointer'
         }
       })), /*#__PURE__*/React.createElement("div", {
+        onDragOver: e => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (dragOverCol !== col.id) setDragOverCol(col.id);
+        },
+        onDragLeave: () => setDragOverCol(prev => prev === col.id ? null : prev),
+        onDrop: e => {
+          e.preventDefault();
+          const taskId = e.dataTransfer.getData('text/plain');
+          const task = allTasks.find(t => t.id === taskId);
+          moveTask(task, col.id);
+          setDragOverCol(null);
+          setDraggedId(null);
+        },
         style: {
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
-          background: 'var(--slate-100)',
           borderRadius: 'var(--radius-xl)',
           padding: 10,
-          minHeight: 120
+          minHeight: 120,
+          background: dragOverCol === col.id ? 'var(--blue-50)' : 'var(--slate-100)',
+          outline: dragOverCol === col.id ? '2px dashed var(--blue-300)' : '2px dashed transparent',
+          outlineOffset: -2,
+          transition: 'background var(--dur-fast), outline-color var(--dur-fast)'
         }
       }, colTasks.map((t, i) => /*#__PURE__*/React.createElement(TaskCard, {
         key: t.id || i,
         task: t,
-        onEdit: openEdit
+        onEdit: openEdit,
+        dragging: draggedId === t.id,
+        onDragStart: () => setDraggedId(t.id),
+        onDragEnd: () => {
+          setDraggedId(null);
+          setDragOverCol(null);
+        }
       })), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           set('status', col.id === 'backlog' ? 'todo' : col.id);
