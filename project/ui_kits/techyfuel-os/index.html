@@ -56,6 +56,7 @@
 <script type="text/babel" src="Docs.jsx?v=5" data-presets="react"></script>
 <script type="text/babel" src="Integrations.jsx?v=5" data-presets="react"></script>
 <script type="text/babel" src="Workspace.jsx?v=5" data-presets="react"></script>
+<script type="text/babel" src="QuickAdd.jsx?v=5" data-presets="react"></script>
 <script type="text/babel" data-presets="react">
 const ROUTES = {
   dashboard: { crumb: 'Workspace', title: 'Executive dashboard', render: () => <Dashboard /> },
@@ -116,10 +117,22 @@ function LoadingScreen() {
 function App() {
   const [active, setActive] = React.useState('dashboard');
   const [aiOpen, setAiOpen] = React.useState(false);
+  const [quickAddOpen, setQuickAddOpen] = React.useState(false);
   const [authUser, setAuthUser] = React.useState(null);
   const [authLoading, setAuthLoading] = React.useState(true);
 
   React.useEffect(() => { window.TFNavigate = setActive; }, [setActive]);
+
+  React.useEffect(() => {
+    function onKeyDown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setQuickAddOpen(true);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   React.useEffect(() => {
     if (!window.db) { setAuthLoading(false); return; }
@@ -147,10 +160,11 @@ function App() {
   return (
     <>
       <AppShell active={active} onNavigate={setActive} title={meta.title} crumb={meta.crumb}
-        onOpenAI={() => setAiOpen(true)} authUser={authUser} onSignOut={handleSignOut}>
+        onOpenAI={() => setAiOpen(true)} onQuickAdd={() => setQuickAddOpen(true)} authUser={authUser} onSignOut={handleSignOut}>
         {route ? route.render() : <Placeholder id={active} />}
       </AppShell>
       <AIPanel open={aiOpen} onClose={() => setAiOpen(false)} />
+      <QuickAddModal open={quickAddOpen} onClose={() => setQuickAddOpen(false)} onNavigate={setActive} />
     </>
   );
 }

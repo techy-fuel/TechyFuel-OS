@@ -159,7 +159,7 @@ function Sidebar({ active, onNavigate, hiddenIds, mobileOpen, onCloseMobile }) {
   );
 }
 
-function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut, onToggleNav }) {
+function TopBar({ title, crumb, onOpenAI, onQuickAdd, onNavigate, authUser, onSignOut, onToggleNav }) {
   const s0 = readTFSettings();
   const [agencyName, setAgencyName] = React.useState(s0.agencyName || '');
   const [notifOpen,  setNotifOpen]  = React.useState(false);
@@ -282,6 +282,15 @@ function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut, onTog
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xs)', color: 'var(--text-subtle)', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-xs)', padding: '1px 5px' }}>⌘K</span>
       </button>
 
+      {/* Quick add */}
+      <button onClick={onQuickAdd} title="Quick add (Ctrl/Cmd+J)" style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 36, height: 36, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)',
+        background: 'transparent', cursor: 'pointer', color: 'var(--text-body)', flexShrink: 0,
+      }}>
+        <Icon name="plus" size={18} />
+      </button>
+
       {/* Ask AI */}
       <button onClick={onOpenAI} title="Ask AI" style={{
         display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 13px', borderRadius: 'var(--radius-md)', flexShrink: 0,
@@ -389,7 +398,7 @@ function TopBar({ title, crumb, onOpenAI, onNavigate, authUser, onSignOut, onTog
 
 const FULL_HEIGHT_SCREENS = new Set(['chat', 'docs']);
 
-function AppShell({ active, onNavigate, title, crumb, onOpenAI, children, authUser, onSignOut, hiddenIds }) {
+function AppShell({ active, onNavigate, title, crumb, onOpenAI, onQuickAdd, children, authUser, onSignOut, hiddenIds }) {
   useLucide();
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const fullH = FULL_HEIGHT_SCREENS.has(active);
@@ -405,7 +414,7 @@ function AppShell({ active, onNavigate, title, crumb, onOpenAI, children, authUs
     <div style={{ display: 'flex', height: '100%', width: '100%', background: 'var(--surface-page)' }}>
       <Sidebar active={active} onNavigate={onNavigate} hiddenIds={hiddenIds} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, height: '100%' }}>
-        <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onNavigate={onNavigate} authUser={authUser} onSignOut={onSignOut} onToggleNav={() => setMobileNavOpen(o => !o)} />
+        <TopBar title={title} crumb={crumb} onOpenAI={onOpenAI} onQuickAdd={onQuickAdd} onNavigate={onNavigate} authUser={authUser} onSignOut={onSignOut} onToggleNav={() => setMobileNavOpen(o => !o)} />
         <main className={fullH ? '' : 'tf-scroll'} style={{ flex: 1, minHeight: 0, overflowY: fullH ? 'hidden' : 'auto', overflowX: fullH ? 'hidden' : 'visible' }}>{children}</main>
       </div>
     </div>

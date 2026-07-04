@@ -337,6 +337,7 @@
     title,
     crumb,
     onOpenAI,
+    onQuickAdd,
     onNavigate,
     authUser,
     onSignOut,
@@ -546,6 +547,25 @@
         padding: '1px 5px'
       }
     }, "⌘K")), /*#__PURE__*/React.createElement("button", {
+      onClick: onQuickAdd,
+      title: "Quick add (Ctrl/Cmd+J)",
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 36,
+        height: 36,
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-subtle)',
+        background: 'transparent',
+        cursor: 'pointer',
+        color: 'var(--text-body)',
+        flexShrink: 0
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 18
+    })), /*#__PURE__*/React.createElement("button", {
       onClick: onOpenAI,
       title: "Ask AI",
       style: {
@@ -890,6 +910,7 @@
     title,
     crumb,
     onOpenAI,
+    onQuickAdd,
     children,
     authUser,
     onSignOut,
@@ -933,6 +954,7 @@
       title: title,
       crumb: crumb,
       onOpenAI: onOpenAI,
+      onQuickAdd: onQuickAdd,
       onNavigate: onNavigate,
       authUser: authUser,
       onSignOut: onSignOut,

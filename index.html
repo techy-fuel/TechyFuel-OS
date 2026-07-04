@@ -60,6 +60,7 @@
 <script src="project/compiled/Workspace.js"></script>
 <script src="project/compiled/Settings.js"></script>
 <script src="project/compiled/Calendar.js"></script>
+<script src="project/compiled/QuickAdd.js"></script>
 
 <!-- App router -->
 <script>
@@ -233,6 +234,7 @@
     var s1 = React.useState(function () { return pathToRoute(window.location.pathname) || 'dashboard'; });
     var active = s1[0], setActive = s1[1];
     var s2 = React.useState(false);       var aiOpen = s2[0], setAiOpen = s2[1];
+    var sQA = React.useState(false);      var quickAddOpen = sQA[0], setQuickAddOpen = sQA[1];
     var s3 = React.useState(null);        var authUser = s3[0], setAuthUser = s3[1];
     var s4 = React.useState(true);        var authLoading = s4[0], setAuthLoading = s4[1];
     var s5 = React.useState(false);       var suspended = s5[0], setSuspended = s5[1];
@@ -257,6 +259,18 @@
     }, []);
 
     React.useEffect(function () { window.TFNavigate = navigate; }, []);
+
+    // Ctrl/Cmd+J opens Quick Add from anywhere in the app.
+    React.useEffect(function () {
+      function onKeyDown(e) {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+          e.preventDefault();
+          setQuickAddOpen(true);
+        }
+      }
+      window.addEventListener('keydown', onKeyDown);
+      return function () { window.removeEventListener('keydown', onKeyDown); };
+    }, []);
 
     React.useEffect(function () {
       if (!window.db) { setAuthLoading(false); return; }
@@ -316,10 +330,12 @@
         active: active, onNavigate: navigate,
         title: restricted ? 'Access restricted' : meta.title, crumb: meta.crumb,
         onOpenAI: function () { setAiOpen(true); },
+        onQuickAdd: function () { setQuickAddOpen(true); },
         authUser: authUser, onSignOut: handleSignOut,
         hiddenIds: hiddenIds,
       }, screenEl),
-      e(window.AIPanel, { open: aiOpen, onClose: function () { setAiOpen(false); } })
+      e(window.AIPanel, { open: aiOpen, onClose: function () { setAiOpen(false); } }),
+      e(window.QuickAddModal, { open: quickAddOpen, onClose: function () { setQuickAddOpen(false); }, onNavigate: navigate })
     );
   }
 
