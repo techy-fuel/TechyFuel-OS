@@ -65,7 +65,7 @@
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: size < 24 ? 9 : 11,
+        fontSize: Math.max(9, Math.round(size * 0.36)),
         fontWeight: 700,
         flex: 'none'
       }
@@ -759,8 +759,8 @@
       onMouseEnter: () => setH(true),
       onMouseLeave: () => setH(false),
       style: {
-        width: 20,
-        height: 20,
+        width: 24,
+        height: 24,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -768,12 +768,12 @@
         border: 'none',
         borderRadius: 'var(--radius-sm)',
         cursor: 'pointer',
-        color: 'rgba(255,255,255,0.55)',
+        color: 'rgba(255,255,255,0.6)',
         transition: 'background 0.12s'
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "plus",
-      size: 13
+      size: 16
     }));
   }
   function SidebarCh({
@@ -806,12 +806,12 @@
       }
     }, ch.type === 'dm' ? /*#__PURE__*/React.createElement(MemberAvatar, {
       name: ch.displayName || ch.name,
-      size: 20
+      size: 24
     }) : /*#__PURE__*/React.createElement(Icon, {
       name: ch.type === 'group' ? 'users' : 'hash',
-      size: 14,
+      size: 17,
       style: {
-        opacity: 0.65,
+        opacity: 0.7,
         flexShrink: 0
       }
     }), /*#__PURE__*/React.createElement("span", {
@@ -1638,8 +1638,8 @@
     }, "Team Chat"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setSearchOpen(true),
       style: {
-        width: 28,
-        height: 28,
+        width: 30,
+        height: 30,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1651,13 +1651,13 @@
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "search",
-      size: 14
+      size: 16
     }))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        height: 30,
+        height: 34,
         padding: '0 8px',
         background: 'rgba(255,255,255,0.08)',
         border: '1px solid rgba(255,255,255,0.12)',
@@ -1665,7 +1665,7 @@
       }
     }, /*#__PURE__*/React.createElement(MemberAvatar, {
       name: team.find(m => m.id === myId)?.name || '',
-      size: 18
+      size: 22
     }), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 'var(--text-xs)',
@@ -1829,11 +1829,11 @@
       }
     }, activeChannel.type === 'dm' ? /*#__PURE__*/React.createElement(MemberAvatar, {
       name: activeChannel.displayName || activeChannel.name,
-      size: 30
+      size: 36
     }) : /*#__PURE__*/React.createElement("span", {
       style: {
-        width: 30,
-        height: 30,
+        width: 36,
+        height: 36,
         borderRadius: 'var(--radius-md)',
         background: 'var(--blue-50)',
         display: 'inline-flex',
@@ -1843,7 +1843,7 @@
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: activeChannel.type === 'group' ? 'users' : 'hash',
-      size: 15,
+      size: 18,
       style: {
         color: 'var(--blue-600)'
       }
@@ -1870,8 +1870,8 @@
       }),
       title: "Voice call",
       style: {
-        width: 32,
-        height: 32,
+        width: 36,
+        height: 36,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1883,7 +1883,7 @@
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "phone",
-      size: 15
+      size: 18
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setCall({
         channelId: activeChannel.id,
@@ -1892,8 +1892,8 @@
       }),
       title: "Video call",
       style: {
-        width: 32,
-        height: 32,
+        width: 36,
+        height: 36,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1905,12 +1905,12 @@
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "video",
-      size: 15
+      size: 18
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setSearchOpen(true),
       style: {
-        width: 32,
-        height: 32,
+        width: 36,
+        height: 36,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1922,12 +1922,12 @@
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "search",
-      size: 15
+      size: 18
     })), /*#__PURE__*/React.createElement("button", {
       onClick: openMembers,
       style: {
-        width: 32,
-        height: 32,
+        width: 36,
+        height: 36,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1939,27 +1939,27 @@
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "users",
-      size: 15
+      size: 18
     })), /*#__PURE__*/React.createElement("button", {
       onClick: openPinned,
       style: {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 5,
-        height: 32,
-        padding: '0 10px',
+        gap: 6,
+        height: 36,
+        padding: '0 12px',
         background: 'none',
         border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-md)',
         cursor: 'pointer',
         color: 'var(--text-muted)',
         fontFamily: 'var(--font-sans)',
-        fontSize: 'var(--text-xs)',
+        fontSize: 'var(--text-sm)',
         fontWeight: 'var(--fw-semibold)'
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "pin",
-      size: 13
+      size: 16
     }), " Pinned")), /*#__PURE__*/React.createElement("div", {
       className: "tf-scroll",
       style: {
@@ -1981,8 +1981,8 @@
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
-        width: 56,
-        height: 56,
+        width: 68,
+        height: 68,
         borderRadius: 'var(--radius-xl)',
         background: 'var(--blue-50)',
         display: 'inline-flex',
@@ -1991,7 +1991,7 @@
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "message-circle",
-      size: 26,
+      size: 32,
       style: {
         color: 'var(--blue-600)'
       }
@@ -2028,11 +2028,11 @@
       }
     }, activeChannel?.type === 'dm' ? /*#__PURE__*/React.createElement(MemberAvatar, {
       name: activeChannel.displayName,
-      size: 56
+      size: 68
     }) : /*#__PURE__*/React.createElement("span", {
       style: {
-        width: 56,
-        height: 56,
+        width: 68,
+        height: 68,
         borderRadius: 'var(--radius-xl)',
         background: 'var(--blue-50)',
         display: 'inline-flex',
@@ -2041,7 +2041,7 @@
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: activeChannel?.type === 'group' ? 'users' : 'hash',
-      size: 26,
+      size: 32,
       style: {
         color: 'var(--blue-600)'
       }
