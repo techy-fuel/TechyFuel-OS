@@ -7,6 +7,11 @@
     AvatarGroup,
     Tabs
   } = window.TechyFuelOSDesignSystem_be0222;
+  function addRecurrenceInterval(dateStr, interval) {
+    const d = new Date((dateStr || new Date().toISOString().slice(0, 10)) + 'T00:00:00Z');
+    if (interval === 'weekly') d.setUTCDate(d.getUTCDate() + 7);else if (interval === 'daily') d.setUTCDate(d.getUTCDate() + 1);else d.setUTCMonth(d.getUTCMonth() + 1); // 'monthly' default
+    return d.toISOString().slice(0, 10);
+  }
   const TF_PRIORITY = {
     urgent: {
       color: 'var(--red-600)',
@@ -162,7 +167,15 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "user",
       size: 10
-    }), " Client"), hover && /*#__PURE__*/React.createElement("span", {
+    }), " Client"), task.is_recurring && /*#__PURE__*/React.createElement("span", {
+      title: "Recurring task"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "repeat",
+      size: 12,
+      style: {
+        color: 'var(--blue-500)'
+      }
+    })), hover && /*#__PURE__*/React.createElement("span", {
       style: {
         marginLeft: 'auto',
         color: 'var(--text-subtle)'
@@ -830,7 +843,9 @@
       due_date: '',
       assigned_to: '',
       project_id: '',
-      client_id: ''
+      client_id: '',
+      is_recurring: false,
+      recurrence_interval: 'weekly'
     });
     const [attachments, setAttachments] = React.useState([]);
 
@@ -983,6 +998,7 @@
                 done: t.status === 'done',
                 assigned_to: t.assigned_to,
                 client_id: t.client_id || null,
+                is_recurring: t.is_recurring || false,
                 assigned_to_name: t.team_members ? t.team_members.name : null,
                 project_name: t.projects ? t.projects.name : null
               };
@@ -1034,6 +1050,9 @@
         if (form.assigned_to) payload.assigned_to = form.assigned_to;
         if (form.project_id) payload.project_id = form.project_id;
         if (form.client_id) payload.client_id = form.client_id;
+        payload.is_recurring = !!form.is_recurring;
+        payload.recurrence_interval = form.is_recurring ? form.recurrence_interval : null;
+        payload.next_run_date = form.is_recurring ? addRecurrenceInterval(form.due_date, form.recurrence_interval) : null;
         if (window.API) {
           const {
             data,
@@ -1074,7 +1093,9 @@
           due_date: '',
           assigned_to: '',
           project_id: '',
-          client_id: ''
+          client_id: '',
+          is_recurring: false,
+          recurrence_interval: 'weekly'
         });
         setAttachments([]);
       } finally {
@@ -1479,7 +1500,42 @@
     }, /*#__PURE__*/React.createElement(AttachArea, {
       files: attachments,
       onChange: setAttachments
-    }))));
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Repeat"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement("label", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 7,
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "checkbox",
+      checked: !!form.is_recurring,
+      onChange: e => set('is_recurring', e.target.checked)
+    }), "Auto-create the next task"), form.is_recurring && /*#__PURE__*/React.createElement("select", {
+      style: {
+        ...FF.select,
+        flex: '0 0 auto',
+        width: 140
+      },
+      value: form.recurrence_interval,
+      onChange: e => set('recurrence_interval', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "daily"
+    }, "Daily"), /*#__PURE__*/React.createElement("option", {
+      value: "weekly"
+    }, "Weekly"), /*#__PURE__*/React.createElement("option", {
+      value: "monthly"
+    }, "Monthly"))))));
   }
   Object.assign(window, {
     TasksBoard

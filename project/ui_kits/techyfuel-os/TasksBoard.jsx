@@ -2,6 +2,14 @@
 (() => {
 const { Card, Badge, Avatar, AvatarGroup, Tabs } = window.TechyFuelOSDesignSystem_be0222;
 
+function addRecurrenceInterval(dateStr, interval) {
+  const d = new Date((dateStr || new Date().toISOString().slice(0, 10)) + 'T00:00:00Z');
+  if (interval === 'weekly') d.setUTCDate(d.getUTCDate() + 7);
+  else if (interval === 'daily') d.setUTCDate(d.getUTCDate() + 1);
+  else d.setUTCMonth(d.getUTCMonth() + 1); // 'monthly' default
+  return d.toISOString().slice(0, 10);
+}
+
 const TF_PRIORITY = {
   urgent: { color: 'var(--red-600)',   bg: 'var(--red-50)',   label: 'Urgent', icon: 'chevrons-up' },
   high:   { color: 'var(--amber-600)', bg: 'var(--amber-50)', label: 'High',   icon: 'chevron-up' },
@@ -54,6 +62,7 @@ function TaskCard({ task, onEdit, onDragStart, onDragEnd, dragging }) {
           <Icon name={p.icon} size={12} /> {p.label}
         </span>
         {task.client_id && <span title="Visible in client portal" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: 'var(--violet-600)', background: 'var(--violet-50)', borderRadius: 'var(--radius-full)', padding: '2px 7px' }}><Icon name="user" size={10} /> Client</span>}
+        {task.is_recurring && <span title="Recurring task"><Icon name="repeat" size={12} style={{ color: 'var(--blue-500)' }} /></span>}
         {hover && <span style={{ marginLeft: 'auto', color: 'var(--text-subtle)' }}><Icon name="pencil" size={12} /></span>}
       </div>
       <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', lineHeight: 1.4, marginBottom: 10, textDecoration: task.done ? 'line-through' : 'none', opacity: task.done ? 0.6 : 1 }}>{task.title}</div>
@@ -310,7 +319,7 @@ function TasksBoard() {
   const [team, setTeam]           = React.useState([]);
   const [projects, setProjects]   = React.useState([]);
   const [clients,  setClients]    = React.useState([]);
-  const [form, setForm] = React.useState({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '', client_id: '' });
+  const [form, setForm] = React.useState({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '', client_id: '', is_recurring: false, recurrence_interval: 'weekly' });
   const [attachments, setAttachments] = React.useState([]);
 
   // Edit task state
@@ -401,7 +410,7 @@ function TasksBoard() {
             if (!map[key]) map[key] = [];
             const task = { id: t.id, title: t.title, priority: t.priority, due_date: t.due_date,
               status: t.status || 'todo', done: t.status === 'done', assigned_to: t.assigned_to,
-              client_id: t.client_id || null,
+              client_id: t.client_id || null, is_recurring: t.is_recurring || false,
               assigned_to_name: t.team_members ? t.team_members.name : null,
               project_name: t.projects ? t.projects.name : null };
             map[key].push(task);
@@ -428,6 +437,9 @@ function TasksBoard() {
       if (form.assigned_to) payload.assigned_to = form.assigned_to;
       if (form.project_id)  payload.project_id  = form.project_id;
       if (form.client_id)   payload.client_id   = form.client_id;
+      payload.is_recurring = !!form.is_recurring;
+      payload.recurrence_interval = form.is_recurring ? form.recurrence_interval : null;
+      payload.next_run_date = form.is_recurring ? addRecurrenceInterval(form.due_date, form.recurrence_interval) : null;
 
       if (window.API) {
         const { data, error } = await window.API.createTask(payload);
@@ -447,7 +459,7 @@ function TasksBoard() {
         }
       }
       setModalOpen(false);
-      setForm({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '', client_id: '' });
+      setForm({ title: '', priority: 'medium', status: 'todo', due_date: '', assigned_to: '', project_id: '', client_id: '', is_recurring: false, recurrence_interval: 'weekly' });
       setAttachments([]);
     } finally { setSaving(false); }
   }
@@ -620,6 +632,21 @@ function TasksBoard() {
         </div>
         <FormRow label="Attachments">
           <AttachArea files={attachments} onChange={setAttachments} />
+        </FormRow>
+        <FormRow label="Repeat">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--text-sm)', color: 'var(--text-body)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={!!form.is_recurring} onChange={e => set('is_recurring', e.target.checked)} />
+              Auto-create the next task
+            </label>
+            {form.is_recurring && (
+              <select style={{ ...FF.select, flex: '0 0 auto', width: 140 }} value={form.recurrence_interval} onChange={e => set('recurrence_interval', e.target.value)}>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            )}
+          </div>
         </FormRow>
       </Modal>
     </div>

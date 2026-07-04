@@ -91,6 +91,11 @@
     symbol: 'A$',
     name: 'Australian Dollar'
   }];
+  function addRecurrenceInterval(dateStr, interval) {
+    const d = new Date((dateStr || new Date().toISOString().slice(0, 10)) + 'T00:00:00Z');
+    if (interval === 'weekly') d.setUTCDate(d.getUTCDate() + 7);else if (interval === 'quarterly') d.setUTCMonth(d.getUTCMonth() + 3);else d.setUTCMonth(d.getUTCMonth() + 1); // 'monthly' default
+    return d.toISOString().slice(0, 10);
+  }
   function getCurrencySymbol(code) {
     return (CURRENCIES.find(c => c.code === code) || CURRENCIES[0]).symbol;
   }
@@ -470,7 +475,9 @@
         amount: '',
         due_date: '',
         status: 'draft',
-        currency: 'USD'
+        currency: 'PKR',
+        is_recurring: false,
+        recurrence_interval: 'monthly'
       });
       setModalOpen(true);
     }
@@ -482,7 +489,9 @@
         amount: inv.amount ? String(inv.amount) : '',
         due_date: inv.due_date ? inv.due_date.slice(0, 10) : '',
         status: inv.status || 'draft',
-        currency: inv.currency || 'PKR'
+        currency: inv.currency || 'PKR',
+        is_recurring: !!inv.is_recurring,
+        recurrence_interval: inv.recurrence_interval || 'monthly'
       });
       setModalOpen(true);
     }
@@ -498,6 +507,9 @@
         if (form.client_id) payload.client_id = form.client_id;
         if (form.amount) payload.amount = Number(form.amount);
         if (form.due_date) payload.due_date = form.due_date;
+        payload.is_recurring = !!form.is_recurring;
+        payload.recurrence_interval = form.is_recurring ? form.recurrence_interval : null;
+        payload.next_run_date = form.is_recurring ? addRecurrenceInterval(form.due_date || new Date().toISOString().slice(0, 10), form.recurrence_interval) : null;
         // Track when it was actually marked paid, so Dashboard's "This month"
         // revenue filter has a real date to go on instead of just due_date.
         if (form.status === 'paid' && editInv?.status !== 'paid') payload.paid_at = new Date().toISOString();else if (form.status !== 'paid' && editInv?.status === 'paid') payload.paid_at = null;
@@ -849,11 +861,21 @@
         }
       }, /*#__PURE__*/React.createElement("div", {
         style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
           fontFamily: 'var(--font-mono)',
           fontSize: 'var(--text-xs)',
           color: 'var(--text-body)'
         }
-      }, inv.invoice_no), /*#__PURE__*/React.createElement("div", {
+      }, inv.invoice_no, inv.is_recurring && /*#__PURE__*/React.createElement(Icon, {
+        name: "repeat",
+        size: 12,
+        style: {
+          color: 'var(--blue-500)'
+        },
+        title: `Repeats ${inv.recurrence_interval || 'monthly'}`
+      })), /*#__PURE__*/React.createElement("div", {
         style: {
           fontSize: 'var(--text-2xs)',
           color: 'var(--text-muted)',
@@ -1288,7 +1310,48 @@
       type: "date",
       value: form.due_date,
       onChange: e => set('due_date', e.target.value)
-    }))), /*#__PURE__*/React.createElement(Modal, {
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Repeat"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement("label", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 7,
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "checkbox",
+      checked: !!form.is_recurring,
+      onChange: e => set('is_recurring', e.target.checked)
+    }), "Auto-create the next invoice"), form.is_recurring && /*#__PURE__*/React.createElement("select", {
+      style: {
+        ...FF.select,
+        flex: '0 0 auto',
+        width: 140
+      },
+      value: form.recurrence_interval,
+      onChange: e => set('recurrence_interval', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "weekly"
+    }, "Weekly"), /*#__PURE__*/React.createElement("option", {
+      value: "monthly"
+    }, "Monthly"), /*#__PURE__*/React.createElement("option", {
+      value: "quarterly"
+    }, "Quarterly"))), form.is_recurring && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        marginTop: 6
+      }
+    }, "A new draft invoice for the same client/amount will be created automatically ", form.recurrence_interval, " after the due date above."))), /*#__PURE__*/React.createElement(Modal, {
       open: expModalOpen,
       onClose: () => setExpModalOpen(false),
       title: editExp ? 'Edit expense' : 'Add expense',

@@ -31,6 +31,14 @@ const CURRENCIES = [
   { code: 'AUD', symbol: 'A$',  name: 'Australian Dollar' },
 ];
 
+function addRecurrenceInterval(dateStr, interval) {
+  const d = new Date((dateStr || new Date().toISOString().slice(0, 10)) + 'T00:00:00Z');
+  if (interval === 'weekly') d.setUTCDate(d.getUTCDate() + 7);
+  else if (interval === 'quarterly') d.setUTCMonth(d.getUTCMonth() + 3);
+  else d.setUTCMonth(d.getUTCMonth() + 1); // 'monthly' default
+  return d.toISOString().slice(0, 10);
+}
+
 function getCurrencySymbol(code) {
   return (CURRENCIES.find(c => c.code === code) || CURRENCIES[0]).symbol;
 }
@@ -318,7 +326,7 @@ function Finance() {
 
   function openNew() {
     setEditInv(null);
-    setForm({ invoice_no: '', client_id: '', amount: '', due_date: '', status: 'draft', currency: 'USD' });
+    setForm({ invoice_no: '', client_id: '', amount: '', due_date: '', status: 'draft', currency: 'PKR', is_recurring: false, recurrence_interval: 'monthly' });
     setModalOpen(true);
   }
 
@@ -331,6 +339,8 @@ function Finance() {
       due_date:   inv.due_date   ? inv.due_date.slice(0, 10) : '',
       status:     inv.status     || 'draft',
       currency:   inv.currency   || 'PKR',
+      is_recurring: !!inv.is_recurring,
+      recurrence_interval: inv.recurrence_interval || 'monthly',
     });
     setModalOpen(true);
   }
@@ -343,6 +353,9 @@ function Finance() {
       if (form.client_id) payload.client_id = form.client_id;
       if (form.amount)    payload.amount    = Number(form.amount);
       if (form.due_date)  payload.due_date  = form.due_date;
+      payload.is_recurring = !!form.is_recurring;
+      payload.recurrence_interval = form.is_recurring ? form.recurrence_interval : null;
+      payload.next_run_date = form.is_recurring ? addRecurrenceInterval(form.due_date || new Date().toISOString().slice(0, 10), form.recurrence_interval) : null;
       // Track when it was actually marked paid, so Dashboard's "This month"
       // revenue filter has a real date to go on instead of just due_date.
       if (form.status === 'paid' && editInv?.status !== 'paid') payload.paid_at = new Date().toISOString();
@@ -486,7 +499,10 @@ function Finance() {
                   return (
                     <tr key={inv.id || i} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '10px 16px' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-body)' }}>{inv.invoice_no}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-body)' }}>
+                          {inv.invoice_no}
+                          {inv.is_recurring && <Icon name="repeat" size={12} style={{ color: 'var(--blue-500)' }} title={`Repeats ${inv.recurrence_interval || 'monthly'}`} />}
+                        </div>
                         <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 2 }}>{inv.currency || 'PKR'}</div>
                       </td>
                       <td style={{ padding: '10px 16px', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)' }}>{clientName}</td>
@@ -649,6 +665,26 @@ function Finance() {
         </FormRow>
         <FormRow label="Due date">
           <input style={FF.input} type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+        </FormRow>
+        <FormRow label="Repeat">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--text-sm)', color: 'var(--text-body)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={!!form.is_recurring} onChange={e => set('is_recurring', e.target.checked)} />
+              Auto-create the next invoice
+            </label>
+            {form.is_recurring && (
+              <select style={{ ...FF.select, flex: '0 0 auto', width: 140 }} value={form.recurrence_interval} onChange={e => set('recurrence_interval', e.target.value)}>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+              </select>
+            )}
+          </div>
+          {form.is_recurring && (
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 6 }}>
+              A new draft invoice for the same client/amount will be created automatically {form.recurrence_interval} after the due date above.
+            </div>
+          )}
         </FormRow>
       </Modal>
 
