@@ -24,6 +24,16 @@ function fmtMoney(n) {
   return '₨' + Math.round(n);
 }
 
+function fxToPKR(amount, currency, rates) {
+  const n = Number(amount);
+  if (!n) return 0;
+  if (!currency || currency === 'PKR') return n;
+  if (!rates) return 0;
+  const usd = currency === 'USD' ? n : (rates[currency] ? n / rates[currency] : null);
+  if (usd === null) return 0;
+  return rates.PKR ? usd * rates.PKR : 0;
+}
+
 const PERIODS = [
   { id: 'month',      label: 'This month' },
   { id: 'last_month', label: 'Last month' },
@@ -189,6 +199,55 @@ function MemberDashboard() {
   );
 }
 
+const TODAY_KEY = new Date().toISOString().slice(0, 10);
+
+function DailyBriefing({ briefing, onDismiss, onOpenAI }) {
+  if (!briefing) return null;
+  const { overdueTasks, dueTodayTasks, overdueInvoices, overdueInvoiceTotal, weekDeadlines } = briefing;
+  const nothingUrgent = overdueTasks === 0 && dueTodayTasks === 0 && overdueInvoices === 0;
+  const lines = [];
+  if (overdueTasks > 0) lines.push({ icon: 'alert-circle', color: 'var(--red-600)', text: `${overdueTasks} task${overdueTasks === 1 ? '' : 's'} overdue` });
+  if (dueTodayTasks > 0) lines.push({ icon: 'clock', color: 'var(--amber-600)', text: `${dueTodayTasks} task${dueTodayTasks === 1 ? '' : 's'} due today` });
+  if (overdueInvoices > 0) lines.push({ icon: 'wallet', color: 'var(--red-600)', text: `${overdueInvoices} invoice${overdueInvoices === 1 ? '' : 's'} overdue (${fmtMoney(overdueInvoiceTotal)})` });
+  if (weekDeadlines > 0) lines.push({ icon: 'calendar-days', color: 'var(--blue-600)', text: `${weekDeadlines} deadline${weekDeadlines === 1 ? '' : 's'} this week` });
+
+  return (
+    <Card padding="lg" style={{ marginBottom: 16, background: 'var(--grad-brand-soft, linear-gradient(135deg, var(--blue-50), var(--slate-0)))', border: '1px solid var(--blue-100)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <span style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 'var(--radius-lg)', background: 'var(--blue-600)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="sparkles" size={18} style={{ color: '#fff' }} />
+          </span>
+          <div>
+            <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', marginBottom: 4 }}>Today's briefing</div>
+            {nothingUrgent ? (
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Nothing urgent — everything's on track. 🎉</div>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px' }}>
+                {lines.map((l, i) => (
+                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)' }}>
+                    <Icon name={l.icon} size={14} style={{ color: l.color }} /> {l.text}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {!nothingUrgent && (
+            <button onClick={onOpenAI} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 30, padding: '0 10px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
+              <Icon name="message-circle" size={13} /> Ask AI what to prioritize
+            </button>
+          )}
+          <button onClick={onDismiss} title="Dismiss for today" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, display: 'flex' }}>
+            <Icon name="x" size={16} />
+          </button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function ExecutiveDashboard() {
   useLucide();
   const [stats,     setStats]     = React.useState({ activeClients: 0, activeProjects: 0, openTasks: 0, revenue: 0 });
@@ -204,6 +263,8 @@ function ExecutiveDashboard() {
   const [period, setPeriod] = React.useState('month');
   const [periodOpen, setPeriodOpen] = React.useState(false);
   const periodRef = React.useRef(null);
+  const [briefing, setBriefing] = React.useState(null);
+  const [briefingDismissed, setBriefingDismissed] = React.useState(() => localStorage.getItem('tf_briefing_dismissed') === TODAY_KEY);
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -253,6 +314,24 @@ function ExecutiveDashboard() {
             .slice(0, 5)
             .map(t => ({ id: t.id, title: t.title, status: t.status, project: t.projects?.name || '', assignee: t.team_members?.name || '', created_at: t.created_at }));
           setActivity(recent);
+
+          const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+          const weekAhead = new Date(today0.getTime() + 7 * 86400000);
+          const openTasksWithDue = r.data.filter(t => t.status !== 'done' && t.due_date);
+          const overdueTasks = openTasksWithDue.filter(t => new Date(t.due_date) < today0).length;
+          const dueTodayTasks = openTasksWithDue.filter(t => { const d = new Date(t.due_date); d.setHours(0, 0, 0, 0); return d.getTime() === today0.getTime(); }).length;
+          const weekDeadlines = openTasksWithDue.filter(t => { const d = new Date(t.due_date); return d >= today0 && d <= weekAhead; }).length;
+          let overdueInvoices = 0, overdueInvoiceTotal = 0;
+          try {
+            const invRes = await window.API.getInvoices();
+            const fx = window.API.getFxRates ? await window.API.getFxRates().catch(() => null) : null;
+            const rates = fx && fx.rates;
+            (invRes.data || []).filter(inv => inv.status !== 'paid' && inv.status !== 'cancelled' && inv.due_date && new Date(inv.due_date) < today0).forEach(inv => {
+              overdueInvoices++;
+              overdueInvoiceTotal += fxToPKR(inv.amount, inv.currency, rates);
+            });
+          } catch {}
+          setBriefing({ overdueTasks, dueTodayTasks, weekDeadlines, overdueInvoices, overdueInvoiceTotal });
         }
       } catch {}
       try {
@@ -265,6 +344,11 @@ function ExecutiveDashboard() {
       } catch {}
     })();
   }, []);
+
+  function dismissBriefing() {
+    localStorage.setItem('tf_briefing_dismissed', TODAY_KEY);
+    setBriefingDismissed(true);
+  }
 
   async function handleNewProject() {
     if (!form.name.trim()) return;
@@ -322,6 +406,8 @@ function ExecutiveDashboard() {
           </button>
         </div>
       </div>
+
+      {!briefingDismissed && <DailyBriefing briefing={briefing} onDismiss={dismissBriefing} onOpenAI={() => window.TFOpenAI && window.TFOpenAI()} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
         <StatCard label="Revenue (paid, PKR)" value={revenueDisplay} icon={<Icon name="dollar-sign" />} tone="success" />

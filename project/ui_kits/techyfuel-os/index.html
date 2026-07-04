@@ -122,6 +122,7 @@ function App() {
   const [authLoading, setAuthLoading] = React.useState(true);
 
   React.useEffect(() => { window.TFNavigate = setActive; }, [setActive]);
+  React.useEffect(() => { window.TFOpenAI = () => setAiOpen(true); }, []);
 
   React.useEffect(() => {
     function onKeyDown(e) {

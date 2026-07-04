@@ -259,6 +259,7 @@
     }, []);
 
     React.useEffect(function () { window.TFNavigate = navigate; }, []);
+    React.useEffect(function () { window.TFOpenAI = function () { setAiOpen(true); }; }, []);
 
     // Ctrl/Cmd+J opens Quick Add from anywhere in the app.
     React.useEffect(function () {
