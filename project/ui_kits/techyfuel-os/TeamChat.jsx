@@ -293,15 +293,29 @@ function MessageInput({ channelName, onSend, team, myId, placeholder }) {
 }
 
 // ── Sidebar item ──────────────────────────────────────────────────
+function SidebarAddBtn({ onClick, title }) {
+  const [h, setH] = React.useState(false);
+  return (
+    <button onClick={onClick} title={title} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: h ? 'rgba(255,255,255,0.15)' : 'none', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'rgba(255,255,255,0.55)', transition: 'background 0.12s' }}>
+      <Icon name="plus" size={13} />
+    </button>
+  );
+}
+
 function SidebarCh({ ch, active, unread, onClick }) {
   const [h, setH] = React.useState(false);
   return (
     <button
       onClick={onClick}
       onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', padding: '5px 10px', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: unread ? 700 : active ? 600 : 500, background: active ? 'rgba(255,255,255,0.15)' : h ? 'rgba(255,255,255,0.08)' : 'transparent', color: active ? '#fff' : unread ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)', textAlign: 'left', transition: 'all 0.12s' }}
+      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: unread ? 700 : active ? 600 : 500, background: active ? 'rgba(255,255,255,0.15)' : h ? 'rgba(255,255,255,0.08)' : 'transparent', color: active ? '#fff' : unread ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)', textAlign: 'left', transition: 'all 0.12s' }}
     >
-      <span style={{ opacity: 0.7, fontSize: 13 }}>{ch.type === 'dm' ? '' : ch.type === 'group' ? '⊕' : '#'}</span>
+      {ch.type === 'dm' ? (
+        <MemberAvatar name={ch.displayName || ch.name} size={20} />
+      ) : (
+        <Icon name={ch.type === 'group' ? 'users' : 'hash'} size={14} style={{ opacity: 0.65, flexShrink: 0 }} />
+      )}
       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.displayName || ch.name}</span>
       {unread > 0 && <span style={{ background: 'var(--blue-400)', color: '#fff', fontSize: 10, fontWeight: 800, borderRadius: 10, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>{unread}</span>}
     </button>
@@ -733,7 +747,7 @@ function TeamChat() {
           <div style={{ marginBottom: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', marginBottom: 2 }}>
               <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Channels</span>
-              <button onClick={() => setNewModal('channel')} style={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, lineHeight: 1 }}>+</button>
+              <SidebarAddBtn onClick={() => setNewModal('channel')} title="New channel" />
             </div>
             {publicChannels.map(ch => <SidebarCh key={ch.id} ch={ch} active={activeId === ch.id} unread={unread[ch.id] || 0} onClick={() => setActiveId(ch.id)} />)}
           </div>
@@ -753,7 +767,7 @@ function TeamChat() {
             <div style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', marginBottom: 2 }}>
                 <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Groups</span>
-                <button onClick={() => setNewModal('group')} style={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, lineHeight: 1 }}>+</button>
+                <SidebarAddBtn onClick={() => setNewModal('group')} title="New group" />
               </div>
               {groups.map(ch => <SidebarCh key={ch.id} ch={ch} active={activeId === ch.id} unread={unread[ch.id] || 0} onClick={() => setActiveId(ch.id)} />)}
             </div>
@@ -763,9 +777,13 @@ function TeamChat() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', marginBottom: 2 }}>
               <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Direct messages</span>
-              <button onClick={() => setNewModal('dm')} style={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, lineHeight: 1 }}>+</button>
+              <SidebarAddBtn onClick={() => setNewModal('dm')} title="New direct message" />
             </div>
-            {dms.length === 0 && <div style={{ padding: '4px 10px', fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,0.3)' }}>No DMs yet</div>}
+            {dms.length === 0 && (
+              <button onClick={() => setNewModal('dm')} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: '1px dashed rgba(255,255,255,0.18)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,0.4)', textAlign: 'left' }}>
+                <Icon name="message-circle-plus" size={13} /> Start a DM
+              </button>
+            )}
             {dms.map(ch => <SidebarCh key={ch.id} ch={ch} active={activeId === ch.id} unread={unread[ch.id] || 0} onClick={() => setActiveId(ch.id)} />)}
           </div>
         </div>
@@ -776,7 +794,13 @@ function TeamChat() {
         {/* Channel header */}
         {activeChannel && (
           <div style={{ display: 'flex', alignItems: 'center', padding: '12px 18px', borderBottom: '1px solid var(--border-subtle)', gap: 10, background: 'var(--slate-0)', flex: 'none' }}>
-            <span style={{ fontSize: 'var(--text-lg)', color: 'var(--text-muted)' }}>{activeChannel.type === 'dm' ? '' : '#'}</span>
+            {activeChannel.type === 'dm' ? (
+              <MemberAvatar name={activeChannel.displayName || activeChannel.name} size={30} />
+            ) : (
+              <span style={{ width: 30, height: 30, borderRadius: 'var(--radius-md)', background: 'var(--blue-50)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name={activeChannel.type === 'group' ? 'users' : 'hash'} size={15} style={{ color: 'var(--blue-600)' }} />
+              </span>
+            )}
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{activeChannel.displayName || activeChannel.name}</div>
               {activeChannel.description && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{activeChannel.description}</div>}
@@ -805,15 +829,34 @@ function TeamChat() {
 
         {/* Messages */}
         <div className="tf-scroll" style={{ flex: 1, overflowY: 'auto', paddingTop: 8 }}>
-          {msgLoading && <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading messages…</div>}
-          {!msgLoading && messages.length === 0 && (
-            <div style={{ padding: '60px 24px', textAlign: 'center' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>{activeChannel?.type === 'dm' ? '👋' : '#️⃣'}</div>
-              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', marginBottom: 6 }}>
-                {activeChannel?.type === 'dm' ? `Start a conversation with ${activeChannel.displayName}` : `Welcome to #${activeChannel?.name}`}
+          {!loading && !activeChannel && (
+            <div style={{ height: '100%', minHeight: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '40px 24px', textAlign: 'center' }}>
+              <span style={{ width: 56, height: 56, borderRadius: 'var(--radius-xl)', background: 'var(--blue-50)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="message-circle" size={26} style={{ color: 'var(--blue-600)' }} />
+              </span>
+              <div>
+                <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', marginBottom: 6 }}>No conversation selected</div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Pick a channel on the left, or start a new one.</div>
               </div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
-                {activeChannel?.description || 'Send the first message!'}
+            </div>
+          )}
+          {msgLoading && <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading messages…</div>}
+          {!msgLoading && activeChannel && messages.length === 0 && (
+            <div style={{ height: '100%', minHeight: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '40px 24px', textAlign: 'center' }}>
+              {activeChannel?.type === 'dm' ? (
+                <MemberAvatar name={activeChannel.displayName} size={56} />
+              ) : (
+                <span style={{ width: 56, height: 56, borderRadius: 'var(--radius-xl)', background: 'var(--blue-50)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name={activeChannel?.type === 'group' ? 'users' : 'hash'} size={26} style={{ color: 'var(--blue-600)' }} />
+                </span>
+              )}
+              <div>
+                <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', marginBottom: 6 }}>
+                  {activeChannel?.type === 'dm' ? `Start a conversation with ${activeChannel.displayName}` : `Welcome to #${activeChannel?.name}`}
+                </div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+                  {activeChannel?.description || 'Send the first message below to get things going.'}
+                </div>
               </div>
             </div>
           )}
@@ -844,6 +887,7 @@ function TeamChat() {
         {activeChannel && (
           <MessageInput
             channelName={activeChannel.displayName || activeChannel.name}
+            placeholder={activeChannel.type === 'dm' ? `Message ${activeChannel.displayName || activeChannel.name}` : `Message #${activeChannel.displayName || activeChannel.name}`}
             onSend={handleSend}
             team={team}
             myId={myId}

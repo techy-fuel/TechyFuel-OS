@@ -748,6 +748,34 @@
   }
 
   // ── Sidebar item ──────────────────────────────────────────────────
+  function SidebarAddBtn({
+    onClick,
+    title
+  }) {
+    const [h, setH] = React.useState(false);
+    return /*#__PURE__*/React.createElement("button", {
+      onClick: onClick,
+      title: title,
+      onMouseEnter: () => setH(true),
+      onMouseLeave: () => setH(false),
+      style: {
+        width: 20,
+        height: 20,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: h ? 'rgba(255,255,255,0.15)' : 'none',
+        border: 'none',
+        borderRadius: 'var(--radius-sm)',
+        cursor: 'pointer',
+        color: 'rgba(255,255,255,0.55)',
+        transition: 'background 0.12s'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 13
+    }));
+  }
   function SidebarCh({
     ch,
     active,
@@ -762,11 +790,11 @@
       style: {
         display: 'flex',
         alignItems: 'center',
-        gap: 7,
+        gap: 8,
         width: '100%',
-        padding: '5px 10px',
+        padding: '6px 10px',
         border: 'none',
-        borderRadius: 'var(--radius-sm)',
+        borderRadius: 'var(--radius-md)',
         cursor: 'pointer',
         fontFamily: 'var(--font-sans)',
         fontSize: 'var(--text-sm)',
@@ -776,12 +804,17 @@
         textAlign: 'left',
         transition: 'all 0.12s'
       }
-    }, /*#__PURE__*/React.createElement("span", {
+    }, ch.type === 'dm' ? /*#__PURE__*/React.createElement(MemberAvatar, {
+      name: ch.displayName || ch.name,
+      size: 20
+    }) : /*#__PURE__*/React.createElement(Icon, {
+      name: ch.type === 'group' ? 'users' : 'hash',
+      size: 14,
       style: {
-        opacity: 0.7,
-        fontSize: 13
+        opacity: 0.65,
+        flexShrink: 0
       }
-    }, ch.type === 'dm' ? '' : ch.type === 'group' ? '⊕' : '#'), /*#__PURE__*/React.createElement("span", {
+    }), /*#__PURE__*/React.createElement("span", {
       style: {
         flex: 1,
         overflow: 'hidden',
@@ -1669,22 +1702,10 @@
         textTransform: 'uppercase',
         letterSpacing: '0.08em'
       }
-    }, "Channels"), /*#__PURE__*/React.createElement("button", {
+    }, "Channels"), /*#__PURE__*/React.createElement(SidebarAddBtn, {
       onClick: () => setNewModal('channel'),
-      style: {
-        width: 18,
-        height: 18,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        color: 'rgba(255,255,255,0.45)',
-        fontSize: 16,
-        lineHeight: 1
-      }
-    }, "+")), publicChannels.map(ch => /*#__PURE__*/React.createElement(SidebarCh, {
+      title: "New channel"
+    })), publicChannels.map(ch => /*#__PURE__*/React.createElement(SidebarCh, {
       key: ch.id,
       ch: ch,
       active: activeId === ch.id,
@@ -1733,22 +1754,10 @@
         textTransform: 'uppercase',
         letterSpacing: '0.08em'
       }
-    }, "Groups"), /*#__PURE__*/React.createElement("button", {
+    }, "Groups"), /*#__PURE__*/React.createElement(SidebarAddBtn, {
       onClick: () => setNewModal('group'),
-      style: {
-        width: 18,
-        height: 18,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        color: 'rgba(255,255,255,0.45)',
-        fontSize: 16,
-        lineHeight: 1
-      }
-    }, "+")), groups.map(ch => /*#__PURE__*/React.createElement(SidebarCh, {
+      title: "New group"
+    })), groups.map(ch => /*#__PURE__*/React.createElement(SidebarCh, {
       key: ch.id,
       ch: ch,
       active: activeId === ch.id,
@@ -1770,28 +1779,30 @@
         textTransform: 'uppercase',
         letterSpacing: '0.08em'
       }
-    }, "Direct messages"), /*#__PURE__*/React.createElement("button", {
+    }, "Direct messages"), /*#__PURE__*/React.createElement(SidebarAddBtn, {
+      onClick: () => setNewModal('dm'),
+      title: "New direct message"
+    })), dms.length === 0 && /*#__PURE__*/React.createElement("button", {
       onClick: () => setNewModal('dm'),
       style: {
-        width: 18,
-        height: 18,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
+        gap: 8,
+        width: '100%',
+        padding: '6px 10px',
         background: 'none',
-        border: 'none',
+        border: '1px dashed rgba(255,255,255,0.18)',
+        borderRadius: 'var(--radius-md)',
         cursor: 'pointer',
-        color: 'rgba(255,255,255,0.45)',
-        fontSize: 16,
-        lineHeight: 1
-      }
-    }, "+")), dms.length === 0 && /*#__PURE__*/React.createElement("div", {
-      style: {
-        padding: '4px 10px',
+        fontFamily: 'var(--font-sans)',
         fontSize: 'var(--text-xs)',
-        color: 'rgba(255,255,255,0.3)'
+        color: 'rgba(255,255,255,0.4)',
+        textAlign: 'left'
       }
-    }, "No DMs yet"), dms.map(ch => /*#__PURE__*/React.createElement(SidebarCh, {
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "message-circle-plus",
+      size: 13
+    }), " Start a DM"), dms.map(ch => /*#__PURE__*/React.createElement(SidebarCh, {
       key: ch.id,
       ch: ch,
       active: activeId === ch.id,
@@ -1816,12 +1827,27 @@
         background: 'var(--slate-0)',
         flex: 'none'
       }
-    }, /*#__PURE__*/React.createElement("span", {
+    }, activeChannel.type === 'dm' ? /*#__PURE__*/React.createElement(MemberAvatar, {
+      name: activeChannel.displayName || activeChannel.name,
+      size: 30
+    }) : /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: 'var(--text-lg)',
-        color: 'var(--text-muted)'
+        width: 30,
+        height: 30,
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--blue-50)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
       }
-    }, activeChannel.type === 'dm' ? '' : '#'), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: activeChannel.type === 'group' ? 'users' : 'hash',
+      size: 15,
+      style: {
+        color: 'var(--blue-600)'
+      }
+    })), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1
       }
@@ -1941,24 +1967,85 @@
         overflowY: 'auto',
         paddingTop: 8
       }
-    }, msgLoading && /*#__PURE__*/React.createElement("div", {
+    }, !loading && !activeChannel && /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: '100%',
+        minHeight: 320,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 14,
+        padding: '40px 24px',
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 56,
+        height: 56,
+        borderRadius: 'var(--radius-xl)',
+        background: 'var(--blue-50)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "message-circle",
+      size: 26,
+      style: {
+        color: 'var(--blue-600)'
+      }
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-lg)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        marginBottom: 6
+      }
+    }, "No conversation selected"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)'
+      }
+    }, "Pick a channel on the left, or start a new one."))), msgLoading && /*#__PURE__*/React.createElement("div", {
       style: {
         padding: 32,
         textAlign: 'center',
         color: 'var(--text-muted)',
         fontSize: 'var(--text-sm)'
       }
-    }, "Loading messages…"), !msgLoading && messages.length === 0 && /*#__PURE__*/React.createElement("div", {
+    }, "Loading messages…"), !msgLoading && activeChannel && messages.length === 0 && /*#__PURE__*/React.createElement("div", {
       style: {
-        padding: '60px 24px',
+        height: '100%',
+        minHeight: 320,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 14,
+        padding: '40px 24px',
         textAlign: 'center'
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, activeChannel?.type === 'dm' ? /*#__PURE__*/React.createElement(MemberAvatar, {
+      name: activeChannel.displayName,
+      size: 56
+    }) : /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: 48,
-        marginBottom: 12
+        width: 56,
+        height: 56,
+        borderRadius: 'var(--radius-xl)',
+        background: 'var(--blue-50)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }
-    }, activeChannel?.type === 'dm' ? '👋' : '#️⃣'), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: activeChannel?.type === 'group' ? 'users' : 'hash',
+      size: 26,
+      style: {
+        color: 'var(--blue-600)'
+      }
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-bold)',
@@ -1970,7 +2057,7 @@
         fontSize: 'var(--text-sm)',
         color: 'var(--text-muted)'
       }
-    }, activeChannel?.description || 'Send the first message!')), messages.map((msg, i) => /*#__PURE__*/React.createElement(MessageBubble, {
+    }, activeChannel?.description || 'Send the first message below to get things going.'))), messages.map((msg, i) => /*#__PURE__*/React.createElement(MessageBubble, {
       key: msg.id,
       msg: msg,
       myId: myId,
@@ -2006,6 +2093,7 @@
       }
     })), activeChannel && /*#__PURE__*/React.createElement(MessageInput, {
       channelName: activeChannel.displayName || activeChannel.name,
+      placeholder: activeChannel.type === 'dm' ? `Message ${activeChannel.displayName || activeChannel.name}` : `Message #${activeChannel.displayName || activeChannel.name}`,
       onSend: handleSend,
       team: team,
       myId: myId
