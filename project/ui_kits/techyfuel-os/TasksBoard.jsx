@@ -41,7 +41,7 @@ function fmtDateFull(ds) {
   return new Date(ds).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function TaskCard({ task, onEdit, onDragStart, onDragEnd, dragging }) {
+function TaskCard({ task, onEdit, onDragStart, onDragEnd, dragging, isTimerRunning }) {
   const [hover, setHover] = React.useState(false);
   const p = TF_PRIORITY[task.priority] || TF_PRIORITY.medium;
   const dueStr = fmtDue(task.due_date);
@@ -63,6 +63,7 @@ function TaskCard({ task, onEdit, onDragStart, onDragEnd, dragging }) {
         </span>
         {task.client_id && <span title="Visible in client portal" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: 'var(--violet-600)', background: 'var(--violet-50)', borderRadius: 'var(--radius-full)', padding: '2px 7px' }}><Icon name="user" size={10} /> Client</span>}
         {task.is_recurring && <span title="Recurring task"><Icon name="repeat" size={12} style={{ color: 'var(--blue-500)' }} /></span>}
+        {isTimerRunning && <span title="Timer running" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: 'var(--green-700)', background: 'var(--green-50)', borderRadius: 'var(--radius-full)', padding: '2px 7px' }}><Icon name="timer" size={11} /> Live</span>}
         {hover && <span style={{ marginLeft: 'auto', color: 'var(--text-subtle)' }}><Icon name="pencil" size={12} /></span>}
       </div>
       <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', lineHeight: 1.4, marginBottom: 10, textDecoration: task.done ? 'line-through' : 'none', opacity: task.done ? 0.6 : 1 }}>{task.title}</div>
@@ -328,6 +329,19 @@ function TasksBoard() {
   const [editSaving, setEditSaving]   = React.useState(false);
   const [editAttachments, setEditAttachments] = React.useState([]);
 
+  // Time tracking — the one entry (if any) currently running for me, and
+  // this task's logged total, both refreshed whenever the edit modal opens.
+  const [runningEntry, setRunningEntry] = React.useState(null);
+  const [taskTotalSeconds, setTaskTotalSeconds] = React.useState(0);
+  const [timerBusy, setTimerBusy] = React.useState(false);
+  const [timerTick, setTimerTick] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!runningEntry) return;
+    const t = setInterval(() => setTimerTick(n => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [runningEntry]);
+
   // Kanban drag-and-drop
   const [draggedId, setDraggedId] = React.useState(null);
   const [dragOverCol, setDragOverCol] = React.useState(null);
@@ -336,8 +350,49 @@ function TasksBoard() {
     setEditTask(task);
     setEditForm({ title: task.title, priority: task.priority || 'medium', status: task.status || 'todo', due_date: task.due_date || '', assigned_to: task.assigned_to || '', client_id: task.client_id || '' });
     setEditAttachments([]);
+    refreshTimeTracking(task.id);
   }
   function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
+
+  async function refreshTimeTracking(taskId) {
+    if (!window.API || !window.API.getTimeEntriesForTask) return;
+    try {
+      const [{ data: entries }, { data: running }] = await Promise.all([
+        window.API.getTimeEntriesForTask(taskId),
+        window.API.getRunningTimeEntry ? window.API.getRunningTimeEntry(window.TFMyMemberId) : Promise.resolve({ data: null }),
+      ]);
+      setTaskTotalSeconds((entries || []).reduce((s, e) => s + (e.duration_seconds || 0), 0));
+      setRunningEntry(running || null);
+    } catch {}
+  }
+
+  async function handleStartTimer(taskId) {
+    if (!window.API || !window.TFMyMemberId || timerBusy) return;
+    setTimerBusy(true);
+    try {
+      const { data } = await window.API.startTimeEntry(taskId, window.TFMyMemberId);
+      if (data) setRunningEntry(data);
+    } finally { setTimerBusy(false); }
+  }
+
+  async function handleStopTimer() {
+    if (!window.API || !runningEntry || timerBusy) return;
+    setTimerBusy(true);
+    try {
+      const { data } = await window.API.stopTimeEntry(runningEntry.id);
+      setRunningEntry(null);
+      if (data && editTask && data.task_id === editTask.id) {
+        setTaskTotalSeconds(s => s + (data.duration_seconds || 0));
+      }
+    } finally { setTimerBusy(false); }
+  }
+
+  function fmtDuration(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    if (h === 0) return `${m}m`;
+    return `${h}h ${m}m`;
+  }
 
   async function moveTask(task, newStatus) {
     if (!task || task.status === newStatus) return;
@@ -426,6 +481,10 @@ function TasksBoard() {
     (async () => { try { const { data } = await window.API.getTeam();     if (data) setTeam(data); } catch {} })();
     (async () => { try { const { data } = await window.API.getProjects(); if (data) setProjects(data); } catch {} })();
     (async () => { try { const { data } = await window.API.getClients();  if (data) setClients(data); } catch {} })();
+    (async () => {
+      if (!window.API.getRunningTimeEntry || !window.TFMyMemberId) return;
+      try { const { data } = await window.API.getRunningTimeEntry(window.TFMyMemberId); setRunningEntry(data || null); } catch {}
+    })();
   }, []);
 
   async function handleAddTask() {
@@ -515,6 +574,7 @@ function TasksBoard() {
                     transition: 'background var(--dur-fast), outline-color var(--dur-fast)' }}>
                   {colTasks.map((t, i) => (
                     <TaskCard key={t.id || i} task={t} onEdit={openEdit}
+                      isTimerRunning={!!(runningEntry && runningEntry.task_id === t.id)}
                       dragging={draggedId === t.id}
                       onDragStart={() => setDraggedId(t.id)}
                       onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }} />
@@ -577,6 +637,29 @@ function TasksBoard() {
             <option value="">Agency only</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
           </select>
+        </FormRow>
+        <FormRow label="Time tracking">
+          {(() => {
+            const runningOnThis = runningEntry && editTask && runningEntry.task_id === editTask.id;
+            const runningOnOther = runningEntry && editTask && runningEntry.task_id !== editTask.id;
+            const liveSeconds = runningOnThis ? Math.floor((Date.now() - new Date(runningEntry.started_at)) / 1000) : 0;
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {runningOnThis ? (
+                  <button onClick={handleStopTimer} disabled={timerBusy} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 14px', background: 'var(--red-50)', color: 'var(--red-600)', border: '1px solid var(--red-100)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: timerBusy ? 'wait' : 'pointer' }}>
+                    <Icon name="square" size={13} /> Stop ({fmtDuration(taskTotalSeconds + liveSeconds)})
+                  </button>
+                ) : (
+                  <button onClick={() => handleStartTimer(editTask.id)} disabled={timerBusy || runningOnOther} title={runningOnOther ? 'Stop your timer on the other task first' : ''} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 14px', background: runningOnOther ? 'var(--slate-100)' : 'var(--blue-50)', color: runningOnOther ? 'var(--text-subtle)' : 'var(--blue-600)', border: `1px solid ${runningOnOther ? 'var(--border-subtle)' : 'var(--blue-100)'}`, borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: (timerBusy || runningOnOther) ? 'not-allowed' : 'pointer' }}>
+                    <Icon name="play" size={13} /> Start timer
+                  </button>
+                )}
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                  {runningOnOther ? 'Timer running on another task' : `${fmtDuration(taskTotalSeconds)} logged`}
+                </span>
+              </div>
+            );
+          })()}
         </FormRow>
         <FormRow label="Attachments">
           <AttachArea files={editAttachments} onChange={setEditAttachments} />

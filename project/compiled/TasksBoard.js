@@ -97,7 +97,8 @@
     onEdit,
     onDragStart,
     onDragEnd,
-    dragging
+    dragging,
+    isTimerRunning
   }) {
     const [hover, setHover] = React.useState(false);
     const p = TF_PRIORITY[task.priority] || TF_PRIORITY.medium;
@@ -175,7 +176,23 @@
       style: {
         color: 'var(--blue-500)'
       }
-    })), hover && /*#__PURE__*/React.createElement("span", {
+    })), isTimerRunning && /*#__PURE__*/React.createElement("span", {
+      title: "Timer running",
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 3,
+        fontSize: 'var(--text-2xs)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--green-700)',
+        background: 'var(--green-50)',
+        borderRadius: 'var(--radius-full)',
+        padding: '2px 7px'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "timer",
+      size: 11
+    }), " Live"), hover && /*#__PURE__*/React.createElement("span", {
       style: {
         marginLeft: 'auto',
         color: 'var(--text-subtle)'
@@ -855,6 +872,18 @@
     const [editSaving, setEditSaving] = React.useState(false);
     const [editAttachments, setEditAttachments] = React.useState([]);
 
+    // Time tracking — the one entry (if any) currently running for me, and
+    // this task's logged total, both refreshed whenever the edit modal opens.
+    const [runningEntry, setRunningEntry] = React.useState(null);
+    const [taskTotalSeconds, setTaskTotalSeconds] = React.useState(0);
+    const [timerBusy, setTimerBusy] = React.useState(false);
+    const [timerTick, setTimerTick] = React.useState(0);
+    React.useEffect(() => {
+      if (!runningEntry) return;
+      const t = setInterval(() => setTimerTick(n => n + 1), 1000);
+      return () => clearInterval(t);
+    }, [runningEntry]);
+
     // Kanban drag-and-drop
     const [draggedId, setDraggedId] = React.useState(null);
     const [dragOverCol, setDragOverCol] = React.useState(null);
@@ -869,12 +898,60 @@
         client_id: task.client_id || ''
       });
       setEditAttachments([]);
+      refreshTimeTracking(task.id);
     }
     function setEF(k, v) {
       setEditForm(f => ({
         ...f,
         [k]: v
       }));
+    }
+    async function refreshTimeTracking(taskId) {
+      if (!window.API || !window.API.getTimeEntriesForTask) return;
+      try {
+        const [{
+          data: entries
+        }, {
+          data: running
+        }] = await Promise.all([window.API.getTimeEntriesForTask(taskId), window.API.getRunningTimeEntry ? window.API.getRunningTimeEntry(window.TFMyMemberId) : Promise.resolve({
+          data: null
+        })]);
+        setTaskTotalSeconds((entries || []).reduce((s, e) => s + (e.duration_seconds || 0), 0));
+        setRunningEntry(running || null);
+      } catch {}
+    }
+    async function handleStartTimer(taskId) {
+      if (!window.API || !window.TFMyMemberId || timerBusy) return;
+      setTimerBusy(true);
+      try {
+        const {
+          data
+        } = await window.API.startTimeEntry(taskId, window.TFMyMemberId);
+        if (data) setRunningEntry(data);
+      } finally {
+        setTimerBusy(false);
+      }
+    }
+    async function handleStopTimer() {
+      if (!window.API || !runningEntry || timerBusy) return;
+      setTimerBusy(true);
+      try {
+        const {
+          data
+        } = await window.API.stopTimeEntry(runningEntry.id);
+        setRunningEntry(null);
+        if (data && editTask && data.task_id === editTask.id) {
+          setTaskTotalSeconds(s => s + (data.duration_seconds || 0));
+        }
+      } finally {
+        setTimerBusy(false);
+      }
+    }
+    function fmtDuration(totalSeconds) {
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor(totalSeconds % 3600 / 60);
+      if (h === 0) return `${m}m`;
+      return `${h}h ${m}m`;
     }
     async function moveTask(task, newStatus) {
       if (!task || task.status === newStatus) return;
@@ -1034,6 +1111,15 @@
             data
           } = await window.API.getClients();
           if (data) setClients(data);
+        } catch {}
+      })();
+      (async () => {
+        if (!window.API.getRunningTimeEntry || !window.TFMyMemberId) return;
+        try {
+          const {
+            data
+          } = await window.API.getRunningTimeEntry(window.TFMyMemberId);
+          setRunningEntry(data || null);
         } catch {}
       })();
     }, []);
@@ -1284,6 +1370,7 @@
         key: t.id || i,
         task: t,
         onEdit: openEdit,
+        isTimerRunning: !!(runningEntry && runningEntry.task_id === t.id),
         dragging: draggedId === t.id,
         onDragStart: () => setDraggedId(t.id),
         onDragEnd: () => {
@@ -1402,6 +1489,67 @@
       key: c.id,
       value: c.id
     }, c.company || c.name)))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Time tracking"
+    }, (() => {
+      const runningOnThis = runningEntry && editTask && runningEntry.task_id === editTask.id;
+      const runningOnOther = runningEntry && editTask && runningEntry.task_id !== editTask.id;
+      const liveSeconds = runningOnThis ? Math.floor((Date.now() - new Date(runningEntry.started_at)) / 1000) : 0;
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12
+        }
+      }, runningOnThis ? /*#__PURE__*/React.createElement("button", {
+        onClick: handleStopTimer,
+        disabled: timerBusy,
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 7,
+          height: 34,
+          padding: '0 14px',
+          background: 'var(--red-50)',
+          color: 'var(--red-600)',
+          border: '1px solid var(--red-100)',
+          borderRadius: 'var(--radius-md)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-sm)',
+          fontWeight: 'var(--fw-semibold)',
+          cursor: timerBusy ? 'wait' : 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "square",
+        size: 13
+      }), " Stop (", fmtDuration(taskTotalSeconds + liveSeconds), ")") : /*#__PURE__*/React.createElement("button", {
+        onClick: () => handleStartTimer(editTask.id),
+        disabled: timerBusy || runningOnOther,
+        title: runningOnOther ? 'Stop your timer on the other task first' : '',
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 7,
+          height: 34,
+          padding: '0 14px',
+          background: runningOnOther ? 'var(--slate-100)' : 'var(--blue-50)',
+          color: runningOnOther ? 'var(--text-subtle)' : 'var(--blue-600)',
+          border: `1px solid ${runningOnOther ? 'var(--border-subtle)' : 'var(--blue-100)'}`,
+          borderRadius: 'var(--radius-md)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-sm)',
+          fontWeight: 'var(--fw-semibold)',
+          cursor: timerBusy || runningOnOther ? 'not-allowed' : 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "play",
+        size: 13
+      }), " Start timer"), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-muted)'
+        }
+      }, runningOnOther ? 'Timer running on another task' : `${fmtDuration(taskTotalSeconds)} logged`));
+    })()), /*#__PURE__*/React.createElement(FormRow, {
       label: "Attachments"
     }, /*#__PURE__*/React.createElement(AttachArea, {
       files: editAttachments,

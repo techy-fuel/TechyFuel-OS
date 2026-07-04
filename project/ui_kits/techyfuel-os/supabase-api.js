@@ -145,6 +145,22 @@
     updateTask: (id, d) => client.from('tasks').update(d).eq('id', id).select().single(),
     deleteTask: (id) => client.from('tasks').delete().eq('id', id),
 
+    // ── TIME TRACKING ────────────────────────────────────
+    // One open entry (ended_at is null) per member represents "the timer
+    // that's currently running" for whatever task they started it on.
+    getRunningTimeEntry: (memberId) =>
+      client.from('time_entries').select('*, tasks(title)').eq('member_id', memberId).is('ended_at', null).maybeSingle(),
+    getTimeEntriesForTask: (taskId) =>
+      client.from('time_entries').select('*, team_members(name)').eq('task_id', taskId).order('started_at', { ascending: false }),
+    startTimeEntry: (taskId, memberId) =>
+      client.from('time_entries').insert({ task_id: taskId, member_id: memberId }).select().single(),
+    stopTimeEntry: async (id) => {
+      const { data: entry } = await client.from('time_entries').select('started_at').eq('id', id).single();
+      const endedAt = new Date();
+      const durationSeconds = entry ? Math.round((endedAt - new Date(entry.started_at)) / 1000) : null;
+      return client.from('time_entries').update({ ended_at: endedAt.toISOString(), duration_seconds: durationSeconds }).eq('id', id).select().single();
+    },
+
     // ── PIPELINE ─────────────────────────────────────────
     getPipeline: () =>
       client.from('pipeline_deals')
