@@ -87,7 +87,18 @@
     // ── TEAM ─────────────────────────────────────────────
     getTeam: () => client.from('team_members').select('*').eq('status', 'active').order('name'),
     getAllTeamMembers: () => client.from('team_members').select('*').order('name'),
-    getTeamMemberByEmail: (email) => client.from('team_members').select('*').eq('email', email).maybeSingle(),
+    // A person can hold one team_members row PER workspace they belong to
+    // (multi-workspace membership) -- matching by email alone can return
+    // more than one row and blow up .maybeSingle(). current_member_id()
+    // resolves to the correct row for whichever workspace is currently
+    // active for this session, so identity lookup never breaks for
+    // multi-workspace members. `email` kept in the signature for callers,
+    // unused now that identity comes from the session, not email matching.
+    getTeamMemberByEmail: async (_email) => {
+      const { data: memberId, error: rpcErr } = await client.rpc('current_member_id');
+      if (rpcErr || !memberId) return { data: null, error: rpcErr };
+      return client.from('team_members').select('*').eq('id', memberId).maybeSingle();
+    },
     addTeamMember: async (d) => {
       const r = await client.from('team_members').insert(d).select().single();
       if (r.data) logActivity('invited', 'team_member', r.data, 'name');
