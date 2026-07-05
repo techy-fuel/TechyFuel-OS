@@ -127,6 +127,7 @@
       return result;
     },
     updateProject: (id, d) => client.from('projects').update(d).eq('id', id).select().single(),
+    deleteProject: (id) => client.from('projects').delete().eq('id', id),
 
     // ── TASKS ────────────────────────────────────────────
     getTasks: (filters = {}) => {

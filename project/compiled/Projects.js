@@ -34,13 +34,25 @@
     return Math.round(spent / budget * 100);
   }
   function ProjectCard({
-    p
+    p,
+    onEdit,
+    onDelete
   }) {
     const [st, sl] = PS[p.status] || ['neutral', p.status];
+    const [menuOpen, setMenuOpen] = React.useState(false);
+    const menuRef = React.useRef(null);
     const pct = p.progress || 0;
     const budgetPct = spentPct(p.budget, p.spent);
     const clientName = p.clients ? p.clients.name : '—';
     const due = fmtDue(p.due_date);
+    React.useEffect(() => {
+      if (!menuOpen) return;
+      function onClickOutside(e) {
+        if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+      }
+      document.addEventListener('mousedown', onClickOutside);
+      return () => document.removeEventListener('mousedown', onClickOutside);
+    }, [menuOpen]);
     return /*#__PURE__*/React.createElement(Card, {
       interactive: true,
       padding: "md",
@@ -69,15 +81,88 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, clientName)), /*#__PURE__*/React.createElement(Icon, {
-      name: "more-horizontal",
-      size: 18,
+    }, clientName)), /*#__PURE__*/React.createElement("div", {
+      ref: menuRef,
       style: {
-        color: 'var(--text-subtle)',
-        cursor: 'pointer',
+        position: 'relative',
         flex: 'none'
       }
-    })), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: e => {
+        e.stopPropagation();
+        setMenuOpen(o => !o);
+      },
+      style: {
+        background: 'none',
+        border: 'none',
+        padding: 2,
+        display: 'flex',
+        cursor: 'pointer',
+        color: 'var(--text-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "more-horizontal",
+      size: 18
+    })), menuOpen && /*#__PURE__*/React.createElement("div", {
+      onClick: e => e.stopPropagation(),
+      style: {
+        position: 'absolute',
+        top: 'calc(100% + 4px)',
+        right: 0,
+        zIndex: 50,
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-xl)',
+        minWidth: 140,
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      onClick: () => {
+        setMenuOpen(false);
+        onEdit(p);
+      },
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '9px 12px',
+        cursor: 'pointer',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-body)'
+      },
+      onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
+      onMouseLeave: e => e.currentTarget.style.background = 'transparent'
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "pencil",
+      size: 14,
+      style: {
+        color: 'var(--text-muted)'
+      }
+    }), " Edit"), /*#__PURE__*/React.createElement("div", {
+      onClick: () => {
+        setMenuOpen(false);
+        onDelete(p);
+      },
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '9px 12px',
+        cursor: 'pointer',
+        fontSize: 'var(--text-sm)',
+        color: '#dc2626',
+        borderTop: '1px solid var(--border-subtle)'
+      },
+      onMouseEnter: e => e.currentTarget.style.background = '#fff1f2',
+      onMouseLeave: e => e.currentTarget.style.background = 'transparent'
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "trash-2",
+      size: 14,
+      style: {
+        color: '#dc2626'
+      }
+    }), " Delete")))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         gap: 6
@@ -174,11 +259,90 @@
       priority: 'medium',
       status: 'active'
     });
+    const [addProjectError, setAddProjectError] = React.useState('');
+    const [editProject, setEditProject] = React.useState(null);
+    const [editForm, setEditForm] = React.useState({});
+    const [editSaving, setEditSaving] = React.useState(false);
+    const [editProjectError, setEditProjectError] = React.useState('');
     function set(k, v) {
       setForm(f => ({
         ...f,
         [k]: v
       }));
+    }
+    function setEF(k, v) {
+      setEditForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
+    function openEdit(p) {
+      setEditProjectError('');
+      setEditProject(p);
+      setEditForm({
+        name: p.name || '',
+        client_id: p.client_id || '',
+        budget: p.budget ? String(p.budget) : '',
+        due_date: p.due_date ? p.due_date.slice(0, 10) : '',
+        priority: p.priority || 'medium',
+        status: p.status || 'active'
+      });
+    }
+    async function handleUpdateProject() {
+      if (!editProject || !editForm.name?.trim()) return;
+      setEditSaving(true);
+      setEditProjectError('');
+      try {
+        const changes = {
+          name: editForm.name.trim(),
+          priority: editForm.priority,
+          status: editForm.status
+        };
+        changes.client_id = editForm.client_id || null;
+        changes.budget = editForm.budget ? Number(editForm.budget) : null;
+        changes.due_date = editForm.due_date || null;
+        if (!window.API) {
+          setEditProject(null);
+          return;
+        }
+        const {
+          data,
+          error
+        } = await window.API.updateProject(editProject.id, changes);
+        if (error) {
+          setEditProjectError(error.message || 'Could not save changes. Please try again.');
+          return;
+        }
+        const clientObj = clients.find(c => c.id === changes.client_id);
+        const updated = {
+          ...editProject,
+          ...(data || changes),
+          clients: clientObj ? {
+            name: clientObj.company || clientObj.name
+          } : null
+        };
+        setProjects(prev => prev.map(p => p.id === editProject.id ? updated : p));
+        setActiveCount(prev => {
+          const wasActive = editProject.status === 'active',
+            isActive = updated.status === 'active';
+          if (wasActive && !isActive) return prev - 1;
+          if (!wasActive && isActive) return prev + 1;
+          return prev;
+        });
+        setTotalBudget(prev => prev - (editProject.budget || 0) + (updated.budget || 0));
+        setEditProject(null);
+      } finally {
+        setEditSaving(false);
+      }
+    }
+    async function handleDeleteProject(p) {
+      if (!window.confirm(`Delete "${p.name}"? This can't be undone.`)) return;
+      try {
+        if (window.API) await window.API.deleteProject(p.id);
+      } catch {}
+      setProjects(prev => prev.filter(x => x.id !== p.id));
+      if (p.status === 'active') setActiveCount(prev => Math.max(0, prev - 1));
+      setTotalBudget(prev => Math.max(0, prev - (p.budget || 0)));
     }
     React.useEffect(() => {
       if (!window.API) {
@@ -202,6 +366,7 @@
     async function handleAddProject() {
       if (!form.name.trim()) return;
       setSaving(true);
+      setAddProjectError('');
       try {
         const payload = {
           name: form.name,
@@ -216,7 +381,11 @@
             data,
             error
           } = await window.API.createProject(payload);
-          if (!error && data) {
+          if (error) {
+            setAddProjectError(error.message || 'Could not create the project. Please try again.');
+            return;
+          }
+          if (data) {
             const clientName = clients.find(c => c.id === form.client_id)?.name || null;
             const newP = {
               ...data,
@@ -329,15 +498,30 @@
       }
     }, projects.map((p, i) => /*#__PURE__*/React.createElement(ProjectCard, {
       key: p.id || i,
-      p: p
+      p: p,
+      onEdit: openEdit,
+      onDelete: handleDeleteProject
     }))), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
-      onClose: () => setModalOpen(false),
+      onClose: () => {
+        setModalOpen(false);
+        setAddProjectError('');
+      },
       title: "New project",
       onSubmit: handleAddProject,
       loading: saving,
       submitLabel: "Create project"
-    }, /*#__PURE__*/React.createElement(FormRow, {
+    }, addProjectError && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 14,
+        padding: '8px 12px',
+        borderRadius: 'var(--radius-md)',
+        background: '#fff1f2',
+        border: '1px solid #fecdd3',
+        color: '#be123c',
+        fontSize: 'var(--text-sm)'
+      }
+    }, addProjectError), /*#__PURE__*/React.createElement(FormRow, {
       label: "Project name",
       required: true
     }, /*#__PURE__*/React.createElement("input", {
@@ -399,6 +583,87 @@
       type: "date",
       value: form.due_date,
       onChange: e => set('due_date', e.target.value)
+    })))), /*#__PURE__*/React.createElement(Modal, {
+      open: !!editProject,
+      onClose: () => setEditProject(null),
+      title: "Edit project",
+      onSubmit: handleUpdateProject,
+      loading: editSaving,
+      submitLabel: "Save changes"
+    }, editProjectError && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 14,
+        padding: '8px 12px',
+        borderRadius: 'var(--radius-md)',
+        background: '#fff1f2',
+        border: '1px solid #fecdd3',
+        color: '#be123c',
+        fontSize: 'var(--text-sm)'
+      }
+    }, editProjectError), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Project name",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Project name…",
+      value: editForm.name || '',
+      onChange: e => setEF('name', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Client"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: editForm.client_id || '',
+      onChange: e => setEF('client_id', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "No client"), clients.map(c => /*#__PURE__*/React.createElement("option", {
+      key: c.id,
+      value: c.id
+    }, c.company || c.name)))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Priority"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: editForm.priority || 'medium',
+      onChange: e => setEF('priority', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "low"
+    }, "Low"), /*#__PURE__*/React.createElement("option", {
+      value: "medium"
+    }, "Medium"), /*#__PURE__*/React.createElement("option", {
+      value: "high"
+    }, "High"))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Status"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: editForm.status || 'active',
+      onChange: e => setEF('status', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "active"
+    }, "Active"), /*#__PURE__*/React.createElement("option", {
+      value: "paused"
+    }, "Paused"), /*#__PURE__*/React.createElement("option", {
+      value: "completed"
+    }, "Completed"), /*#__PURE__*/React.createElement("option", {
+      value: "archived"
+    }, "Archived")))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Budget ($)"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      placeholder: "0",
+      value: editForm.budget || '',
+      onChange: e => setEF('budget', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Due date"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "date",
+      value: editForm.due_date || '',
+      onChange: e => setEF('due_date', e.target.value)
     })))));
   }
   Object.assign(window, {
