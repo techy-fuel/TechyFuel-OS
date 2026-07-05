@@ -966,6 +966,23 @@
         setTimerBusy(false);
       }
     }
+
+    // Marking a task done while its timer is still running would otherwise
+    // keep counting silently in the background with no way to stop it once
+    // the task leaves the board's "in progress" view -- so completing a task
+    // always stops its own timer first.
+    async function stopTimerIfRunningOnTask(taskId) {
+      if (!window.API || !runningEntry || runningEntry.task_id !== taskId) return;
+      try {
+        const {
+          data
+        } = await window.API.stopTimeEntry(runningEntry.id);
+        setRunningEntry(null);
+        if (data && editTask && data.task_id === editTask.id) {
+          setTaskTotalSeconds(s => s + (data.duration_seconds || 0));
+        }
+      } catch {}
+    }
     function fmtDuration(totalSeconds) {
       const h = Math.floor(totalSeconds / 3600);
       const m = Math.floor(totalSeconds % 3600 / 60);
@@ -1002,6 +1019,7 @@
         isOpen = newStatus !== 'done';
       if (wasOpen && !isOpen) setTotalOpen(prev => Math.max(0, prev - 1));
       if (!wasOpen && isOpen) setTotalOpen(prev => prev + 1);
+      if (newStatus === 'done') await stopTimerIfRunningOnTask(task.id);
       if (window.API && task.id && !String(task.id).startsWith('f')) {
         try {
           await window.API.updateTask(task.id, {
@@ -1025,6 +1043,7 @@
           assigned_to: editForm.assigned_to || null,
           client_id: editForm.client_id || null
         };
+        if (changes.status === 'done') await stopTimerIfRunningOnTask(editTask.id);
         if (window.API && editTask.id && !editTask.id.startsWith('f')) {
           const {
             error
