@@ -972,6 +972,16 @@
       if (h === 0) return `${m}m`;
       return `${h}h ${m}m`;
     }
+
+    // Second-level ticking clock (unlike fmtDuration, which rounds to minutes
+    // and would look frozen at "0m" for the timer's entire first minute).
+    function fmtClock(totalSeconds) {
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor(totalSeconds % 3600 / 60);
+      const s = totalSeconds % 60;
+      const pad = n => String(n).padStart(2, '0');
+      return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+    }
     async function moveTask(task, newStatus) {
       if (!task || task.status === newStatus) return;
       const updated = {
@@ -1521,6 +1531,40 @@
       return /*#__PURE__*/React.createElement("div", {
         style: {
           display: 'flex',
+          flexDirection: 'column',
+          gap: 8
+        }
+      }, runningOnThis && /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          width: 7,
+          height: 7,
+          borderRadius: '50%',
+          background: 'var(--red-500)',
+          flexShrink: 0,
+          animation: 'tf-pulse 1.4s ease-in-out infinite'
+        }
+      }), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontFamily: 'var(--font-mono)',
+          fontSize: 'var(--text-2xl)',
+          fontWeight: 'var(--fw-bold)',
+          color: 'var(--text-strong)',
+          fontVariantNumeric: 'tabular-nums'
+        }
+      }, fmtClock(liveSeconds)), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-muted)'
+        }
+      }, "this session")), /*#__PURE__*/React.createElement("style", null, '@keyframes tf-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }'), /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
           alignItems: 'center',
           gap: 12
         }
@@ -1545,7 +1589,7 @@
       }, /*#__PURE__*/React.createElement(Icon, {
         name: "square",
         size: 13
-      }), " Stop (", fmtDuration(taskTotalSeconds + liveSeconds), ")") : /*#__PURE__*/React.createElement("button", {
+      }), " Stop") : /*#__PURE__*/React.createElement("button", {
         onClick: () => handleStartTimer(editTask.id),
         disabled: timerBusy || runningOnOther,
         title: runningOnOther ? 'Stop your timer on the other task first' : '',
@@ -1572,7 +1616,7 @@
           fontSize: 'var(--text-xs)',
           color: 'var(--text-muted)'
         }
-      }, runningOnOther ? 'Timer running on another task' : `${fmtDuration(taskTotalSeconds)} logged`));
+      }, runningOnOther ? 'Timer running on another task' : `${fmtDuration(taskTotalSeconds + liveSeconds)} logged total`)));
     })(), timerError && /*#__PURE__*/React.createElement("div", {
       style: {
         marginTop: 8,

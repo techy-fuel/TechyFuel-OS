@@ -402,6 +402,16 @@ function TasksBoard() {
     return `${h}h ${m}m`;
   }
 
+  // Second-level ticking clock (unlike fmtDuration, which rounds to minutes
+  // and would look frozen at "0m" for the timer's entire first minute).
+  function fmtClock(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    const pad = n => String(n).padStart(2, '0');
+    return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  }
+
   async function moveTask(task, newStatus) {
     if (!task || task.status === newStatus) return;
     const updated = { ...task, status: newStatus, done: newStatus === 'done' };
@@ -654,19 +664,31 @@ function TasksBoard() {
             const runningOnOther = runningEntry && editTask && runningEntry.task_id !== editTask.id;
             const liveSeconds = runningOnThis ? Math.floor((Date.now() - new Date(runningEntry.started_at)) / 1000) : 0;
             return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {runningOnThis ? (
-                  <button onClick={handleStopTimer} disabled={timerBusy} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 14px', background: 'var(--red-50)', color: 'var(--red-600)', border: '1px solid var(--red-100)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: timerBusy ? 'wait' : 'pointer' }}>
-                    <Icon name="square" size={13} /> Stop ({fmtDuration(taskTotalSeconds + liveSeconds)})
-                  </button>
-                ) : (
-                  <button onClick={() => handleStartTimer(editTask.id)} disabled={timerBusy || runningOnOther} title={runningOnOther ? 'Stop your timer on the other task first' : ''} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 14px', background: runningOnOther ? 'var(--slate-100)' : 'var(--blue-50)', color: runningOnOther ? 'var(--text-subtle)' : 'var(--blue-600)', border: `1px solid ${runningOnOther ? 'var(--border-subtle)' : 'var(--blue-100)'}`, borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: (timerBusy || runningOnOther) ? 'not-allowed' : 'pointer' }}>
-                    <Icon name="play" size={13} /> Start timer
-                  </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {runningOnThis && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--red-500)', flexShrink: 0, animation: 'tf-pulse 1.4s ease-in-out infinite' }} />
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xl)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmtClock(liveSeconds)}
+                    </span>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>this session</span>
+                  </div>
                 )}
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                  {runningOnOther ? 'Timer running on another task' : `${fmtDuration(taskTotalSeconds)} logged`}
-                </span>
+                <style>{'@keyframes tf-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }'}</style>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {runningOnThis ? (
+                    <button onClick={handleStopTimer} disabled={timerBusy} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 14px', background: 'var(--red-50)', color: 'var(--red-600)', border: '1px solid var(--red-100)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: timerBusy ? 'wait' : 'pointer' }}>
+                      <Icon name="square" size={13} /> Stop
+                    </button>
+                  ) : (
+                    <button onClick={() => handleStartTimer(editTask.id)} disabled={timerBusy || runningOnOther} title={runningOnOther ? 'Stop your timer on the other task first' : ''} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 14px', background: runningOnOther ? 'var(--slate-100)' : 'var(--blue-50)', color: runningOnOther ? 'var(--text-subtle)' : 'var(--blue-600)', border: `1px solid ${runningOnOther ? 'var(--border-subtle)' : 'var(--blue-100)'}`, borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: (timerBusy || runningOnOther) ? 'not-allowed' : 'pointer' }}>
+                      <Icon name="play" size={13} /> Start timer
+                    </button>
+                  )}
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                    {runningOnOther ? 'Timer running on another task' : `${fmtDuration(taskTotalSeconds + liveSeconds)} logged total`}
+                  </span>
+                </div>
               </div>
             );
           })()}
