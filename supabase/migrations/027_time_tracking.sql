@@ -2,7 +2,7 @@
 -- null) at a time per member represents "the timer that's currently
 -- running" -- stopping it fills in ended_at + duration_seconds so totals
 -- can be summed without recomputing timestamps every read.
-create table public.time_entries (
+create table if not exists public.time_entries (
   id               uuid primary key default uuid_generate_v4(),
   task_id          uuid references public.tasks(id) on delete cascade not null,
   member_id        uuid references public.team_members(id) on delete set null,
@@ -19,6 +19,7 @@ create index if not exists time_entries_workspace_id_idx on public.time_entries(
 
 alter table public.time_entries enable row level security;
 
+drop policy if exists "Staff full access" on public.time_entries;
 create policy "Staff full access" on public.time_entries for all to authenticated
   using (current_member_role() is not null and workspace_id = current_workspace_id())
   with check (current_member_role() is not null and workspace_id = current_workspace_id());
