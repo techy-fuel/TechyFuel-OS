@@ -4,7 +4,7 @@ const { Card, Badge } = window.TechyFuelOSDesignSystem_be0222;
 
 const REPORTS = [
   { id: 'clients',  name: 'Client performance report',  desc: 'Per-client retainer, deliverables & satisfaction',        icon: 'users',         tone: ['var(--blue-50)',   'var(--blue-600)'],   runs: 'Auto · monthly' },
-  { id: 'team',     name: 'Team productivity report',   desc: 'Utilization, output and on-time delivery by member',       icon: 'gauge',         tone: ['var(--violet-50)', 'var(--violet-600)'], runs: 'Auto · weekly'  },
+  { id: 'team',     name: 'Team productivity report',   desc: 'Tasks completed, hours logged and time by task per member', icon: 'gauge',         tone: ['var(--violet-50)', 'var(--violet-600)'], runs: 'Auto · weekly'  },
   { id: 'revenue',  name: 'Revenue & profit report',    desc: 'MRR, net profit, expenses and forecast',                  icon: 'trending-up',   tone: ['var(--green-50)',  'var(--green-600)'],  runs: 'Auto · monthly' },
   { id: 'ads',      name: 'Ads performance report',     desc: 'Spend, ROAS, CPL and leads across ad accounts',           icon: 'megaphone',     tone: ['var(--amber-50)',  'var(--amber-600)'],  runs: 'Manual'         },
   { id: 'projects', name: 'Project status report',      desc: 'Milestones, budget burn and risk flags',                  icon: 'folder-kanban', tone: ['var(--teal-50)',   'var(--teal-600)'],   runs: 'Auto · weekly'  },
@@ -105,20 +105,54 @@ async function runClients(fmt) {
     </tbody></table>`);
 }
 
+function fmtHours(totalSeconds) {
+  if (!totalSeconds) return '0h';
+  const h = totalSeconds / 3600;
+  return h < 1 ? Math.round(totalSeconds / 60) + 'm' : h.toFixed(1) + 'h';
+}
+
 async function runTeam(fmt) {
-  const [tr, tkr] = await Promise.all([window.API.getTeam(), window.API.getTasks()]);
-  const team = tr.data || [], tasks = tkr.data || [];
+  const [tr, tkr, ter] = await Promise.all([window.API.getTeam(), window.API.getTasks(), window.API.getAllTimeEntries ? window.API.getAllTimeEntries() : Promise.resolve({ data: [] })]);
+  const team = tr.data || [], tasks = tkr.data || [], entries = ter.data || [];
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const isThisMonth = e => new Date(e.started_at) >= monthStart;
+
   const rows = team.map(m => {
     const mt = tasks.filter(t => t.assigned_to === m.id);
     const done = mt.filter(t => t.status === 'done').length;
     const rate = mt.length > 0 ? Math.round((done / mt.length) * 100) : 0;
-    return { name: m.name, role: m.role || '—', total: mt.length, done, open: mt.length - done, rate };
+    const myEntries = entries.filter(e => e.member_id === m.id);
+    const secondsAllTime = myEntries.reduce((s, e) => s + (e.duration_seconds || 0), 0);
+    const secondsThisMonth = myEntries.filter(isThisMonth).reduce((s, e) => s + (e.duration_seconds || 0), 0);
+    return { name: m.name, role: m.role || '—', total: mt.length, done, open: mt.length - done, rate, secondsAllTime, secondsThisMonth };
   });
-  if (fmt === 'csv') return downloadCSV('team-productivity.csv', ['Name','Role','Total Tasks','Done','Open','Completion %'], rows.map(r => [r.name, r.role, r.total, r.done, r.open, r.rate + '%']));
+
+  // Per-task time breakdown (this month) -- lets a member's total be
+  // traced back to exactly which tasks it came from, not just a lump sum.
+  const taskSeconds = {};
+  entries.filter(isThisMonth).forEach(e => {
+    const key = e.task_id;
+    if (!taskSeconds[key]) taskSeconds[key] = { title: e.tasks?.title || '(deleted task)', status: e.tasks?.status || '—', member: e.team_members?.name || '—', seconds: 0 };
+    taskSeconds[key].seconds += e.duration_seconds || 0;
+  });
+  const taskRows = Object.values(taskSeconds).sort((a, b) => a.member.localeCompare(b.member) || b.seconds - a.seconds);
+
+  if (fmt === 'csv') {
+    return downloadCSV('team-productivity.csv',
+      ['Name', 'Role', 'Total Tasks', 'Done', 'Open', 'Completion %', 'Hours (this month)', 'Hours (all time)'],
+      rows.map(r => [r.name, r.role, r.total, r.done, r.open, r.rate + '%', (r.secondsThisMonth / 3600).toFixed(2), (r.secondsAllTime / 3600).toFixed(2)]));
+  }
   openPDF('Team Productivity Report',
-    `<table><thead><tr><th>Name</th><th>Role</th><th class="r">Total</th><th class="r">Done</th><th class="r">Open</th><th class="r">Completion</th></tr></thead><tbody>
-    ${rows.map(r => `<tr><td>${r.name}</td><td>${r.role}</td><td class="r">${r.total}</td><td class="r">${r.done}</td><td class="r">${r.open}</td><td class="r">${r.rate}%</td></tr>`).join('')}
-    </tbody></table>`);
+    `<table><thead><tr><th>Name</th><th>Role</th><th class="r">Total</th><th class="r">Done</th><th class="r">Open</th><th class="r">Completion</th><th class="r">Hours (month)</th><th class="r">Hours (all time)</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${r.name}</td><td>${r.role}</td><td class="r">${r.total}</td><td class="r">${r.done}</td><td class="r">${r.open}</td><td class="r">${r.rate}%</td><td class="r">${fmtHours(r.secondsThisMonth)}</td><td class="r">${fmtHours(r.secondsAllTime)}</td></tr>`).join('')}
+    </tbody></table>
+    <br/><br/>
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;">Time logged by task — this month</div>
+    ${taskRows.length === 0 ? '<div style="font-size:13px;color:#94a3b8;">No time logged yet this month.</div>' : `
+    <table><thead><tr><th>Task</th><th>Member</th><th>Status</th><th class="r">Time logged</th></tr></thead><tbody>
+    ${taskRows.map(t => `<tr><td>${t.title}</td><td>${t.member}</td><td>${t.status}</td><td class="r">${fmtHours(t.seconds)}</td></tr>`).join('')}
+    </tbody></table>`}`);
 }
 
 async function runRevenue(fmt) {

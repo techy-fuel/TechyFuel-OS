@@ -164,6 +164,11 @@
       client.from('time_entries').select('*, tasks(title)').eq('member_id', memberId).is('ended_at', null).maybeSingle(),
     getTimeEntriesForTask: (taskId) =>
       client.from('time_entries').select('*, team_members(name)').eq('task_id', taskId).order('started_at', { ascending: false }),
+    // For reporting: every completed (stopped) entry across all tasks/members,
+    // so "how long did each person spend on each task this month" can be
+    // computed client-side without re-querying per task.
+    getAllTimeEntries: () =>
+      client.from('time_entries').select('*, tasks(title, status), team_members(name)').not('duration_seconds', 'is', null).order('started_at', { ascending: false }),
     startTimeEntry: (taskId, memberId) =>
       client.from('time_entries').insert({ task_id: taskId, member_id: memberId }).select().single(),
     stopTimeEntry: async (id) => {
