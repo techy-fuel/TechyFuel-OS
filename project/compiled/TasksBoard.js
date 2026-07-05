@@ -879,6 +879,7 @@
     const [taskTotalSeconds, setTaskTotalSeconds] = React.useState(0);
     const [timerBusy, setTimerBusy] = React.useState(false);
     const [timerTick, setTimerTick] = React.useState(0);
+    const [timerError, setTimerError] = React.useState('');
     React.useEffect(() => {
       if (!runningEntry) return;
       const t = setInterval(() => setTimerTick(n => n + 1), 1000);
@@ -899,6 +900,7 @@
         client_id: task.client_id || ''
       });
       setEditAttachments([]);
+      setTimerError('');
       refreshTimeTracking(task.id);
     }
     function setEF(k, v) {
@@ -924,10 +926,16 @@
     async function handleStartTimer(taskId) {
       if (!window.API || !window.TFMyMemberId || timerBusy) return;
       setTimerBusy(true);
+      setTimerError('');
       try {
         const {
-          data
+          data,
+          error
         } = await window.API.startTimeEntry(taskId, window.TFMyMemberId);
+        if (error) {
+          setTimerError(error.message || 'Could not start the timer. Please try again.');
+          return;
+        }
         if (data) setRunningEntry(data);
       } finally {
         setTimerBusy(false);
@@ -936,10 +944,16 @@
     async function handleStopTimer() {
       if (!window.API || !runningEntry || timerBusy) return;
       setTimerBusy(true);
+      setTimerError('');
       try {
         const {
-          data
+          data,
+          error
         } = await window.API.stopTimeEntry(runningEntry.id);
+        if (error) {
+          setTimerError(error.message || 'Could not stop the timer. Please try again.');
+          return;
+        }
         setRunningEntry(null);
         if (data && editTask && data.task_id === editTask.id) {
           setTaskTotalSeconds(s => s + (data.duration_seconds || 0));
@@ -1555,7 +1569,17 @@
           color: 'var(--text-muted)'
         }
       }, runningOnOther ? 'Timer running on another task' : `${fmtDuration(taskTotalSeconds)} logged`));
-    })()), /*#__PURE__*/React.createElement(FormRow, {
+    })(), timerError && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 8,
+        padding: '8px 12px',
+        borderRadius: 'var(--radius-md)',
+        background: '#fff1f2',
+        border: '1px solid #fecdd3',
+        color: '#be123c',
+        fontSize: 'var(--text-xs)'
+      }
+    }, timerError)), /*#__PURE__*/React.createElement(FormRow, {
       label: "Attachments"
     }, /*#__PURE__*/React.createElement(AttachArea, {
       files: editAttachments,

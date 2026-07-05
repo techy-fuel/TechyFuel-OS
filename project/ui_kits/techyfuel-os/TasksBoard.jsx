@@ -336,6 +336,7 @@ function TasksBoard() {
   const [taskTotalSeconds, setTaskTotalSeconds] = React.useState(0);
   const [timerBusy, setTimerBusy] = React.useState(false);
   const [timerTick, setTimerTick] = React.useState(0);
+  const [timerError, setTimerError] = React.useState('');
 
   React.useEffect(() => {
     if (!runningEntry) return;
@@ -351,6 +352,7 @@ function TasksBoard() {
     setEditTask(task);
     setEditForm({ title: task.title, priority: task.priority || 'medium', status: task.status || 'todo', due_date: task.due_date || '', assigned_to: task.assigned_to || '', client_id: task.client_id || '' });
     setEditAttachments([]);
+    setTimerError('');
     refreshTimeTracking(task.id);
   }
   function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
@@ -370,8 +372,10 @@ function TasksBoard() {
   async function handleStartTimer(taskId) {
     if (!window.API || !window.TFMyMemberId || timerBusy) return;
     setTimerBusy(true);
+    setTimerError('');
     try {
-      const { data } = await window.API.startTimeEntry(taskId, window.TFMyMemberId);
+      const { data, error } = await window.API.startTimeEntry(taskId, window.TFMyMemberId);
+      if (error) { setTimerError(error.message || 'Could not start the timer. Please try again.'); return; }
       if (data) setRunningEntry(data);
     } finally { setTimerBusy(false); }
   }
@@ -379,8 +383,10 @@ function TasksBoard() {
   async function handleStopTimer() {
     if (!window.API || !runningEntry || timerBusy) return;
     setTimerBusy(true);
+    setTimerError('');
     try {
-      const { data } = await window.API.stopTimeEntry(runningEntry.id);
+      const { data, error } = await window.API.stopTimeEntry(runningEntry.id);
+      if (error) { setTimerError(error.message || 'Could not stop the timer. Please try again.'); return; }
       setRunningEntry(null);
       if (data && editTask && data.task_id === editTask.id) {
         setTaskTotalSeconds(s => s + (data.duration_seconds || 0));
@@ -663,6 +669,11 @@ function TasksBoard() {
               </div>
             );
           })()}
+          {timerError && (
+            <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 'var(--radius-md)', background: '#fff1f2', border: '1px solid #fecdd3', color: '#be123c', fontSize: 'var(--text-xs)' }}>
+              {timerError}
+            </div>
+          )}
         </FormRow>
         <FormRow label="Attachments">
           <AttachArea files={editAttachments} onChange={setEditAttachments} />
