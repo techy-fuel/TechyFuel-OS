@@ -850,6 +850,7 @@
     const [loading, setLoading] = React.useState(true);
     const [modalOpen, setModalOpen] = React.useState(false);
     const [saving, setSaving] = React.useState(false);
+    const [addTaskError, setAddTaskError] = React.useState('');
     const [team, setTeam] = React.useState([]);
     const [projects, setProjects] = React.useState([]);
     const [clients, setClients] = React.useState([]);
@@ -1126,6 +1127,7 @@
     async function handleAddTask() {
       if (!form.title.trim()) return;
       setSaving(true);
+      setAddTaskError('');
       try {
         const payload = {
           title: form.title,
@@ -1144,7 +1146,11 @@
             data,
             error
           } = await window.API.createTask(payload);
-          if (!error && data) {
+          if (error) {
+            setAddTaskError(error.message || 'Could not create the task. Please try again.');
+            return;
+          }
+          if (data) {
             const assigneeName = team.find(m => m.id === form.assigned_to)?.name || null;
             const projectName = projects.find(p => p.id === form.project_id)?.name || null;
             const clientName = clients.find(c => c.id === form.client_id)?.company || clients.find(c => c.id === form.client_id)?.name || null;
@@ -1556,12 +1562,25 @@
       onChange: setEditAttachments
     }))), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
-      onClose: () => setModalOpen(false),
+      onClose: () => {
+        setModalOpen(false);
+        setAddTaskError('');
+      },
       title: "Add task",
       onSubmit: handleAddTask,
       loading: saving,
       submitLabel: "Add task"
-    }, /*#__PURE__*/React.createElement(FormRow, {
+    }, addTaskError && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 14,
+        padding: '8px 12px',
+        borderRadius: 'var(--radius-md)',
+        background: '#fff1f2',
+        border: '1px solid #fecdd3',
+        color: '#be123c',
+        fontSize: 'var(--text-sm)'
+      }
+    }, addTaskError), /*#__PURE__*/React.createElement(FormRow, {
       label: "Title",
       required: true
     }, /*#__PURE__*/React.createElement("input", {

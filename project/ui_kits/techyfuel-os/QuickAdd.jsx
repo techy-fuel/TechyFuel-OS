@@ -55,8 +55,9 @@ function QuickAddModal({ open, onClose, onNavigate }) {
 
     setLoading(true);
     try {
+      let result;
       if (type === 'task') {
-        await window.API.createTask({
+        result = await window.API.createTask({
           title: form.title.trim(),
           client_id: form.client_id || null,
           project_id: form.project_id || null,
@@ -66,19 +67,20 @@ function QuickAddModal({ open, onClose, onNavigate }) {
           created_by: window.TFMyMemberId || null,
         });
       } else if (type === 'client') {
-        await window.API.createClient({
+        result = await window.API.createClient({
           name: form.name.trim(), company: form.company || null, email: form.email || null, phone: form.phone || null,
         });
       } else if (type === 'project') {
-        await window.API.createProject({
+        result = await window.API.createProject({
           name: form.name.trim(), client_id: form.client_id || null, due_date: form.due_date || null,
           priority: form.priority, created_by: window.TFMyMemberId || null,
         });
       } else if (type === 'invoice') {
-        await window.API.createInvoice({
+        result = await window.API.createInvoice({
           client_id: form.client_id, amount: Number(form.amount), currency: form.currency, due_date: form.due_date || null, status: 'draft',
         });
       }
+      if (result && result.error) throw new Error(result.error.message || 'Could not create it. Please try again.');
       onClose();
       if (onNavigate) onNavigate(type === 'task' ? 'tasks' : type === 'client' ? 'crm' : type === 'project' ? 'projects' : 'finance');
     } catch (err) {
