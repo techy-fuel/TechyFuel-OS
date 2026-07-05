@@ -10,10 +10,35 @@ const PS = {
 };
 const PRIORITY_TONE = { high: 'danger', medium: 'warning', low: 'neutral' };
 
-function fmtBudget(n) {
-  if (!n) return '$0';
-  if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
-  return '$' + n;
+const CURRENCIES = [
+  { code: 'PKR', symbol: '₨',   name: 'Pakistani Rupee' },
+  { code: 'USD', symbol: '$',   name: 'US Dollar' },
+  { code: 'EUR', symbol: '€',   name: 'Euro' },
+  { code: 'GBP', symbol: '£',   name: 'British Pound' },
+  { code: 'AED', symbol: 'AED', name: 'UAE Dirham' },
+  { code: 'SAR', symbol: 'SAR', name: 'Saudi Riyal' },
+];
+
+function getCurrencySymbol(code) {
+  return (CURRENCIES.find(c => c.code === code) || CURRENCIES[0]).symbol;
+}
+
+function fxToPKR(amount, currency, rates) {
+  const n = Number(amount);
+  if (!n) return 0;
+  if (!currency || currency === 'PKR') return n;
+  if (!rates) return 0;
+  const usd = currency === 'USD' ? n : (rates[currency] ? n / rates[currency] : null);
+  if (usd === null) return 0;
+  return rates.PKR ? usd * rates.PKR : 0;
+}
+
+function fmtBudget(n, currency) {
+  const sym = getCurrencySymbol(currency || 'PKR');
+  if (!n) return sym + '0';
+  if (n >= 1000000) return sym + (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return sym + (n / 1000).toFixed(1) + 'K';
+  return sym + n;
 }
 function fmtDue(ds) {
   if (!ds) return '—';
@@ -24,7 +49,7 @@ function spentPct(budget, spent) {
   return Math.round((spent / budget) * 100);
 }
 
-function ProjectCard({ p, onEdit, onDelete }) {
+function ProjectCard({ p, onEdit, onDelete, rates }) {
   const [st, sl] = PS[p.status] || ['neutral', p.status];
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuRef = React.useRef(null);
@@ -84,7 +109,10 @@ function ProjectCard({ p, onEdit, onDelete }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
         <div>
           <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', fontWeight: 'var(--fw-bold)' }}>Budget · {budgetPct}% used</div>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>{fmtBudget(p.budget)}</div>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', fontVariantNumeric: 'tabular-nums' }}>{fmtBudget(p.budget, p.currency)}</div>
+          {(p.currency || 'PKR') !== 'PKR' && rates && p.budget > 0 && (
+            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 1 }}>≈ {fmtBudget(fxToPKR(p.budget, p.currency, rates), 'PKR')}</div>
+          )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}><Icon name="calendar" size={13} /> {due}</span>
@@ -98,18 +126,23 @@ function Projects() {
   useLucide();
   const [projects, setProjects] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [activeCount, setActiveCount] = React.useState(0);
-  const [totalBudget, setTotalBudget] = React.useState(0);
   const [clients, setClients] = React.useState([]);
+  const [rates, setRates] = React.useState(null);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
-  const [form, setForm] = React.useState({ name: '', client_id: '', budget: '', due_date: '', priority: 'medium', status: 'active' });
+  const [form, setForm] = React.useState({ name: '', client_id: '', budget: '', currency: 'PKR', due_date: '', priority: 'medium', status: 'active' });
   const [addProjectError, setAddProjectError] = React.useState('');
 
   const [editProject, setEditProject] = React.useState(null);
   const [editForm, setEditForm] = React.useState({});
   const [editSaving, setEditSaving] = React.useState(false);
   const [editProjectError, setEditProjectError] = React.useState('');
+
+  // Derived rather than tracked separately, so they always reflect the
+  // current projects list (and each project's own currency) with no
+  // separate counters to keep in sync on every add/edit/delete.
+  const activeCount = projects.filter(p => p.status === 'active').length;
+  const totalBudget = projects.reduce((s, p) => s + fxToPKR(p.budget, p.currency, rates), 0);
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
   function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
@@ -118,7 +151,7 @@ function Projects() {
     setEditProjectError('');
     setEditProject(p);
     setEditForm({
-      name: p.name || '', client_id: p.client_id || '', budget: p.budget ? String(p.budget) : '',
+      name: p.name || '', client_id: p.client_id || '', budget: p.budget ? String(p.budget) : '', currency: p.currency || 'PKR',
       due_date: p.due_date ? p.due_date.slice(0, 10) : '', priority: p.priority || 'medium', status: p.status || 'active',
     });
   }
@@ -128,7 +161,7 @@ function Projects() {
     setEditSaving(true);
     setEditProjectError('');
     try {
-      const changes = { name: editForm.name.trim(), priority: editForm.priority, status: editForm.status };
+      const changes = { name: editForm.name.trim(), priority: editForm.priority, status: editForm.status, currency: editForm.currency || 'PKR' };
       changes.client_id = editForm.client_id || null;
       changes.budget    = editForm.budget ? Number(editForm.budget) : null;
       changes.due_date  = editForm.due_date || null;
@@ -138,13 +171,6 @@ function Projects() {
       const clientObj = clients.find(c => c.id === changes.client_id);
       const updated = { ...editProject, ...(data || changes), clients: clientObj ? { name: clientObj.company || clientObj.name } : null };
       setProjects(prev => prev.map(p => p.id === editProject.id ? updated : p));
-      setActiveCount(prev => {
-        const wasActive = editProject.status === 'active', isActive = updated.status === 'active';
-        if (wasActive && !isActive) return prev - 1;
-        if (!wasActive && isActive) return prev + 1;
-        return prev;
-      });
-      setTotalBudget(prev => prev - (editProject.budget || 0) + (updated.budget || 0));
       setEditProject(null);
     } finally { setEditSaving(false); }
   }
@@ -153,24 +179,23 @@ function Projects() {
     if (!window.confirm(`Delete "${p.name}"? This can't be undone.`)) return;
     try { if (window.API) await window.API.deleteProject(p.id); } catch {}
     setProjects(prev => prev.filter(x => x.id !== p.id));
-    if (p.status === 'active') setActiveCount(prev => Math.max(0, prev - 1));
-    setTotalBudget(prev => Math.max(0, prev - (p.budget || 0)));
   }
 
   React.useEffect(() => {
     if (!window.API) { setLoading(false); return; }
     window.API.getProjects().then(r => {
-      const data = r.data || [];
-      setProjects(data);
-      setActiveCount(data.filter(p => p.status === 'active').length);
-      setTotalBudget(data.reduce((s, p) => s + (p.budget || 0), 0));
+      if (r.data) setProjects(r.data);
     }).catch(() => {}).finally(() => setLoading(false));
     window.API.getClients().then(r => { if (r.data) setClients(r.data); }).catch(() => {});
+    if (window.API.getFxRates) {
+      window.API.getFxRates().then(fx => { if (fx && fx.rates) setRates(fx.rates); }).catch(() => {});
+    }
   }, []);
 
   function fmtTotal(n) {
-    if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
-    return '$' + n;
+    if (n >= 1000000) return '₨' + (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000)    return '₨' + (n / 1000).toFixed(1) + 'K';
+    return '₨' + Math.round(n);
   }
 
   async function handleAddProject() {
@@ -178,7 +203,7 @@ function Projects() {
     setSaving(true);
     setAddProjectError('');
     try {
-      const payload = { name: form.name, status: form.status, priority: form.priority };
+      const payload = { name: form.name, status: form.status, priority: form.priority, currency: form.currency || 'PKR' };
       if (form.client_id) payload.client_id = form.client_id;
       if (form.budget)    payload.budget    = Number(form.budget);
       if (form.due_date)  payload.due_date  = form.due_date;
@@ -189,12 +214,10 @@ function Projects() {
           const clientName = clients.find(c => c.id === form.client_id)?.name || null;
           const newP = { ...data, clients: clientName ? { name: clientName } : null };
           setProjects(prev => [...prev, newP]);
-          if (data.status === 'active') setActiveCount(prev => prev + 1);
-          setTotalBudget(prev => prev + (data.budget || 0));
         }
       }
       setModalOpen(false);
-      setForm({ name: '', client_id: '', budget: '', due_date: '', priority: 'medium', status: 'active' });
+      setForm({ name: '', client_id: '', budget: '', currency: 'PKR', due_date: '', priority: 'medium', status: 'active' });
     } finally { setSaving(false); }
   }
 
@@ -221,7 +244,7 @@ function Projects() {
 
       {!loading && projects.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-          {projects.map((p, i) => <ProjectCard key={p.id || i} p={p} onEdit={openEdit} onDelete={handleDeleteProject} />)}
+          {projects.map((p, i) => <ProjectCard key={p.id || i} p={p} onEdit={openEdit} onDelete={handleDeleteProject} rates={rates} />)}
         </div>
       )}
 
@@ -257,8 +280,13 @@ function Projects() {
           </FormRow>
         </div>
         <div style={FF.row2}>
-          <FormRow label="Budget ($)">
-            <input style={FF.input} type="number" placeholder="0" value={form.budget} onChange={e => set('budget', e.target.value)} />
+          <FormRow label="Budget">
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input style={FF.input} type="number" placeholder="0" value={form.budget} onChange={e => set('budget', e.target.value)} />
+              <select style={{ ...FF.select, flex: '0 0 auto', width: 90 }} value={form.currency} onChange={e => set('currency', e.target.value)}>
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+              </select>
+            </div>
           </FormRow>
           <FormRow label="Due date">
             <input style={FF.input} type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
@@ -299,8 +327,13 @@ function Projects() {
           </FormRow>
         </div>
         <div style={FF.row2}>
-          <FormRow label="Budget ($)">
-            <input style={FF.input} type="number" placeholder="0" value={editForm.budget || ''} onChange={e => setEF('budget', e.target.value)} />
+          <FormRow label="Budget">
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input style={FF.input} type="number" placeholder="0" value={editForm.budget || ''} onChange={e => setEF('budget', e.target.value)} />
+              <select style={{ ...FF.select, flex: '0 0 auto', width: 90 }} value={editForm.currency || 'PKR'} onChange={e => setEF('currency', e.target.value)}>
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+              </select>
+            </div>
           </FormRow>
           <FormRow label="Due date">
             <input style={FF.input} type="date" value={editForm.due_date || ''} onChange={e => setEF('due_date', e.target.value)} />
