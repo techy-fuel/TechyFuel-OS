@@ -26,6 +26,7 @@
     const [team, setTeam] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [taskCounts, setTaskCounts] = React.useState({});
+    const [progress, setProgress] = React.useState({}); // memberId -> { total, done, pct, secondsThisMonth, secondsAllTime }
     const [modalOpen, setModalOpen] = React.useState(false);
     const [saving, setSaving] = React.useState(false);
     const [form, setForm] = React.useState({
@@ -55,8 +56,52 @@
           if (t.assigned_to) counts[t.assigned_to] = (counts[t.assigned_to] || 0) + 1;
         });
         setTaskCounts(counts);
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        (window.API.getAllTimeEntries ? window.API.getAllTimeEntries() : Promise.resolve({
+          data: []
+        })).then(er => {
+          const entries = er.data || [];
+          const byMember = {};
+          r.data.forEach(t => {
+            if (!t.assigned_to) return;
+            if (!byMember[t.assigned_to]) byMember[t.assigned_to] = {
+              total: 0,
+              done: 0,
+              secondsThisMonth: 0,
+              secondsAllTime: 0
+            };
+            byMember[t.assigned_to].total++;
+            if (t.status === 'done') byMember[t.assigned_to].done++;
+          });
+          entries.forEach(e => {
+            if (!e.member_id) return;
+            if (!byMember[e.member_id]) byMember[e.member_id] = {
+              total: 0,
+              done: 0,
+              secondsThisMonth: 0,
+              secondsAllTime: 0
+            };
+            byMember[e.member_id].secondsAllTime += e.duration_seconds || 0;
+            if (new Date(e.started_at) >= monthStart) byMember[e.member_id].secondsThisMonth += e.duration_seconds || 0;
+          });
+          const result = {};
+          Object.keys(byMember).forEach(id => {
+            const b = byMember[id];
+            result[id] = {
+              ...b,
+              pct: b.total > 0 ? Math.round(b.done / b.total * 100) : 0
+            };
+          });
+          setProgress(result);
+        }).catch(() => {});
       }).catch(() => {});
     }, []);
+    function fmtHours(totalSeconds) {
+      if (!totalSeconds) return '0h';
+      const h = totalSeconds / 3600;
+      return h < 1 ? Math.round(totalSeconds / 60) + 'm' : h.toFixed(1) + 'h';
+    }
     async function handleInviteMember() {
       if (!form.name.trim()) {
         alert('Name is required.');
@@ -242,6 +287,13 @@
       const load = maxTasks > 0 ? Math.round(tasks / maxTasks * 100) : 0;
       const tone = DEPT_TONE[m.department] || 'neutral';
       const suspended = m.status === 'inactive';
+      const prog = progress[m.id] || {
+        total: 0,
+        done: 0,
+        pct: 0,
+        secondsThisMonth: 0,
+        secondsAllTime: 0
+      };
       return /*#__PURE__*/React.createElement(Card, {
         key: m.id || i,
         interactive: true,
@@ -315,6 +367,58 @@
         tone: load > 85 ? 'danger' : load > 70 ? 'warning' : 'brand',
         size: "sm"
       })), /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          marginBottom: 12
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: 'var(--text-xs)'
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: 'var(--text-muted)',
+          fontWeight: 'var(--fw-semibold)'
+        }
+      }, "Progress · ", prog.done, "/", prog.total, " tasks done"), /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: 'var(--text-strong)',
+          fontWeight: 'var(--fw-bold)'
+        }
+      }, prog.pct, "%")), /*#__PURE__*/React.createElement(ProgressBar, {
+        value: prog.pct,
+        tone: "success",
+        size: "sm"
+      }), /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          gap: 14,
+          fontSize: 'var(--text-2xs)',
+          color: 'var(--text-muted)'
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "timer",
+        size: 12
+      }), " ", fmtHours(prog.secondsThisMonth), " this month"), /*#__PURE__*/React.createElement("span", {
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "history",
+        size: 12
+      }), " ", fmtHours(prog.secondsAllTime), " all time"))), /*#__PURE__*/React.createElement("div", {
         style: {
           display: 'flex',
           alignItems: 'center',
