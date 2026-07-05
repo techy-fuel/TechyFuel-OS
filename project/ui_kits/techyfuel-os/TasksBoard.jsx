@@ -370,7 +370,8 @@ function TasksBoard() {
   }
 
   async function handleStartTimer(taskId) {
-    if (!window.API || !window.TFMyMemberId || timerBusy) return;
+    if (timerBusy) return;
+    if (!window.API || !window.TFMyMemberId) { setTimerError('Could not identify your account. Please refresh the page and try again.'); return; }
     setTimerBusy(true);
     setTimerError('');
     try {
