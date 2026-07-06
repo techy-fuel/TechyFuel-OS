@@ -1055,6 +1055,7 @@
     const [search, setSearch] = React.useState('');
     const [newName, setNewName] = React.useState('');
     const [showNew, setShowNew] = React.useState(false);
+    const [folderError, setFolderError] = React.useState('');
     const [drag, setDrag] = React.useState(false);
     const [view, setView] = React.useState('grid'); // 'grid' | 'list'
 
@@ -1144,17 +1145,30 @@
       }
     }
     async function createFolder() {
-      if (!newName.trim() || !window.API) return;
+      if (!newName.trim()) {
+        setFolderError('Folder name is required.');
+        return;
+      }
+      if (!window.API) return;
+      setFolderError('');
       try {
-        await window.API.createFolder({
+        const {
+          error
+        } = await window.API.createFolder({
           name: newName.trim(),
           project_id: projectId,
           parent_id: currentFolder
         });
+        if (error) {
+          setFolderError(error.message || 'Could not create the folder. Please try again.');
+          return;
+        }
         setNewName('');
         setShowNew(false);
         load();
-      } catch {}
+      } catch (err) {
+        setFolderError(err.message || 'Could not create the folder. Please try again.');
+      }
     }
     const folders = allFolders.filter(f => f.parent_id === currentFolder);
     const filtered = files.filter(f => !search || f.name?.toLowerCase().includes(search.toLowerCase()));
@@ -1299,7 +1313,10 @@
       name: view === 'grid' ? 'layout-list' : 'layout-grid',
       size: 15
     }), view === 'grid' ? 'List' : 'Grid'), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowNew(true),
+      onClick: () => {
+        setShowNew(true);
+        setFolderError('');
+      },
       style: {
         height: 36,
         padding: '0 14px',
@@ -1418,7 +1435,10 @@
       }
     }, bc.name)))), showNew && /*#__PURE__*/React.createElement("div", {
       style: {
-        padding: '6px 24px 10px',
+        padding: '6px 24px 10px'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
         display: 'flex',
         gap: 8
       }
@@ -1432,13 +1452,14 @@
         if (e.key === 'Escape') {
           setShowNew(false);
           setNewName('');
+          setFolderError('');
         }
       },
       style: {
         flex: 1,
         height: 34,
         padding: '0 12px',
-        border: '1px solid var(--blue-400)',
+        border: `1px solid ${folderError ? 'var(--red-400)' : 'var(--blue-400)'}`,
         borderRadius: 7,
         fontSize: 14,
         fontFamily: 'var(--font-sans)',
@@ -1461,6 +1482,7 @@
       onClick: () => {
         setShowNew(false);
         setNewName('');
+        setFolderError('');
       },
       style: {
         height: 34,
@@ -1473,7 +1495,13 @@
         color: 'var(--text-muted)',
         fontFamily: 'var(--font-sans)'
       }
-    }, "Cancel")), /*#__PURE__*/React.createElement("div", {
+    }, "Cancel")), folderError && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 6,
+        fontSize: 13,
+        color: 'var(--red-600)'
+      }
+    }, folderError)), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         overflowY: 'auto',

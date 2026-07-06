@@ -355,6 +355,7 @@ function FilesBrowser({ projectId }) {
   const [search, setSearch] = React.useState('');
   const [newName, setNewName] = React.useState('');
   const [showNew, setShowNew] = React.useState(false);
+  const [folderError, setFolderError] = React.useState('');
   const [drag, setDrag] = React.useState(false);
   const [view, setView] = React.useState('grid'); // 'grid' | 'list'
 
@@ -416,8 +417,18 @@ function FilesBrowser({ projectId }) {
   }
 
   async function createFolder() {
-    if (!newName.trim() || !window.API) return;
-    try { await window.API.createFolder({ name: newName.trim(), project_id: projectId, parent_id: currentFolder }); setNewName(''); setShowNew(false); load(); } catch {}
+    if (!newName.trim()) { setFolderError('Folder name is required.'); return; }
+    if (!window.API) return;
+    setFolderError('');
+    try {
+      const { error } = await window.API.createFolder({ name: newName.trim(), project_id: projectId, parent_id: currentFolder });
+      if (error) { setFolderError(error.message || 'Could not create the folder. Please try again.'); return; }
+      setNewName('');
+      setShowNew(false);
+      load();
+    } catch (err) {
+      setFolderError(err.message || 'Could not create the folder. Please try again.');
+    }
   }
 
   const folders = allFolders.filter(f => f.parent_id === currentFolder);
@@ -454,7 +465,7 @@ function FilesBrowser({ projectId }) {
           <Icon name={view === 'grid' ? 'layout-list' : 'layout-grid'} size={15} />
           {view === 'grid' ? 'List' : 'Grid'}
         </button>
-        <button onClick={() => setShowNew(true)} style={{ height: 36, padding: '0 14px', border: '1px solid var(--slate-200)', borderRadius: 8, background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontFamily: 'var(--font-sans)', color: 'var(--text-body)' }}>
+        <button onClick={() => { setShowNew(true); setFolderError(''); }} style={{ height: 36, padding: '0 14px', border: '1px solid var(--slate-200)', borderRadius: 8, background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontFamily: 'var(--font-sans)', color: 'var(--text-body)' }}>
           <Icon name="folder-plus" size={15} /> New folder
         </button>
         <button onClick={connectDrive} disabled={drivePicking} style={{ height: 36, padding: '0 14px', border: '1px solid var(--slate-200)', borderRadius: 8, background: 'white', color: '#0F9D58', cursor: drivePicking ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-sans)', opacity: drivePicking ? 0.7 : 1 }}>
@@ -483,12 +494,15 @@ function FilesBrowser({ projectId }) {
       </div>
 
       {showNew && (
-        <div style={{ padding: '6px 24px 10px', display: 'flex', gap: 8 }}>
-          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Folder name..." autoFocus
-            onKeyDown={e => { if (e.key === 'Enter') createFolder(); if (e.key === 'Escape') { setShowNew(false); setNewName(''); } }}
-            style={{ flex: 1, height: 34, padding: '0 12px', border: '1px solid var(--blue-400)', borderRadius: 7, fontSize: 14, fontFamily: 'var(--font-sans)', outline: 'none' }} />
-          <button onClick={createFolder} style={{ height: 34, padding: '0 14px', background: 'var(--blue-600)', color: 'white', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 14, fontFamily: 'var(--font-sans)' }}>Create</button>
-          <button onClick={() => { setShowNew(false); setNewName(''); }} style={{ height: 34, padding: '0 12px', background: 'none', border: '1px solid var(--slate-200)', borderRadius: 7, cursor: 'pointer', fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>Cancel</button>
+        <div style={{ padding: '6px 24px 10px' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Folder name..." autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') createFolder(); if (e.key === 'Escape') { setShowNew(false); setNewName(''); setFolderError(''); } }}
+              style={{ flex: 1, height: 34, padding: '0 12px', border: `1px solid ${folderError ? 'var(--red-400)' : 'var(--blue-400)'}`, borderRadius: 7, fontSize: 14, fontFamily: 'var(--font-sans)', outline: 'none' }} />
+            <button onClick={createFolder} style={{ height: 34, padding: '0 14px', background: 'var(--blue-600)', color: 'white', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 14, fontFamily: 'var(--font-sans)' }}>Create</button>
+            <button onClick={() => { setShowNew(false); setNewName(''); setFolderError(''); }} style={{ height: 34, padding: '0 12px', background: 'none', border: '1px solid var(--slate-200)', borderRadius: 7, cursor: 'pointer', fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>Cancel</button>
+          </div>
+          {folderError && <div style={{ marginTop: 6, fontSize: 13, color: 'var(--red-600)' }}>{folderError}</div>}
         </div>
       )}
 
