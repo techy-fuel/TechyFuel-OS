@@ -297,6 +297,19 @@ function Email() {
     setComposeOpen(true);
   }
 
+  function openForward(msg) {
+    const senderLabel = msg.from?.name ? `${msg.from.name} <${msg.from.address}>` : (msg.from?.address || 'Unknown');
+    const body = (msg.text && msg.text.trim()) || (msg.html ? msg.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '');
+    const when = msg.date ? new Date(msg.date).toLocaleString() : '';
+    setComposeInitial({
+      to: '',
+      subject: /^fwd:/i.test(msg.subject || '') ? msg.subject : `Fwd: ${msg.subject || ''}`,
+      body: `\n\n---------- Forwarded message ----------\nFrom: ${senderLabel}\nDate: ${when}\nSubject: ${msg.subject || ''}\nTo: ${(msg.to || []).join(', ')}\n\n${body}`,
+    });
+    setComposeTitle('Forward');
+    setComposeOpen(true);
+  }
+
   async function removeAccount(acct) {
     if (!window.confirm(`Disconnect "${acct.label}"? You'll need to reconnect it to use it again.`)) return;
     try {
@@ -368,11 +381,16 @@ function Email() {
             <>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
                 <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{selectedMsg.subject}</div>
-                {mailbox !== 'sent' && (
-                  <button onClick={() => openReply(selectedMsg)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', flexShrink: 0, background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
-                    <Icon name="reply" size={14} /> Reply
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  {mailbox !== 'sent' && (
+                    <button onClick={() => openReply(selectedMsg)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
+                      <Icon name="reply" size={14} /> Reply
+                    </button>
+                  )}
+                  <button onClick={() => openForward(selectedMsg)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
+                    <Icon name="forward" size={14} /> Forward
                   </button>
-                )}
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 16, borderBottom: '1px solid var(--border-subtle)', marginBottom: 16 }}>
                 <Badge tone="neutral" size="sm">{mailbox === 'sent' ? `To: ${(selectedMsg.to || []).join(', ') || 'Unknown'}` : (selectedMsg.from?.name || selectedMsg.from?.address)}</Badge>

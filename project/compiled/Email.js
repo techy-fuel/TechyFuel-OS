@@ -638,6 +638,18 @@
       setComposeTitle('Reply');
       setComposeOpen(true);
     }
+    function openForward(msg) {
+      const senderLabel = msg.from?.name ? `${msg.from.name} <${msg.from.address}>` : msg.from?.address || 'Unknown';
+      const body = msg.text && msg.text.trim() || (msg.html ? msg.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '');
+      const when = msg.date ? new Date(msg.date).toLocaleString() : '';
+      setComposeInitial({
+        to: '',
+        subject: /^fwd:/i.test(msg.subject || '') ? msg.subject : `Fwd: ${msg.subject || ''}`,
+        body: `\n\n---------- Forwarded message ----------\nFrom: ${senderLabel}\nDate: ${when}\nSubject: ${msg.subject || ''}\nTo: ${(msg.to || []).join(', ')}\n\n${body}`
+      });
+      setComposeTitle('Forward');
+      setComposeOpen(true);
+    }
     async function removeAccount(acct) {
       if (!window.confirm(`Disconnect "${acct.label}"? You'll need to reconnect it to use it again.`)) return;
       try {
@@ -877,7 +889,13 @@
         fontWeight: 'var(--fw-bold)',
         color: 'var(--text-strong)'
       }
-    }, selectedMsg.subject), mailbox !== 'sent' && /*#__PURE__*/React.createElement("button", {
+    }, selectedMsg.subject), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 8,
+        flexShrink: 0
+      }
+    }, mailbox !== 'sent' && /*#__PURE__*/React.createElement("button", {
       onClick: () => openReply(selectedMsg),
       style: {
         display: 'inline-flex',
@@ -885,7 +903,6 @@
         gap: 6,
         height: 32,
         padding: '0 12px',
-        flexShrink: 0,
         background: 'var(--slate-0)',
         border: '1px solid var(--border-default)',
         borderRadius: 'var(--radius-md)',
@@ -898,7 +915,27 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "reply",
       size: 14
-    }), " Reply")), /*#__PURE__*/React.createElement("div", {
+    }), " Reply"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => openForward(selectedMsg),
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        height: 32,
+        padding: '0 12px',
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "forward",
+      size: 14
+    }), " Forward"))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
