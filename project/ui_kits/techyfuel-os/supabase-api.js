@@ -253,6 +253,7 @@
       if (r.data) logActivity('uploaded', 'file', r.data, 'name');
       return r;
     },
+    updateFile: (id, d) => client.from('files').update(d).eq('id', id).select().single(),
 
     // ── FOLDERS ──────────────────────────────────────────
     getFolders: (projectId) => client.from('folders').select('*').eq('project_id', projectId).order('name'),

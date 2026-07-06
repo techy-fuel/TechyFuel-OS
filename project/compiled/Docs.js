@@ -1057,6 +1057,8 @@
     const [showNew, setShowNew] = React.useState(false);
     const [folderError, setFolderError] = React.useState('');
     const [drag, setDrag] = React.useState(false);
+    const [draggedFileId, setDraggedFileId] = React.useState(null);
+    const [dragOverFolderId, setDragOverFolderId] = React.useState(null);
     const [view, setView] = React.useState('grid'); // 'grid' | 'list'
 
     async function load() {
@@ -1168,6 +1170,20 @@
         load();
       } catch (err) {
         setFolderError(err.message || 'Could not create the folder. Please try again.');
+      }
+    }
+    async function moveFileToFolder(fileId, folderId) {
+      if (!window.API) return;
+      setFiles(prev => prev.filter(f => f.id !== fileId)); // optimistic — it's leaving the current view
+      try {
+        const {
+          error
+        } = await window.API.updateFile(fileId, {
+          folder_id: folderId
+        });
+        if (error) load(); // couldn't move it after all — reload to restore the real state
+      } catch {
+        load();
       }
     }
     const folders = allFolders.filter(f => f.parent_id === currentFolder);
@@ -1393,12 +1409,30 @@
         setCurrentFolder(null);
         setCrumb([]);
       },
+      onDragOver: e => {
+        if (draggedFileId && crumb.length) {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOverFolderId('root');
+        }
+      },
+      onDragLeave: () => setDragOverFolderId(prev => prev === 'root' ? null : prev),
+      onDrop: e => {
+        if (draggedFileId && crumb.length) {
+          e.preventDefault();
+          e.stopPropagation();
+          moveFileToFolder(draggedFileId, null);
+          setDraggedFileId(null);
+          setDragOverFolderId(null);
+        }
+      },
       style: {
-        background: 'none',
+        background: dragOverFolderId === 'root' ? 'var(--blue-50)' : 'none',
         border: 'none',
+        borderRadius: 6,
         cursor: 'pointer',
         color: crumb.length ? 'var(--blue-600)' : 'var(--text-body)',
-        padding: 0,
+        padding: dragOverFolderId === 'root' ? '2px 6px' : 0,
         fontFamily: 'var(--font-sans)',
         fontSize: 14,
         fontWeight: !crumb.length ? 600 : 400
@@ -1510,13 +1544,13 @@
       },
       onDragOver: e => {
         e.preventDefault();
-        setDrag(true);
+        if (!draggedFileId) setDrag(true);
       },
       onDragLeave: () => setDrag(false),
       onDrop: e => {
         e.preventDefault();
         setDrag(false);
-        upload(e.dataTransfer.files);
+        if (!draggedFileId) upload(e.dataTransfer.files);
       }
     }, drag && /*#__PURE__*/React.createElement("div", {
       style: {
@@ -1583,19 +1617,40 @@
           name: f.name
         }]);
       },
+      onDragOver: e => {
+        if (draggedFileId) {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOverFolderId(f.id);
+        }
+      },
+      onDragLeave: () => setDragOverFolderId(prev => prev === f.id ? null : prev),
+      onDrop: e => {
+        if (draggedFileId) {
+          e.preventDefault();
+          e.stopPropagation();
+          moveFileToFolder(draggedFileId, f.id);
+          setDraggedFileId(null);
+          setDragOverFolderId(null);
+        }
+      },
       style: {
         display: 'flex',
         alignItems: 'center',
         gap: 10,
         padding: '11px 14px',
-        border: '1px solid var(--slate-200)',
+        border: `1px solid ${dragOverFolderId === f.id ? 'var(--blue-400)' : 'var(--slate-200)'}`,
         borderRadius: 9,
         cursor: 'pointer',
-        background: 'white',
+        background: dragOverFolderId === f.id ? 'var(--blue-50)' : 'white',
         transition: 'background 0.15s'
       },
-      onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
-      onMouseLeave: e => e.currentTarget.style.background = 'white'
+      onMouseEnter: e => {
+        if (!draggedFileId) e.currentTarget.style.background = 'var(--slate-50)';
+      },
+      onMouseLeave: e => {
+        if (!draggedFileId) e.currentTarget.style.background = 'white';
+      }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "folder",
       size: 20,
@@ -1631,13 +1686,23 @@
       return /*#__PURE__*/React.createElement("div", {
         key: f.id,
         onClick: () => setPreview(f),
+        draggable: true,
+        onDragStart: e => {
+          e.dataTransfer.effectAllowed = 'move';
+          setDraggedFileId(f.id);
+        },
+        onDragEnd: () => {
+          setDraggedFileId(null);
+          setDragOverFolderId(null);
+        },
         style: {
           border: '1px solid var(--slate-200)',
           borderRadius: 10,
           overflow: 'hidden',
-          cursor: 'pointer',
+          cursor: 'grab',
           background: 'white',
-          transition: 'box-shadow 0.15s'
+          transition: 'box-shadow 0.15s',
+          opacity: draggedFileId === f.id ? 0.4 : 1
         },
         onMouseEnter: e => e.currentTarget.style.boxShadow = 'var(--shadow-md)',
         onMouseLeave: e => e.currentTarget.style.boxShadow = 'none'
@@ -1694,14 +1759,24 @@
     }, filtered.map((f, i) => /*#__PURE__*/React.createElement("div", {
       key: f.id,
       onClick: () => setPreview(f),
+      draggable: true,
+      onDragStart: e => {
+        e.dataTransfer.effectAllowed = 'move';
+        setDraggedFileId(f.id);
+      },
+      onDragEnd: () => {
+        setDraggedFileId(null);
+        setDragOverFolderId(null);
+      },
       style: {
         display: 'flex',
         alignItems: 'center',
         gap: 12,
         padding: '10px 16px',
         borderBottom: i < filtered.length - 1 ? '1px solid var(--slate-100)' : 'none',
-        cursor: 'pointer',
-        background: 'white'
+        cursor: 'grab',
+        background: 'white',
+        opacity: draggedFileId === f.id ? 0.4 : 1
       },
       onMouseEnter: e => e.currentTarget.style.background = 'var(--slate-50)',
       onMouseLeave: e => e.currentTarget.style.background = 'white'
