@@ -525,6 +525,33 @@
         apiKey
       });
     }, []);
+
+    // Auto-save branding fields shortly after each edit — otherwise navigating
+    // to another screen before pressing "Save changes" remounts Settings and
+    // silently drops everything typed since the last explicit save.
+    React.useEffect(() => {
+      const t = setTimeout(() => {
+        const sk = loadSaved();
+        saveSettings({
+          ...sk,
+          agencyName,
+          agencyEmail,
+          logoUrl,
+          tagline,
+          agencyPhone,
+          agencyWebsite,
+          agencyAddress,
+          paymentAccount,
+          paymentSwift,
+          paymentPayoneer,
+          signatureName,
+          signatureTitle,
+          signatureImageUrl,
+          servicesLine
+        });
+      }, 500);
+      return () => clearTimeout(t);
+    }, [agencyName, agencyEmail, logoUrl, tagline, agencyPhone, agencyWebsite, agencyAddress, paymentAccount, paymentSwift, paymentPayoneer, signatureName, signatureTitle, signatureImageUrl, servicesLine]);
     function handleSaveBranding() {
       const sk = loadSaved();
       saveSettings({
