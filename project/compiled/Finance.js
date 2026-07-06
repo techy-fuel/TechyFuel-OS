@@ -185,8 +185,12 @@
   // reference template. `flip` mirrors it for the footer.
   function invoiceRibbonSvg(flip) {
     const path = flip ? 'M60,10 L300,10 L520,170' : 'M60,170 L300,170 L520,10';
+    // Header ribbon (flip=false) sits well below the top edge so it stays
+    // clear of the tagline text above it — only ever crossing the big
+    // "INVOICE" heading, never the (variable-length) tagline line.
+    const posStyle = flip ? 'bottom:0' : 'top:52px';
     return `
-    <svg viewBox="0 0 620 180" preserveAspectRatio="none" style="position:absolute;${flip ? 'bottom' : 'top'}:0;right:0;width:340px;height:100px;overflow:visible">
+    <svg viewBox="0 0 620 180" preserveAspectRatio="none" style="position:absolute;${posStyle};right:0;width:280px;height:70px;overflow:visible">
       <path d="${path}" fill="none" stroke="#1f2937" stroke-width="46" stroke-linejoin="round" stroke-linecap="butt"/>
       <path d="${flip ? 'M110,40 L340,40 L560,190' : 'M110,140 L340,140 L560,-10'}" fill="none" stroke="#2563eb" stroke-width="54" stroke-linejoin="round" stroke-linecap="butt"/>
     </svg>`;
