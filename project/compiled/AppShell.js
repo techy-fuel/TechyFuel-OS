@@ -53,6 +53,10 @@
   }, {
     group: 'Business',
     items: [{
+      id: 'email',
+      label: 'Email',
+      icon: 'mail'
+    }, {
       id: 'finance',
       label: 'Finance',
       icon: 'wallet'

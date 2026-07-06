@@ -19,6 +19,7 @@ const TF_NAV = [
     { id: 'ads', label: 'Meta Ads', icon: 'megaphone' },
   ]},
   { group: 'Business', items: [
+    { id: 'email', label: 'Email', icon: 'mail' },
     { id: 'finance', label: 'Finance', icon: 'wallet' },
     { id: 'reports', label: 'Reports', icon: 'chart-line' },
     { id: 'docs', label: 'Docs & Files', icon: 'file-text' },
