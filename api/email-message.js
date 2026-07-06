@@ -1,22 +1,22 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
+import { resolveEmailCredentials } from '../lib/resolve-email-account.js';
 
 // Fetches one message's full body by UID (list view only loads headers) and
-// marks it \Seen. Same mailbox credentials as email-list.js.
+// marks it \Seen. Same account-resolution as email-list.js.
 export default async function handler(req, res) {
-  const { EMAIL_IMAP_HOST, EMAIL_IMAP_PORT, EMAIL_USER, EMAIL_PASSWORD } = process.env;
-  if (!EMAIL_IMAP_HOST || !EMAIL_USER || !EMAIL_PASSWORD) {
-    return res.status(200).json({ ok: false, error: 'Email not configured.' });
-  }
   const uid = Number(req.query.uid);
   if (!uid) return res.status(400).json({ ok: false, error: 'uid is required' });
   const wantSent = (req.query.mailbox || 'inbox').toLowerCase() === 'sent';
 
+  const creds = await resolveEmailCredentials(req, req.query.accountId);
+  if (!creds) return res.status(200).json({ ok: false, error: 'Email not configured.' });
+
   const client = new ImapFlow({
-    host: EMAIL_IMAP_HOST,
-    port: Number(EMAIL_IMAP_PORT) || 993,
+    host: creds.imapHost,
+    port: creds.imapPort,
     secure: true,
-    auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
+    auth: { user: creds.user, pass: creds.pass },
     logger: false,
   });
 

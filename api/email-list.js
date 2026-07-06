@@ -1,25 +1,26 @@
 import { ImapFlow } from 'imapflow';
+import { resolveEmailCredentials } from '../lib/resolve-email-account.js';
 
 // Lists the most recent inbox messages (headers only -- no body, so this
-// stays fast even on a mailbox with years of history). Needs the mailbox's
-// own IMAP credentials as Vercel env vars: EMAIL_IMAP_HOST, EMAIL_IMAP_PORT
-// (defaults 993), EMAIL_USER, EMAIL_PASSWORD. These are real mailbox
+// stays fast even on a mailbox with years of history). Uses either the one
+// shared TechyFuel mailbox (env vars, default) or a specific team member's
+// own connected account (?accountId=...). These are real mailbox
 // credentials, not an OAuth token, so they must never be exposed to the
 // client -- this function only ever returns message metadata, never the
 // password, and the browser never talks to the mail server directly.
 export default async function handler(req, res) {
-  const { EMAIL_IMAP_HOST, EMAIL_IMAP_PORT, EMAIL_USER, EMAIL_PASSWORD } = process.env;
-  if (!EMAIL_IMAP_HOST || !EMAIL_USER || !EMAIL_PASSWORD) {
-    return res.status(200).json({ ok: false, error: 'Email not configured. Set EMAIL_IMAP_HOST, EMAIL_USER and EMAIL_PASSWORD in Vercel.' });
+  const creds = await resolveEmailCredentials(req, req.query.accountId);
+  if (!creds) {
+    return res.status(200).json({ ok: false, error: req.query.accountId ? 'That account could not be found.' : 'Email not configured. Set EMAIL_IMAP_HOST, EMAIL_USER and EMAIL_PASSWORD in Vercel, or connect your own account.' });
   }
 
   const limit = Math.min(Number(req.query.limit) || 30, 100);
   const wantSent = (req.query.mailbox || 'inbox').toLowerCase() === 'sent';
   const client = new ImapFlow({
-    host: EMAIL_IMAP_HOST,
-    port: Number(EMAIL_IMAP_PORT) || 993,
+    host: creds.imapHost,
+    port: creds.imapPort,
     secure: true,
-    auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
+    auth: { user: creds.user, pass: creds.pass },
     logger: false,
   });
 

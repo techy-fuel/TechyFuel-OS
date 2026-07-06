@@ -1,11 +1,27 @@
-// Email screen — reads/sends through the agency's own mailbox via IMAP/SMTP
-// (api/email-list.js, api/email-message.js, api/email-send.js). No OAuth --
-// this is for a plain cPanel/Hostinger-style mailbox, so credentials live
-// only as Vercel env vars on the server; the browser never touches them.
+// Email screen — reads/sends through a mailbox via IMAP/SMTP (api/email-list.js,
+// api/email-message.js, api/email-send.js, api/email-accounts.js). No OAuth --
+// this is for plain cPanel/Hostinger-style mailboxes. By default it uses the
+// one shared TechyFuel inbox (Vercel env vars) but each team member can also
+// connect their own separate mailbox from here; those credentials are
+// encrypted server-side and never touch the client, keyed to whoever is
+// signed in (verified from their own Supabase session token on every call).
 (() => {
   const {
     Badge
   } = window.TechyFuelOSDesignSystem_be0222;
+  async function authHeader() {
+    try {
+      const {
+        data
+      } = await window.db.auth.getSession();
+      const token = data?.session?.access_token;
+      return token ? {
+        Authorization: `Bearer ${token}`
+      } : {};
+    } catch {
+      return {};
+    }
+  }
   function fmtWhen(ds) {
     if (!ds) return '';
     const d = new Date(ds);
@@ -92,7 +108,8 @@
   function ComposeModal({
     open,
     onClose,
-    onSent
+    onSent,
+    accountId
   }) {
     const [form, setForm] = React.useState({
       to: '',
@@ -115,12 +132,17 @@
       setSending(true);
       setError('');
       try {
+        const headers = {
+          'Content-Type': 'application/json',
+          ...(await authHeader())
+        };
         const res = await fetch('/api/email-send', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(form)
+          headers,
+          body: JSON.stringify({
+            ...form,
+            accountId
+          })
         });
         const data = await res.json();
         if (!data.ok) {
@@ -191,6 +213,320 @@
       onChange: e => set('body', e.target.value)
     })));
   }
+  function AddAccountModal({
+    open,
+    onClose,
+    onAdded
+  }) {
+    const EMPTY = {
+      label: '',
+      email: '',
+      imapHost: '',
+      imapPort: '993',
+      smtpHost: '',
+      smtpPort: '465',
+      fromName: '',
+      password: ''
+    };
+    const [form, setForm] = React.useState(EMPTY);
+    const [saving, setSaving] = React.useState(false);
+    const [error, setError] = React.useState('');
+    function set(k, v) {
+      setForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
+    async function handleSave() {
+      if (!form.label.trim() || !form.email.trim() || !form.imapHost.trim() || !form.smtpHost.trim() || !form.password.trim()) {
+        setError('Label, email, IMAP host, SMTP host and password are all required.');
+        return;
+      }
+      setSaving(true);
+      setError('');
+      try {
+        const headers = {
+          'Content-Type': 'application/json',
+          ...(await authHeader())
+        };
+        const res = await fetch('/api/email-accounts', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(form)
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          setError(data.error || 'Could not connect this account.');
+          return;
+        }
+        setForm(EMPTY);
+        onClose();
+        if (onAdded) onAdded(data.account);
+      } catch (err) {
+        setError(err.message || 'Could not connect this account.');
+      } finally {
+        setSaving(false);
+      }
+    }
+    return /*#__PURE__*/React.createElement(Modal, {
+      open: open,
+      onClose: onClose,
+      title: "Connect your own email",
+      onSubmit: handleSave,
+      loading: saving,
+      submitLabel: "Connect"
+    }, error && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 14,
+        padding: '8px 12px',
+        borderRadius: 'var(--radius-md)',
+        background: '#fff1f2',
+        border: '1px solid #fecdd3',
+        color: '#be123c',
+        fontSize: 'var(--text-sm)'
+      }
+    }, error), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Label",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "e.g. My Gmail, Personal inbox…",
+      value: form.label,
+      onChange: e => set('label', e.target.value),
+      autoFocus: true
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Email address",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "email",
+      placeholder: "you@example.com",
+      value: form.email,
+      onChange: e => set('email', e.target.value)
+    })), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "IMAP host",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "imap.example.com",
+      value: form.imapHost,
+      onChange: e => set('imapHost', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "IMAP port"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      value: form.imapPort,
+      onChange: e => set('imapPort', e.target.value)
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "SMTP host",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "smtp.example.com",
+      value: form.smtpHost,
+      onChange: e => set('smtpHost', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "SMTP port"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      value: form.smtpPort,
+      onChange: e => set('smtpPort', e.target.value)
+    }))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Password",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "password",
+      placeholder: "Mailbox password",
+      value: form.password,
+      onChange: e => set('password', e.target.value)
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)'
+      }
+    }, "Stored encrypted — only you can use this connection, and nobody else on your team can see it or the password."));
+  }
+  function AccountSwitcher({
+    accounts,
+    activeAccountId,
+    onSwitch,
+    onAddClick,
+    onRemove
+  }) {
+    const [open, setOpen] = React.useState(false);
+    const ref = React.useRef(null);
+    React.useEffect(() => {
+      if (!open) return;
+      function onClickOutside(e) {
+        if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      }
+      document.addEventListener('mousedown', onClickOutside);
+      return () => document.removeEventListener('mousedown', onClickOutside);
+    }, [open]);
+    const active = activeAccountId ? accounts.find(a => a.id === activeAccountId) : null;
+    const activeLabel = active ? active.label : 'TechyFuel (shared inbox)';
+    return /*#__PURE__*/React.createElement("div", {
+      ref: ref,
+      style: {
+        position: 'relative'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setOpen(o => !o),
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 36,
+        padding: '0 14px',
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)',
+        cursor: 'pointer',
+        maxWidth: 220
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "mail",
+      size: 15,
+      style: {
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, activeLabel), /*#__PURE__*/React.createElement(Icon, {
+      name: "chevron-down",
+      size: 14,
+      style: {
+        color: 'var(--text-subtle)',
+        flexShrink: 0
+      }
+    })), open && /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'absolute',
+        top: 'calc(100% + 6px)',
+        left: 0,
+        zIndex: 200,
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-xl)',
+        minWidth: 260,
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      onClick: () => {
+        onSwitch(null);
+        setOpen(false);
+      },
+      style: {
+        padding: '10px 14px',
+        cursor: 'pointer',
+        fontSize: 'var(--text-sm)',
+        fontWeight: !activeAccountId ? 'var(--fw-bold)' : 'var(--fw-medium)',
+        color: !activeAccountId ? 'var(--blue-700)' : 'var(--text-body)',
+        background: !activeAccountId ? 'var(--blue-50)' : 'transparent'
+      },
+      onMouseEnter: e => {
+        if (activeAccountId) e.currentTarget.style.background = 'var(--slate-50)';
+      },
+      onMouseLeave: e => {
+        if (activeAccountId) e.currentTarget.style.background = 'transparent';
+      }
+    }, "TechyFuel (shared inbox)"), accounts.map(a => /*#__PURE__*/React.createElement("div", {
+      key: a.id,
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '10px 14px',
+        cursor: 'pointer',
+        background: activeAccountId === a.id ? 'var(--blue-50)' : 'transparent',
+        borderTop: '1px solid var(--border-subtle)'
+      },
+      onMouseEnter: e => {
+        if (activeAccountId !== a.id) e.currentTarget.style.background = 'var(--slate-50)';
+      },
+      onMouseLeave: e => {
+        if (activeAccountId !== a.id) e.currentTarget.style.background = 'transparent';
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      onClick: () => {
+        onSwitch(a.id);
+        setOpen(false);
+      },
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: activeAccountId === a.id ? 'var(--fw-bold)' : 'var(--fw-medium)',
+        color: activeAccountId === a.id ? 'var(--blue-700)' : 'var(--text-body)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, a.label), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-2xs)',
+        color: 'var(--text-subtle)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, a.email)), /*#__PURE__*/React.createElement("button", {
+      onClick: () => onRemove(a),
+      title: "Disconnect",
+      style: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'var(--text-subtle)',
+        padding: 4,
+        display: 'flex',
+        flexShrink: 0
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "x",
+      size: 14
+    })))), /*#__PURE__*/React.createElement("div", {
+      onClick: () => {
+        onAddClick();
+        setOpen(false);
+      },
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 7,
+        padding: '10px 14px',
+        cursor: 'pointer',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--blue-600)',
+        borderTop: '1px solid var(--border-subtle)'
+      },
+      onMouseEnter: e => e.currentTarget.style.background = 'var(--blue-50)',
+      onMouseLeave: e => e.currentTarget.style.background = 'transparent'
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 14
+    }), " Connect your own email")));
+  }
   function Email() {
     useLucide();
     const [messages, setMessages] = React.useState([]);
@@ -200,8 +536,24 @@
     const [selectedMsg, setSelectedMsg] = React.useState(null);
     const [msgLoading, setMsgLoading] = React.useState(false);
     const [composeOpen, setComposeOpen] = React.useState(false);
+    const [addAccountOpen, setAddAccountOpen] = React.useState(false);
     const [mailbox, setMailbox] = React.useState('inbox'); // 'inbox' | 'sent'
+    const [accounts, setAccounts] = React.useState([]);
+    const [activeAccountId, setActiveAccountId] = React.useState(null); // null = shared default mailbox
 
+    async function loadAccounts() {
+      try {
+        const headers = await authHeader();
+        const res = await fetch('/api/email-accounts', {
+          headers
+        });
+        const data = await res.json();
+        if (data.ok) setAccounts(data.accounts || []);
+      } catch {}
+    }
+    React.useEffect(() => {
+      loadAccounts();
+    }, []);
     async function loadList(box) {
       const which = box || mailbox;
       setLoading(true);
@@ -209,7 +561,14 @@
       setSelectedUid(null);
       setSelectedMsg(null);
       try {
-        const res = await fetch(`/api/email-list?mailbox=${which}`);
+        const headers = await authHeader();
+        const params = new URLSearchParams({
+          mailbox: which
+        });
+        if (activeAccountId) params.set('accountId', activeAccountId);
+        const res = await fetch(`/api/email-list?${params}`, {
+          headers
+        });
         const data = await res.json();
         if (!data.ok) {
           setError(data.error || 'Could not load your mailbox.');
@@ -225,13 +584,21 @@
     }
     React.useEffect(() => {
       loadList(mailbox);
-    }, [mailbox]);
+    }, [mailbox, activeAccountId]);
     async function openMessage(uid) {
       setSelectedUid(uid);
       setSelectedMsg(null);
       setMsgLoading(true);
       try {
-        const res = await fetch(`/api/email-message?uid=${uid}&mailbox=${mailbox}`);
+        const headers = await authHeader();
+        const params = new URLSearchParams({
+          uid,
+          mailbox
+        });
+        if (activeAccountId) params.set('accountId', activeAccountId);
+        const res = await fetch(`/api/email-message?${params}`, {
+          headers
+        });
         const data = await res.json();
         if (data.ok) {
           setSelectedMsg(data.message);
@@ -243,6 +610,18 @@
       } catch {} finally {
         setMsgLoading(false);
       }
+    }
+    async function removeAccount(acct) {
+      if (!window.confirm(`Disconnect "${acct.label}"? You'll need to reconnect it to use it again.`)) return;
+      try {
+        const headers = await authHeader();
+        await fetch(`/api/email-accounts?id=${acct.id}`, {
+          method: 'DELETE',
+          headers
+        });
+        setAccounts(prev => prev.filter(a => a.id !== acct.id));
+        if (activeAccountId === acct.id) setActiveAccountId(null);
+      } catch {}
     }
     return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -257,7 +636,9 @@
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '20px 24px 16px',
-        flexShrink: 0
+        flexShrink: 0,
+        gap: 12,
+        flexWrap: 'wrap'
       }
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
       style: {
@@ -274,9 +655,16 @@
     }, messages.length, " messages in ", mailbox === 'sent' ? 'sent' : 'inbox')), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
-        gap: 8
+        gap: 8,
+        flexWrap: 'wrap'
       }
-    }, /*#__PURE__*/React.createElement("button", {
+    }, /*#__PURE__*/React.createElement(AccountSwitcher, {
+      accounts: accounts,
+      activeAccountId: activeAccountId,
+      onSwitch: setActiveAccountId,
+      onAddClick: () => setAddAccountOpen(true),
+      onRemove: removeAccount
+    }), /*#__PURE__*/React.createElement("button", {
       onClick: () => loadList(),
       disabled: loading,
       style: {
@@ -494,7 +882,15 @@
     }, "Could not load this message."))), /*#__PURE__*/React.createElement(ComposeModal, {
       open: composeOpen,
       onClose: () => setComposeOpen(false),
-      onSent: loadList
+      onSent: loadList,
+      accountId: activeAccountId
+    }), /*#__PURE__*/React.createElement(AddAccountModal, {
+      open: addAccountOpen,
+      onClose: () => setAddAccountOpen(false),
+      onAdded: acct => {
+        setAccounts(prev => [...prev, acct]);
+        setActiveAccountId(acct.id);
+      }
     }));
   }
   Object.assign(window, {
