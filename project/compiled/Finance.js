@@ -174,8 +174,22 @@
       paymentSwift: saved.paymentSwift || '',
       paymentPayoneer: saved.paymentPayoneer || '',
       signatureName: saved.signatureName || '',
-      signatureTitle: saved.signatureTitle || ''
+      signatureTitle: saved.signatureTitle || '',
+      signatureImageUrl: saved.signatureImageUrl || '',
+      servicesLine: saved.servicesLine || ''
     };
+  }
+
+  // Two overlapping diagonal ribbon bands (dark + blue), drawn as thick
+  // rounded polylines with a bend — the chevron/wave graphic from the
+  // reference template. `flip` mirrors it for the footer.
+  function invoiceRibbonSvg(flip) {
+    const path = flip ? 'M60,10 L300,10 L520,170' : 'M60,170 L300,170 L520,10';
+    return `
+    <svg viewBox="0 0 620 180" preserveAspectRatio="none" style="position:absolute;${flip ? 'bottom' : 'top'}:0;right:0;width:340px;height:100px;overflow:visible">
+      <path d="${path}" fill="none" stroke="#1f2937" stroke-width="46" stroke-linejoin="round" stroke-linecap="butt"/>
+      <path d="${flip ? 'M110,40 L340,40 L560,190' : 'M110,140 L340,140 L560,-10'}" fill="none" stroke="#2563eb" stroke-width="54" stroke-linejoin="round" stroke-linecap="butt"/>
+    </svg>`;
   }
   function invoiceItemsOf(inv) {
     const items = (inv.invoice_items || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
@@ -200,17 +214,14 @@
     const items = invoiceItemsOf(inv);
     const total = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.unit_price) || 0), 0);
     const rowsHtml = items.map((it, i) => `
-    <tr style="background:${i % 2 ? '#f8fafc' : '#fff'}">
-      <td style="padding:12px 16px;font-size:13px;color:#334155">${it.description}</td>
-      <td style="padding:12px 16px;font-size:13px;color:#334155;text-align:center">${Number(it.qty) || 0}</td>
-      <td style="padding:12px 16px;font-size:13px;color:#334155;text-align:right">${fmtAmt(it.unit_price, currency)}</td>
-      <td style="padding:12px 16px;font-size:13px;font-weight:700;color:#0f172a;text-align:right">${fmtAmt((Number(it.qty) || 0) * (Number(it.unit_price) || 0), currency)}</td>
+    <tr style="background:${i % 2 ? '#f0f1f3' : '#fafafa'}">
+      <td style="padding:14px 18px;font-size:14px;font-weight:600;color:#1e293b">${it.description}</td>
+      <td style="padding:14px 18px;font-size:14px;color:#334155;text-align:center">${String(Number(it.qty) || 0).padStart(2, '0')}</td>
+      <td style="padding:14px 18px;font-size:14px;color:#334155;text-align:center">${fmtAmt(it.unit_price, currency)}</td>
+      <td style="padding:14px 18px;font-size:14px;font-weight:700;color:#0f172a;text-align:center;background:rgba(15,23,42,0.05)">${fmtAmt((Number(it.qty) || 0) * (Number(it.unit_price) || 0), currency)}</td>
     </tr>`).join('');
-    const stripe = top => `
-    <div style="position:absolute;${top ? 'top:0' : 'bottom:0'};right:0;width:260px;height:90px;overflow:hidden;${top ? '' : 'transform:scaleY(-1)'}">
-      <div style="position:absolute;top:-30px;right:-60px;width:340px;height:130px;background:#0f172a;transform:rotate(-8deg)"></div>
-      <div style="position:absolute;top:-10px;right:-90px;width:340px;height:70px;background:#2563eb;transform:rotate(-8deg)"></div>
-    </div>`;
+    const noteLines = (inv.notes || '').split('\n').map(l => l.trim()).filter(Boolean);
+    const notesHtml = (noteLines.length ? noteLines : [`Thank you for choosing ${b.agencyName}.`, 'Payment is due on or before the due date above.', 'Please include the Invoice Number as your payment reference.']).map(l => `<li>${l}</li>`).join('');
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -219,40 +230,54 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; background: #fff; }
-  .sheet { position: relative; max-width: 820px; margin: 0 auto; padding: 40px 48px; overflow: hidden; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 28px; position: relative; z-index: 2; }
-  .brand-row { display: flex; align-items: center; gap: 12px; }
-  .brand-row img { height: 44px; }
-  .brand { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; color: #0f172a; }
-  .brand-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .invoice-box { text-align: right; }
-  .invoice-box h1 { font-size: 26px; font-weight: 900; letter-spacing: 0.05em; color: #0f172a; margin-bottom: 8px; }
-  .invoice-no { display: inline-block; background: #1e40af; color: #fff; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 4px; letter-spacing: 0.03em; }
-  .billto { margin: 28px 0 22px; position: relative; z-index: 2; }
-  .billto label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; display: block; margin-bottom: 6px; }
-  .billto .name { font-size: 15px; font-weight: 700; color: #0f172a; }
+  .sheet { position: relative; max-width: 860px; margin: 0 auto; }
+  .topbar { height: 5px; background: #2563eb; }
+  .header { position: relative; display: flex; justify-content: space-between; align-items: flex-start; padding: 26px 48px 20px; overflow: hidden; min-height: 130px; }
+  .brand-row { display: flex; align-items: center; gap: 12px; position: relative; z-index: 2; }
+  .brand-row img { height: 52px; object-fit: contain; }
+  .brand { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #0f172a; }
+  .invoice-box { text-align: right; position: relative; z-index: 2; }
+  .invoice-box .tagline { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 2px; }
+  .invoice-box h1 { font-size: 34px; font-weight: 800; letter-spacing: 0.02em; color: #1e293b; }
+  .rule-dark { height: 3px; background: #1f2937; }
+  .services-line { padding: 10px 48px; font-size: 11px; color: #475569; }
+  .billto-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 26px 48px 22px; }
+  .billto label { font-size: 13px; color: #334155; display: block; margin-bottom: 4px; }
+  .billto .name { font-size: 17px; font-weight: 800; color: #2563eb; text-transform: uppercase; }
   .billto .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
-  .meta-right { text-align: right; font-size: 12px; color: #64748b; }
-  .meta-right b { color: #0f172a; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; position: relative; z-index: 2; }
-  thead th { text-align: left; padding: 11px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #fff; background: #0f172a; }
-  thead th:nth-child(2) { text-align: center; }
-  thead th:nth-child(3), thead th:nth-child(4) { text-align: right; }
-  .totals { margin-left: auto; width: 260px; position: relative; z-index: 2; margin-bottom: 28px; }
-  .totals-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; color: #64748b; }
-  .totals-row.total { border-top: 2px solid #0f172a; padding-top: 12px; margin-top: 4px; font-size: 18px; font-weight: 800; color: #0f172a; }
-  .lower { display: flex; justify-content: space-between; gap: 32px; margin-bottom: 32px; position: relative; z-index: 2; }
-  .payment label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; display: block; margin-bottom: 8px; }
-  .payment .row { font-size: 12px; color: #334155; margin-bottom: 4px; }
-  .payment .row b { color: #0f172a; display: inline-block; width: 76px; }
-  .thanks { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
-  .notes { font-size: 12px; color: #64748b; max-width: 260px; }
-  .signature { text-align: right; margin-top: 24px; }
-  .signature .name { font-size: 14px; font-weight: 700; font-style: italic; color: #0f172a; }
-  .signature .title { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .footer { position: relative; background: #0f172a; color: #fff; padding: 18px 48px; display: flex; justify-content: space-around; font-size: 11px; overflow: hidden; }
-  .footer-item { display: flex; align-items: center; gap: 6px; position: relative; z-index: 2; }
-  .footer-item b { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #93c5fd; }
+  .billto .contact-line { font-size: 12px; color: #334155; margin-top: 6px; }
+  .invoice-no-box { display: inline-block; background: #2563eb; color: #fff; font-size: 15px; font-weight: 700; padding: 8px 18px; border-radius: 3px; letter-spacing: 0.02em; margin-bottom: 8px; }
+  .meta-right { text-align: right; font-size: 12px; color: #334155; }
+  .meta-right .row { display: flex; justify-content: flex-end; gap: 14px; }
+  .meta-right .row span:first-child { color: #64748b; }
+  .meta-right .row span:last-child { font-weight: 700; color: #0f172a; min-width: 90px; text-align: left; }
+  table { width: calc(100% - 96px); margin: 0 48px 24px; border-collapse: collapse; }
+  thead th { text-align: left; padding: 13px 18px; font-size: 14px; font-weight: 700; color: #fff; background: #1f2937; }
+  thead th:first-child { background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
+  thead th:nth-child(2), thead th:nth-child(3), thead th:nth-child(4) { text-align: center; }
+  .lower-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 0 48px 24px; }
+  .payment h3 { font-size: 14px; font-weight: 700; color: #2563eb; margin-bottom: 10px; }
+  .payment .row { font-size: 12px; color: #334155; margin-bottom: 5px; }
+  .payment .row b { color: #0f172a; display: inline-block; width: 80px; }
+  .total-box { background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 22px; border-radius: 3px; min-width: 260px; }
+  .total-box .label { font-size: 15px; font-weight: 700; }
+  .total-box .value { font-size: 20px; font-weight: 800; }
+  .thanks-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 0 48px 28px; }
+  .thanks { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+  .notes h4 { font-size: 13px; font-weight: 700; color: #2563eb; margin-bottom: 6px; }
+  .notes ul { list-style: none; font-size: 11px; color: #475569; max-width: 320px; }
+  .notes li { margin-bottom: 3px; }
+  .notes li::before { content: '- '; }
+  .signature { text-align: right; }
+  .signature img { height: 46px; object-fit: contain; margin-bottom: 2px; }
+  .signature .name { font-size: 14px; font-weight: 800; letter-spacing: 0.02em; color: #0f172a; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 4px; min-width: 160px; }
+  .signature .title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-top: 2px; }
+  .contact-section { padding: 4px 48px 24px; }
+  .contact-section h4 { font-size: 15px; font-weight: 800; color: #2563eb; margin-bottom: 8px; }
+  .contact-section .row { font-size: 12px; color: #1e293b; margin-bottom: 3px; }
+  .contact-section .row b { display: inline-block; width: 76px; font-weight: 700; }
+  .footer { position: relative; overflow: hidden; min-height: 70px; }
+  .footer .rule-dark { position: relative; z-index: 2; }
   @media print {
     @page { margin: 0; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
@@ -261,68 +286,78 @@
 </head>
 <body>
 <div class="sheet">
-  ${stripe(true)}
+  <div class="topbar"></div>
   <div class="header">
+    ${invoiceRibbonSvg(false)}
     <div class="brand-row">
-      ${b.logoUrl ? `<img src="${b.logoUrl}" alt=""/>` : ''}
-      <div>
-        <div class="brand">${b.agencyName}</div>
-        ${b.tagline ? `<div class="brand-sub">${b.tagline}</div>` : ''}
-      </div>
+      ${b.logoUrl ? `<img src="${b.logoUrl}" alt=""/>` : `<div class="brand">${b.agencyName}</div>`}
     </div>
     <div class="invoice-box">
+      ${b.tagline ? `<div class="tagline">${b.tagline}</div>` : ''}
       <h1>INVOICE</h1>
-      <div class="invoice-no">NO:#${inv.invoice_no}</div>
     </div>
   </div>
+  <div class="rule-dark"></div>
+  ${b.servicesLine ? `<div class="services-line">${b.servicesLine}</div>` : ''}
 
-  <div class="billto" style="display:flex;justify-content:space-between">
-    <div>
-      <label>Invoice To</label>
+  <div class="billto-row">
+    <div class="billto">
+      <label>Invoice To:</label>
       <div class="name">${clientName}</div>
-      ${clientEmail ? `<div class="sub">${clientEmail}</div>` : ''}
-      ${clientPhone ? `<div class="sub">${clientPhone}</div>` : ''}
+      ${clientObj.company && clientObj.company !== clientName ? `<div class="sub">${clientObj.company}</div>` : ''}
+      ${clientPhone ? `<div class="contact-line">P : ${clientPhone}</div>` : ''}
+      ${clientEmail ? `<div class="contact-line">E : ${clientEmail}</div>` : ''}
     </div>
     <div class="meta-right">
-      <div>Date: <b>${fmtDate(inv.created_at || new Date().toISOString())}</b></div>
-      <div>Due date: <b>${fmtDate(inv.due_date)}</b></div>
-      <div>Status: <b>${(IS[inv.status] || {
-      label: inv.status
-    }).label}</b></div>
+      <div class="invoice-no-box">INVOICE NO:#${inv.invoice_no}</div>
+      <div class="row"><span>Invoice Date</span><span>${fmtDate(inv.created_at || new Date().toISOString())}</span></div>
+      <div class="row"><span>Due Date</span><span>${fmtDate(inv.due_date)}</span></div>
     </div>
   </div>
 
   <table>
-    <thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+    <thead><tr><th>Item description</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr></thead>
     <tbody>${rowsHtml}</tbody>
   </table>
 
-  <div class="totals">
-    <div class="totals-row"><span>Subtotal</span><span>${fmtAmt(total, currency)}</span></div>
-    <div class="totals-row total"><span>Total</span><span>${fmtAmt(total, currency)}</span></div>
-  </div>
-
-  <div class="lower">
+  <div class="lower-row">
     <div class="payment">
-      <label>Payment Method</label>
+      <h3>Payment method</h3>
       ${b.paymentAccount ? `<div class="row"><b>Account</b>${b.paymentAccount}</div>` : ''}
       ${b.paymentSwift ? `<div class="row"><b>Swift</b>${b.paymentSwift}</div>` : ''}
       ${b.paymentPayoneer ? `<div class="row"><b>Payoneer</b>${b.paymentPayoneer}</div>` : ''}
     </div>
+    <div class="total-box"><span class="label">Total</span><span class="value">${fmtAmt(total, currency)}</span></div>
+  </div>
+
+  <div class="thanks-row">
     <div>
       <div class="thanks">Thanks for your business!</div>
-      <div class="notes">${inv.notes || 'Please make payment by the due date above. Contact us with any questions about this invoice.'}</div>
-      ${b.signatureName ? `<div class="signature"><div class="name">${b.signatureName}</div><div class="title">${b.signatureTitle || ''}</div></div>` : ''}
+      <div class="notes">
+        <h4>Notes</h4>
+        <ul>${notesHtml}</ul>
+      </div>
     </div>
+    ${b.signatureName ? `
+    <div class="signature">
+      ${b.signatureImageUrl ? `<img src="${b.signatureImageUrl}" alt=""/>` : ''}
+      <div class="name">${b.signatureName}</div>
+      <div class="title">${b.signatureTitle || ''}</div>
+    </div>` : ''}
   </div>
-</div>
 
-<div class="footer">
-  ${stripe(false)}
-  ${b.agencyPhone ? `<div class="footer-item"><div><b>Phone</b>${b.agencyPhone}</div></div>` : ''}
-  ${b.agencyWebsite ? `<div class="footer-item"><div><b>Website</b>${b.agencyWebsite}</div></div>` : ''}
-  ${b.agencyAddress ? `<div class="footer-item"><div><b>Address</b>${b.agencyAddress}</div></div>` : ''}
-  ${b.agencyEmail ? `<div class="footer-item"><div><b>Email</b>${b.agencyEmail}</div></div>` : ''}
+  <div class="contact-section">
+    <h4>Contact</h4>
+    ${b.agencyPhone ? `<div class="row"><b>Phone</b>: ${b.agencyPhone}</div>` : ''}
+    ${b.agencyWebsite ? `<div class="row"><b>Web Site</b>: ${b.agencyWebsite}</div>` : ''}
+    ${b.agencyAddress ? `<div class="row"><b>Address</b>: ${b.agencyAddress}</div>` : ''}
+    ${b.agencyEmail ? `<div class="row"><b>Email</b>: ${b.agencyEmail}</div>` : ''}
+  </div>
+
+  <div class="footer">
+    <div class="rule-dark"></div>
+    ${invoiceRibbonSvg(true)}
+  </div>
 </div>
 </body>
 </html>`;

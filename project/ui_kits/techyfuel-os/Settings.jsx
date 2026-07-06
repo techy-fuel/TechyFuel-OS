@@ -219,9 +219,12 @@ function Settings() {
   const [paymentPayoneer,setPaymentPayoneer]= React.useState(saved.paymentPayoneer || '');
   const [signatureName,  setSignatureName]  = React.useState(saved.signatureName || '');
   const [signatureTitle, setSignatureTitle] = React.useState(saved.signatureTitle || '');
+  const [signatureImageUrl, setSignatureImageUrl] = React.useState(saved.signatureImageUrl || '');
+  const [servicesLine, setServicesLine] = React.useState(saved.servicesLine || '');
   const [saved2,     setSaved2]     = React.useState(false);
   const [toast,      setToast]      = React.useState('');
   const logoInputRef = React.useRef(null);
+  const signatureInputRef = React.useRef(null);
 
   function showToast(msg) {
     setToast(msg);
@@ -253,7 +256,7 @@ function Settings() {
     const sk = loadSaved();
     saveSettings({
       ...sk, agencyName, agencyEmail, logoUrl, tagline, agencyPhone, agencyWebsite, agencyAddress,
-      paymentAccount, paymentSwift, paymentPayoneer, signatureName, signatureTitle,
+      paymentAccount, paymentSwift, paymentPayoneer, signatureName, signatureTitle, signatureImageUrl, servicesLine,
     });
     setSaved2(true);
     showToast('Branding saved!');
@@ -268,6 +271,18 @@ function Settings() {
     reader.onload = ev => {
       setLogoUrl(ev.target.result);
       showToast('Logo ready — click Save changes to apply');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleSignatureUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 1 * 1024 * 1024) { showToast('Image must be under 1MB'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      setSignatureImageUrl(ev.target.result);
+      showToast('Signature ready — click Save changes to apply');
     };
     reader.readAsDataURL(file);
   }
@@ -394,6 +409,10 @@ function Settings() {
                   <input style={inputStyle} value={agencyAddress} onChange={e => setAgencyAddress(e.target.value)} placeholder="Office address" />
                 </div>
               </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Services line (shown under the invoice header)</label>
+                <input style={inputStyle} value={servicesLine} onChange={e => setServicesLine(e.target.value)} placeholder="Digital Marketing • Web Development • UI/UX Design • Branding • SEO" />
+              </div>
 
               <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4, marginTop: 8 }}>Invoice details</h3>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>Shown on every exported invoice PDF — payment method and the signature block.</p>
@@ -419,6 +438,19 @@ function Settings() {
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Signature title</label>
                   <input style={inputStyle} value={signatureTitle} onChange={e => setSignatureTitle(e.target.value)} placeholder="CEO" />
+                </div>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Signature image (optional)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {signatureImageUrl && <img src={signatureImageUrl} alt="Signature" style={{ height: 40, objectFit: 'contain' }} />}
+                  <input ref={signatureInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleSignatureUpload} />
+                  <button onClick={() => signatureInputRef.current && signatureInputRef.current.click()} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
+                    <Icon name="upload" size={15} /> Upload signature
+                  </button>
+                  {signatureImageUrl && <button onClick={() => { setSignatureImageUrl(''); showToast('Signature removed'); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 10px', background: 'transparent', border: 'none', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--red-500)', cursor: 'pointer' }}>
+                    <Icon name="x" size={12} /> Remove
+                  </button>}
                 </div>
               </div>
               <button onClick={handleSaveBranding} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 18px', background: saved2 ? 'var(--green-600)' : 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer', transition: 'background 0.2s' }}>

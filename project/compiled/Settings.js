@@ -485,9 +485,12 @@
     const [paymentPayoneer, setPaymentPayoneer] = React.useState(saved.paymentPayoneer || '');
     const [signatureName, setSignatureName] = React.useState(saved.signatureName || '');
     const [signatureTitle, setSignatureTitle] = React.useState(saved.signatureTitle || '');
+    const [signatureImageUrl, setSignatureImageUrl] = React.useState(saved.signatureImageUrl || '');
+    const [servicesLine, setServicesLine] = React.useState(saved.servicesLine || '');
     const [saved2, setSaved2] = React.useState(false);
     const [toast, setToast] = React.useState('');
     const logoInputRef = React.useRef(null);
+    const signatureInputRef = React.useRef(null);
     function showToast(msg) {
       setToast(msg);
       setTimeout(() => setToast(''), 3000);
@@ -537,7 +540,9 @@
         paymentSwift,
         paymentPayoneer,
         signatureName,
-        signatureTitle
+        signatureTitle,
+        signatureImageUrl,
+        servicesLine
       });
       setSaved2(true);
       showToast('Branding saved!');
@@ -554,6 +559,20 @@
       reader.onload = ev => {
         setLogoUrl(ev.target.result);
         showToast('Logo ready — click Save changes to apply');
+      };
+      reader.readAsDataURL(file);
+    }
+    function handleSignatureUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 1 * 1024 * 1024) {
+        showToast('Image must be under 1MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        setSignatureImageUrl(ev.target.result);
+        showToast('Signature ready — click Save changes to apply');
       };
       reader.readAsDataURL(file);
     }
@@ -967,7 +986,26 @@
       value: agencyAddress,
       onChange: e => setAgencyAddress(e.target.value),
       placeholder: "Office address"
-    }))), /*#__PURE__*/React.createElement("h3", {
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 20
+      }
+    }, /*#__PURE__*/React.createElement("label", {
+      style: {
+        display: 'block',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-muted)',
+        marginBottom: 6,
+        textTransform: 'uppercase',
+        letterSpacing: 'var(--tracking-caps)'
+      }
+    }, "Services line (shown under the invoice header)"), /*#__PURE__*/React.createElement("input", {
+      style: inputStyle,
+      value: servicesLine,
+      onChange: e => setServicesLine(e.target.value),
+      placeholder: "Digital Marketing • Web Development • UI/UX Design • Branding • SEO"
+    })), /*#__PURE__*/React.createElement("h3", {
       style: {
         fontSize: 'var(--text-lg)',
         fontWeight: 'var(--fw-bold)',
@@ -1069,7 +1107,84 @@
       value: signatureTitle,
       onChange: e => setSignatureTitle(e.target.value),
       placeholder: "CEO"
-    }))), /*#__PURE__*/React.createElement("button", {
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 20
+      }
+    }, /*#__PURE__*/React.createElement("label", {
+      style: {
+        display: 'block',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-muted)',
+        marginBottom: 6,
+        textTransform: 'uppercase',
+        letterSpacing: 'var(--tracking-caps)'
+      }
+    }, "Signature image (optional)"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12
+      }
+    }, signatureImageUrl && /*#__PURE__*/React.createElement("img", {
+      src: signatureImageUrl,
+      alt: "Signature",
+      style: {
+        height: 40,
+        objectFit: 'contain'
+      }
+    }), /*#__PURE__*/React.createElement("input", {
+      ref: signatureInputRef,
+      type: "file",
+      accept: "image/*",
+      style: {
+        display: 'none'
+      },
+      onChange: handleSignatureUpload
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: () => signatureInputRef.current && signatureInputRef.current.click(),
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 34,
+        padding: '0 13px',
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "upload",
+      size: 15
+    }), " Upload signature"), signatureImageUrl && /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setSignatureImageUrl('');
+        showToast('Signature removed');
+      },
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        height: 26,
+        padding: '0 10px',
+        background: 'transparent',
+        border: 'none',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--red-500)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "x",
+      size: 12
+    }), " Remove"))), /*#__PURE__*/React.createElement("button", {
       onClick: handleSaveBranding,
       style: {
         display: 'inline-flex',
