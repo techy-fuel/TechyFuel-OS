@@ -144,7 +144,7 @@ function buildInvoiceHtml(inv, clients) {
 <meta charset="utf-8"/>
 <title>Invoice ${inv.invoice_no}</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; background: #fff; }
   .sheet { position: relative; max-width: 820px; margin: 0 auto; padding: 40px 48px; overflow: hidden; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 28px; position: relative; z-index: 2; }
@@ -180,7 +180,10 @@ function buildInvoiceHtml(inv, clients) {
   .footer { position: relative; background: #0f172a; color: #fff; padding: 18px 48px; display: flex; justify-content: space-around; font-size: 11px; overflow: hidden; }
   .footer-item { display: flex; align-items: center; gap: 6px; position: relative; z-index: 2; }
   .footer-item b { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #93c5fd; }
-  @media print { @page { margin: 0; } }
+  @media print {
+    @page { margin: 0; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+  }
 </style>
 </head>
 <body>
