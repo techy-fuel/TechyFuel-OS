@@ -36,17 +36,18 @@ function Modal({ open, onClose, title, children, onSubmit, loading, submitLabel 
         backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ background: 'var(--slate-0)', borderRadius: 'var(--radius-2xl)',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.3)', width: '100%', maxWidth: 480, overflow: 'hidden' }}>
+        boxShadow: '0 25px 60px rgba(0,0,0,0.3)', width: '100%', maxWidth: 480, maxHeight: '88vh',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '18px 22px', borderBottom: '1px solid var(--border-subtle)' }}>
+          padding: '18px 22px', borderBottom: '1px solid var(--border-subtle)', flex: '0 0 auto' }}>
           <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', margin: 0 }}>{title}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--text-muted)', padding: 4, borderRadius: 'var(--radius-sm)', display: 'flex', lineHeight: 1 }}>
             <Icon name="x" size={18} />
           </button>
         </div>
-        <div style={{ padding: '20px 22px' }}>{children}</div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8,
+        <div style={{ padding: '20px 22px', overflowY: 'auto', flex: '1 1 auto', minHeight: 0 }}>{children}</div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flex: '0 0 auto',
           padding: '14px 22px', borderTop: '1px solid var(--border-subtle)', background: 'var(--slate-50)' }}>
           <button onClick={onClose} disabled={loading}
             style={{ height: 36, padding: '0 16px', background: 'var(--slate-0)', border: '1px solid var(--border-default)',

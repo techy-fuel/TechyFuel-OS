@@ -15,11 +15,56 @@
       return {};
     }
   }
+  // Returns whether the save actually landed — localStorage throws
+  // QuotaExceededError when a stored logo/signature image (base64, ~33%
+  // bigger than the original file) pushes the origin over its ~5-10MB cap,
+  // and callers need to know so they can tell the user instead of the
+  // change silently vanishing on next reload.
   function saveSettings(obj) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
       window.dispatchEvent(new Event('tf-settings-saved'));
-    } catch {}
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Downscales an uploaded image to a max dimension and re-encodes as PNG
+  // (keeps transparency, unlike JPEG) before it ever touches localStorage —
+  // a phone-camera-sized PNG can be 5-10MB, which alone blows the ~5-10MB
+  // per-origin quota and made every logo/signature upload silently fail.
+  function resizeImageToDataUrl(file, maxDim) {
+    return new Promise((resolve, reject) => {
+      if (!file.type.startsWith('image/')) {
+        reject(new Error('Please choose an image file.'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Could not read that file.'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Could not read that image.'));
+        img.onload = () => {
+          let {
+            width,
+            height
+          } = img;
+          if (width > maxDim || height > maxDim) {
+            const scale = maxDim / Math.max(width, height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   /* ── Notification row ─────────────────────────────────────────── */
@@ -532,7 +577,7 @@
     React.useEffect(() => {
       const t = setTimeout(() => {
         const sk = loadSaved();
-        saveSettings({
+        const ok = saveSettings({
           ...sk,
           agencyName,
           agencyEmail,
@@ -549,12 +594,13 @@
           signatureImageUrl,
           servicesLine
         });
+        if (!ok) showToast('Could not save — try a smaller logo/signature image.');
       }, 500);
       return () => clearTimeout(t);
     }, [agencyName, agencyEmail, logoUrl, tagline, agencyPhone, agencyWebsite, agencyAddress, paymentAccount, paymentSwift, paymentPayoneer, signatureName, signatureTitle, signatureImageUrl, servicesLine]);
     function handleSaveBranding() {
       const sk = loadSaved();
-      saveSettings({
+      const ok = saveSettings({
         ...sk,
         agencyName,
         agencyEmail,
@@ -571,37 +617,39 @@
         signatureImageUrl,
         servicesLine
       });
-      setSaved2(true);
-      showToast('Branding saved!');
-      setTimeout(() => setSaved2(false), 2500);
+      if (ok) {
+        setSaved2(true);
+        showToast('Branding saved!');
+        setTimeout(() => setSaved2(false), 2500);
+      } else {
+        showToast('Could not save — try a smaller logo/signature image.');
+      }
     }
-    function handleLogoUpload(e) {
+    async function handleLogoUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
-      if (file.size > 2 * 1024 * 1024) {
-        showToast('Image must be under 2MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = ev => {
-        setLogoUrl(ev.target.result);
+      try {
+        const dataUrl = await resizeImageToDataUrl(file, 320);
+        setLogoUrl(dataUrl);
         showToast('Logo ready — click Save changes to apply');
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        showToast(err.message || 'Could not process that image');
+      } finally {
+        e.target.value = '';
+      }
     }
-    function handleSignatureUpload(e) {
+    async function handleSignatureUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
-      if (file.size > 1 * 1024 * 1024) {
-        showToast('Image must be under 1MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = ev => {
-        setSignatureImageUrl(ev.target.result);
+      try {
+        const dataUrl = await resizeImageToDataUrl(file, 260);
+        setSignatureImageUrl(dataUrl);
         showToast('Signature ready — click Save changes to apply');
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        showToast(err.message || 'Could not process that image');
+      } finally {
+        e.target.value = '';
+      }
     }
     function openInteg(it) {
       setIntegDraft({

@@ -85,6 +85,9 @@ function Modal({
       boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
       width: '100%',
       maxWidth: 480,
+      maxHeight: '88vh',
+      display: 'flex',
+      flexDirection: 'column',
       overflow: 'hidden'
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -93,7 +96,8 @@ function Modal({
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '18px 22px',
-      borderBottom: '1px solid var(--border-subtle)'
+      borderBottom: '1px solid var(--border-subtle)',
+      flex: '0 0 auto'
     }
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
@@ -119,13 +123,17 @@ function Modal({
     size: 18
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
-      padding: '20px 22px'
+      padding: '20px 22px',
+      overflowY: 'auto',
+      flex: '1 1 auto',
+      minHeight: 0
     }
   }, children), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       justifyContent: 'flex-end',
       gap: 8,
+      flex: '0 0 auto',
       padding: '14px 22px',
       borderTop: '1px solid var(--border-subtle)',
       background: 'var(--slate-50)'
