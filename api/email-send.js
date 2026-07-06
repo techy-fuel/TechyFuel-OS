@@ -36,8 +36,10 @@ export default async function handler(req, res) {
           auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD }, logger: false,
         });
         await client.connect();
+        const list = await client.list();
+        const sentBox = list.find(b => (b.specialUse === '\\Sent') || /^(sent|sent items|sent-mail)$/i.test(b.name));
         const raw = `From: ${fromHeader}\r\nTo: ${to}\r\nSubject: ${subject}\r\nDate: ${new Date().toUTCString()}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n${mail.html}`;
-        await client.append('Sent', raw, ['\\Seen']).catch(() => {});
+        await client.append(sentBox ? sentBox.path : 'Sent', raw, ['\\Seen']).catch(() => {});
         await client.logout();
       } catch {} // Sent-folder copy is a nice-to-have; the send itself already succeeded.
     }

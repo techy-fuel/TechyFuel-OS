@@ -14,6 +14,7 @@ export default async function handler(req, res) {
   }
 
   const limit = Math.min(Number(req.query.limit) || 30, 100);
+  const wantSent = (req.query.mailbox || 'inbox').toLowerCase() === 'sent';
   const client = new ImapFlow({
     host: EMAIL_IMAP_HOST,
     port: Number(EMAIL_IMAP_PORT) || 993,
@@ -24,7 +25,18 @@ export default async function handler(req, res) {
 
   try {
     await client.connect();
-    const lock = await client.getMailboxLock('INBOX');
+
+    let mailboxPath = 'INBOX';
+    if (wantSent) {
+      // Different mail servers name this differently (Sent, Sent Items,
+      // INBOX.Sent, ...) -- ask the server which folder it flags as the
+      // special-use Sent mailbox instead of guessing a name.
+      const list = await client.list();
+      const sentBox = list.find(b => (b.specialUse === '\\Sent') || /^(sent|sent items|sent-mail)$/i.test(b.name));
+      mailboxPath = sentBox ? sentBox.path : 'Sent';
+    }
+
+    const lock = await client.getMailboxLock(mailboxPath);
     const messages = [];
     try {
       const total = client.mailbox.exists;
@@ -35,6 +47,7 @@ export default async function handler(req, res) {
             uid: msg.uid,
             subject: msg.envelope?.subject || '(no subject)',
             from: msg.envelope?.from?.[0] ? { name: msg.envelope.from[0].name || '', address: msg.envelope.from[0].address || '' } : null,
+            to: wantSent ? (msg.envelope?.to || []).map(t => ({ name: t.name || '', address: t.address || '' })) : undefined,
             date: msg.envelope?.date || null,
             seen: msg.flags?.has('\\Seen') || false,
           });

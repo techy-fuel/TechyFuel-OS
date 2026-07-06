@@ -22,9 +22,12 @@
   function MessageRow({
     msg,
     active,
-    onClick
+    onClick,
+    mailbox
   }) {
     const [hover, setHover] = React.useState(false);
+    const isSent = mailbox === 'sent';
+    const who = isSent ? msg.to && msg.to[0] ? msg.to[0].name || msg.to[0].address : 'Unknown recipient' : msg.from?.name || msg.from?.address || 'Unknown sender';
     return /*#__PURE__*/React.createElement("div", {
       onClick: onClick,
       onMouseEnter: () => setHover(true),
@@ -46,7 +49,7 @@
         borderRadius: '50%',
         marginTop: 6,
         flexShrink: 0,
-        background: msg.seen ? 'transparent' : 'var(--blue-500)'
+        background: msg.seen || isSent ? 'transparent' : 'var(--blue-500)'
       }
     }), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -68,7 +71,7 @@
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap'
       }
-    }, msg.from?.name || msg.from?.address || 'Unknown sender'), /*#__PURE__*/React.createElement("span", {
+    }, isSent ? `To: ${who}` : who), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 'var(--text-2xs)',
         color: 'var(--text-subtle)',
@@ -197,33 +200,38 @@
     const [selectedMsg, setSelectedMsg] = React.useState(null);
     const [msgLoading, setMsgLoading] = React.useState(false);
     const [composeOpen, setComposeOpen] = React.useState(false);
-    async function loadList() {
+    const [mailbox, setMailbox] = React.useState('inbox'); // 'inbox' | 'sent'
+
+    async function loadList(box) {
+      const which = box || mailbox;
       setLoading(true);
       setError('');
+      setSelectedUid(null);
+      setSelectedMsg(null);
       try {
-        const res = await fetch('/api/email-list');
+        const res = await fetch(`/api/email-list?mailbox=${which}`);
         const data = await res.json();
         if (!data.ok) {
-          setError(data.error || 'Could not load your inbox.');
+          setError(data.error || 'Could not load your mailbox.');
           setMessages([]);
           return;
         }
         setMessages(data.messages || []);
       } catch (err) {
-        setError(err.message || 'Could not load your inbox.');
+        setError(err.message || 'Could not load your mailbox.');
       } finally {
         setLoading(false);
       }
     }
     React.useEffect(() => {
-      loadList();
-    }, []);
+      loadList(mailbox);
+    }, [mailbox]);
     async function openMessage(uid) {
       setSelectedUid(uid);
       setSelectedMsg(null);
       setMsgLoading(true);
       try {
-        const res = await fetch(`/api/email-message?uid=${uid}`);
+        const res = await fetch(`/api/email-message?uid=${uid}&mailbox=${mailbox}`);
         const data = await res.json();
         if (data.ok) {
           setSelectedMsg(data.message);
@@ -263,13 +271,13 @@
         color: 'var(--text-muted)',
         marginTop: 2
       }
-    }, messages.length, " messages in inbox")), /*#__PURE__*/React.createElement("div", {
+    }, messages.length, " messages in ", mailbox === 'sent' ? 'sent' : 'inbox')), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         gap: 8
       }
     }, /*#__PURE__*/React.createElement("button", {
-      onClick: loadList,
+      onClick: () => loadList(),
       disabled: loading,
       style: {
         display: 'inline-flex',
@@ -336,6 +344,42 @@
         width: 340,
         flexShrink: 0,
         borderRight: '1px solid var(--border-subtle)',
+        display: 'flex',
+        flexDirection: 'column'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 4,
+        padding: 10,
+        borderBottom: '1px solid var(--border-subtle)',
+        flexShrink: 0
+      }
+    }, [['inbox', 'inbox', 'Inbox'], ['sent', 'send', 'Sent']].map(([id, icon, label]) => /*#__PURE__*/React.createElement("button", {
+      key: id,
+      onClick: () => setMailbox(id),
+      style: {
+        flex: 1,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        height: 32,
+        borderRadius: 'var(--radius-md)',
+        border: 'none',
+        cursor: 'pointer',
+        background: mailbox === id ? 'var(--blue-50)' : 'transparent',
+        color: mailbox === id ? 'var(--blue-700)' : 'var(--text-muted)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: icon,
+      size: 14
+    }), " ", label))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
         overflowY: 'auto'
       }
     }, loading ? /*#__PURE__*/React.createElement("div", {
@@ -363,9 +407,10 @@
     }), "No messages yet.") : messages.map(m => /*#__PURE__*/React.createElement(MessageRow, {
       key: m.uid,
       msg: m,
+      mailbox: mailbox,
       active: m.uid === selectedUid,
       onClick: () => openMessage(m.uid)
-    }))), /*#__PURE__*/React.createElement("div", {
+    })))), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         minWidth: 0,
@@ -418,7 +463,7 @@
     }, /*#__PURE__*/React.createElement(Badge, {
       tone: "neutral",
       size: "sm"
-    }, selectedMsg.from?.name || selectedMsg.from?.address), /*#__PURE__*/React.createElement("span", {
+    }, mailbox === 'sent' ? `To: ${(selectedMsg.to || []).join(', ') || 'Unknown'}` : selectedMsg.from?.name || selectedMsg.from?.address), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 'var(--text-xs)',
         color: 'var(--text-subtle)'

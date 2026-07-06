@@ -10,6 +10,7 @@ export default async function handler(req, res) {
   }
   const uid = Number(req.query.uid);
   if (!uid) return res.status(400).json({ ok: false, error: 'uid is required' });
+  const wantSent = (req.query.mailbox || 'inbox').toLowerCase() === 'sent';
 
   const client = new ImapFlow({
     host: EMAIL_IMAP_HOST,
@@ -21,7 +22,15 @@ export default async function handler(req, res) {
 
   try {
     await client.connect();
-    const lock = await client.getMailboxLock('INBOX');
+
+    let mailboxPath = 'INBOX';
+    if (wantSent) {
+      const list = await client.list();
+      const sentBox = list.find(b => (b.specialUse === '\\Sent') || /^(sent|sent items|sent-mail)$/i.test(b.name));
+      mailboxPath = sentBox ? sentBox.path : 'Sent';
+    }
+
+    const lock = await client.getMailboxLock(mailboxPath);
     let result = null;
     try {
       const msg = await client.fetchOne(uid, { envelope: true, source: true }, { uid: true });
@@ -35,7 +44,7 @@ export default async function handler(req, res) {
           html: parsed.html || null,
           text: parsed.text || '',
         };
-        await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+        if (!wantSent) await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
       }
     } finally {
       lock.release();
