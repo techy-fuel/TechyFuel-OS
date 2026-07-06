@@ -180,4 +180,35 @@ function isDriveFile(f) {
   return mime.startsWith('application/vnd.google-apps') || /drive\.google\.com/.test(link);
 }
 
-Object.assign(window, { Icon, useLucide, Modal, FormRow, FF, readIntegrationsCfg, pickFilesFromGoogleDrive, isDriveFile });
+// ── Email unread count (sidebar badge + notification bell) ────────────────
+async function getEmailAuthHeader() {
+  try {
+    const { data } = await window.db.auth.getSession();
+    const token = data?.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch { return {}; }
+}
+
+// Sums unread across the shared default inbox (if configured) and every
+// email account this member has connected -- so the sidebar/bell badge
+// reflects all of a person's mail, not just whichever one happens to be
+// active in the Email screen right now.
+async function getTotalUnreadEmailCount() {
+  if (!window.db) return 0;
+  const headers = await getEmailAuthHeader();
+  try {
+    const [defaultRes, accountsRes] = await Promise.all([
+      fetch('/api/email-unread-count', { headers }).then(r => r.json()).catch(() => ({ unread: 0 })),
+      fetch('/api/email-accounts', { headers }).then(r => r.json()).catch(() => ({ accounts: [] })),
+    ]);
+    let total = defaultRes.unread || 0;
+    const accounts = (accountsRes.ok && accountsRes.accounts) || [];
+    const perAccount = await Promise.all(accounts.map(a =>
+      fetch(`/api/email-unread-count?accountId=${a.id}`, { headers }).then(r => r.json()).catch(() => ({ unread: 0 }))
+    ));
+    perAccount.forEach(r => { total += r.unread || 0; });
+    return total;
+  } catch { return 0; }
+}
+
+Object.assign(window, { Icon, useLucide, Modal, FormRow, FF, readIntegrationsCfg, pickFilesFromGoogleDrive, isDriveFile, getTotalUnreadEmailCount });

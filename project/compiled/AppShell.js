@@ -166,6 +166,7 @@
     const [logoUrl, setLogoUrl] = React.useState(s0.logoUrl || '');
     const [teamCount, setTeamCount] = React.useState(null);
     const [taskBadge, setTaskBadge] = React.useState(null);
+    const [emailBadge, setEmailBadge] = React.useState(null);
     React.useEffect(() => {
       if (window.API) {
         (async () => {
@@ -186,6 +187,14 @@
           } catch {}
         })();
       }
+      async function checkEmailUnread() {
+        try {
+          const n = await window.getTotalUnreadEmailCount();
+          setEmailBadge(n > 0 ? String(n) : null);
+        } catch {}
+      }
+      checkEmailUnread();
+      const emailTimer = setInterval(checkEmailUnread, 60000);
       function onSettingsChange() {
         const s = readTFSettings();
         setAgencyName(s.agencyName || '');
@@ -196,6 +205,7 @@
       return () => {
         window.removeEventListener('tf-settings-saved', onSettingsChange);
         window.removeEventListener('storage', onSettingsChange);
+        clearInterval(emailTimer);
       };
     }, []);
     const displayName = agencyName || 'My Agency';
@@ -204,6 +214,9 @@
       items: g.items.filter(it => !(hiddenIds || []).includes(it.id)).map(it => it.id === 'tasks' ? {
         ...it,
         badge: taskBadge || undefined
+      } : it.id === 'email' ? {
+        ...it,
+        badge: emailBadge || undefined
       } : it)
     })).filter(g => g.items.length > 0);
     return /*#__PURE__*/React.createElement(React.Fragment, null, mobileOpen && /*#__PURE__*/React.createElement("div", {
@@ -375,6 +388,7 @@
       document.addEventListener('mousedown', onClickOutside);
       return () => document.removeEventListener('mousedown', onClickOutside);
     }, []);
+    const [emailUnread, setEmailUnread] = React.useState(0);
 
     // Poll unread count every 60s
     React.useEffect(() => {
@@ -385,9 +399,19 @@
           setUnreadCount(count);
         } catch {}
       }
+      async function checkEmailUnread() {
+        try {
+          setEmailUnread(await window.getTotalUnreadEmailCount());
+        } catch {}
+      }
       checkUnread();
+      checkEmailUnread();
       const t = setInterval(checkUnread, 60000);
-      return () => clearInterval(t);
+      const te = setInterval(checkEmailUnread, 60000);
+      return () => {
+        clearInterval(t);
+        clearInterval(te);
+      };
     }, []);
     function openNotifs() {
       setNotifOpen(o => !o);
@@ -414,7 +438,15 @@
               read: false,
               link_screen: 'tasks'
             })).filter(t => t.type === 'task_overdue' || new Date(t._date) - now < 48 * 3600 * 1000).sort((a, b) => new Date(a._date) - new Date(b._date)).slice(0, 5);
-            const combined = [...(dbNotifs || []), ...taskNotifs].slice(0, 15);
+            const emailNotif = emailUnread > 0 ? [{
+              id: 'email-unread',
+              type: 'email',
+              title: `${emailUnread} new email${emailUnread === 1 ? '' : 's'}`,
+              body: 'In your inbox',
+              read: false,
+              link_screen: 'email'
+            }] : [];
+            const combined = [...emailNotif, ...(dbNotifs || []), ...taskNotifs].slice(0, 15);
             setNotifs(combined);
             if (myId) await window.API.markAllRead(myId);
             setUnreadCount(0);
@@ -617,7 +649,7 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "bell",
       size: 18
-    }), unreadCount > 0 && /*#__PURE__*/React.createElement("span", {
+    }), (unreadCount > 0 || emailUnread > 0) && /*#__PURE__*/React.createElement("span", {
       style: {
         position: 'absolute',
         top: 5,
@@ -675,6 +707,11 @@
       }
     }), "All caught up!") : notifs.map(n => {
       const typeConfig = {
+        email: {
+          icon: 'mail',
+          color: 'var(--blue-500)',
+          screen: 'email'
+        },
         task_assigned: {
           icon: 'user-check',
           color: 'var(--blue-500)',
