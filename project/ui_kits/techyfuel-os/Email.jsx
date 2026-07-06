@@ -52,11 +52,15 @@ function MessageRow({ msg, active, onClick, mailbox }) {
   );
 }
 
-function ComposeModal({ open, onClose, onSent, accountId }) {
+function ComposeModal({ open, onClose, onSent, accountId, initial, title }) {
   const [form, setForm] = React.useState({ to: '', subject: '', body: '' });
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState('');
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+  React.useEffect(() => {
+    if (open) { setForm(initial || { to: '', subject: '', body: '' }); setError(''); }
+  }, [open]);
 
   async function handleSend() {
     if (!form.to.trim() || !form.subject.trim() || !form.body.trim()) { setError('To, subject and message are all required.'); return; }
@@ -76,7 +80,7 @@ function ComposeModal({ open, onClose, onSent, accountId }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Compose email" onSubmit={handleSend} loading={sending} submitLabel="Send">
+    <Modal open={open} onClose={onClose} title={title || 'Compose email'} onSubmit={handleSend} loading={sending} submitLabel="Send">
       {error && (
         <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 'var(--radius-md)', background: '#fff1f2', border: '1px solid #fecdd3', color: '#be123c', fontSize: 'var(--text-sm)' }}>
           {error}
@@ -224,6 +228,8 @@ function Email() {
   const [msgLoading, setMsgLoading] = React.useState(false);
   const [composeOpen, setComposeOpen] = React.useState(false);
   const [addAccountOpen, setAddAccountOpen] = React.useState(false);
+  const [composeInitial, setComposeInitial] = React.useState(null);
+  const [composeTitle, setComposeTitle] = React.useState('');
   const [mailbox, setMailbox] = React.useState('inbox'); // 'inbox' | 'sent'
   const [accounts, setAccounts] = React.useState([]);
   const [activeAccountId, setActiveAccountId] = React.useState(null); // null = shared default mailbox
@@ -277,6 +283,20 @@ function Email() {
     } catch {} finally { setMsgLoading(false); }
   }
 
+  function openReply(msg) {
+    const senderAddr = mailbox === 'sent' ? (msg.to && msg.to[0]) : msg.from?.address;
+    const senderName = mailbox === 'sent' ? (msg.to && msg.to[0]) : (msg.from?.name || msg.from?.address);
+    const quotedBody = (msg.text && msg.text.trim()) || (msg.html ? msg.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '');
+    const when = msg.date ? new Date(msg.date).toLocaleString() : '';
+    setComposeInitial({
+      to: senderAddr || '',
+      subject: /^re:/i.test(msg.subject || '') ? msg.subject : `Re: ${msg.subject || ''}`,
+      body: `\n\nOn ${when}, ${senderName || 'they'} wrote:\n${quotedBody.split('\n').map(l => '> ' + l).join('\n')}`,
+    });
+    setComposeTitle('Reply');
+    setComposeOpen(true);
+  }
+
   async function removeAccount(acct) {
     if (!window.confirm(`Disconnect "${acct.label}"? You'll need to reconnect it to use it again.`)) return;
     try {
@@ -299,7 +319,7 @@ function Email() {
           <button onClick={() => loadList()} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: loading ? 'wait' : 'pointer' }}>
             <Icon name="refresh-cw" size={15} /> Refresh
           </button>
-          <button onClick={() => setComposeOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+          <button onClick={() => { setComposeInitial(null); setComposeTitle('Compose email'); setComposeOpen(true); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px', background: 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
             <Icon name="pencil" size={15} /> Compose
           </button>
         </div>
@@ -346,7 +366,14 @@ function Email() {
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading…</div>
           ) : selectedMsg ? (
             <>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)', marginBottom: 10 }}>{selectedMsg.subject}</div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--fw-bold)', color: 'var(--text-strong)' }}>{selectedMsg.subject}</div>
+                {mailbox !== 'sent' && (
+                  <button onClick={() => openReply(selectedMsg)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', flexShrink: 0, background: 'var(--slate-0)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-body)', cursor: 'pointer' }}>
+                    <Icon name="reply" size={14} /> Reply
+                  </button>
+                )}
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 16, borderBottom: '1px solid var(--border-subtle)', marginBottom: 16 }}>
                 <Badge tone="neutral" size="sm">{mailbox === 'sent' ? `To: ${(selectedMsg.to || []).join(', ') || 'Unknown'}` : (selectedMsg.from?.name || selectedMsg.from?.address)}</Badge>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-subtle)' }}>{selectedMsg.date ? new Date(selectedMsg.date).toLocaleString() : ''}</span>
@@ -363,7 +390,7 @@ function Email() {
         </div>
       </div>
 
-      <ComposeModal open={composeOpen} onClose={() => setComposeOpen(false)} onSent={loadList} accountId={activeAccountId} />
+      <ComposeModal open={composeOpen} onClose={() => setComposeOpen(false)} onSent={loadList} accountId={activeAccountId} initial={composeInitial} title={composeTitle} />
       <AddAccountModal open={addAccountOpen} onClose={() => setAddAccountOpen(false)} onAdded={acct => { setAccounts(prev => [...prev, acct]); setActiveAccountId(acct.id); }} />
     </div>
   );

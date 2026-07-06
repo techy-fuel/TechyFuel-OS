@@ -109,7 +109,9 @@
     open,
     onClose,
     onSent,
-    accountId
+    accountId,
+    initial,
+    title
   }) {
     const [form, setForm] = React.useState({
       to: '',
@@ -124,6 +126,16 @@
         [k]: v
       }));
     }
+    React.useEffect(() => {
+      if (open) {
+        setForm(initial || {
+          to: '',
+          subject: '',
+          body: ''
+        });
+        setError('');
+      }
+    }, [open]);
     async function handleSend() {
       if (!form.to.trim() || !form.subject.trim() || !form.body.trim()) {
         setError('To, subject and message are all required.');
@@ -165,7 +177,7 @@
     return /*#__PURE__*/React.createElement(Modal, {
       open: open,
       onClose: onClose,
-      title: "Compose email",
+      title: title || 'Compose email',
       onSubmit: handleSend,
       loading: sending,
       submitLabel: "Send"
@@ -537,6 +549,8 @@
     const [msgLoading, setMsgLoading] = React.useState(false);
     const [composeOpen, setComposeOpen] = React.useState(false);
     const [addAccountOpen, setAddAccountOpen] = React.useState(false);
+    const [composeInitial, setComposeInitial] = React.useState(null);
+    const [composeTitle, setComposeTitle] = React.useState('');
     const [mailbox, setMailbox] = React.useState('inbox'); // 'inbox' | 'sent'
     const [accounts, setAccounts] = React.useState([]);
     const [activeAccountId, setActiveAccountId] = React.useState(null); // null = shared default mailbox
@@ -610,6 +624,19 @@
       } catch {} finally {
         setMsgLoading(false);
       }
+    }
+    function openReply(msg) {
+      const senderAddr = mailbox === 'sent' ? msg.to && msg.to[0] : msg.from?.address;
+      const senderName = mailbox === 'sent' ? msg.to && msg.to[0] : msg.from?.name || msg.from?.address;
+      const quotedBody = msg.text && msg.text.trim() || (msg.html ? msg.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '');
+      const when = msg.date ? new Date(msg.date).toLocaleString() : '';
+      setComposeInitial({
+        to: senderAddr || '',
+        subject: /^re:/i.test(msg.subject || '') ? msg.subject : `Re: ${msg.subject || ''}`,
+        body: `\n\nOn ${when}, ${senderName || 'they'} wrote:\n${quotedBody.split('\n').map(l => '> ' + l).join('\n')}`
+      });
+      setComposeTitle('Reply');
+      setComposeOpen(true);
     }
     async function removeAccount(acct) {
       if (!window.confirm(`Disconnect "${acct.label}"? You'll need to reconnect it to use it again.`)) return;
@@ -686,7 +713,11 @@
       name: "refresh-cw",
       size: 15
     }), " Refresh"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setComposeOpen(true),
+      onClick: () => {
+        setComposeInitial(null);
+        setComposeTitle('Compose email');
+        setComposeOpen(true);
+      },
       style: {
         display: 'inline-flex',
         alignItems: 'center',
@@ -834,12 +865,40 @@
       }
     }, "Loading…") : selectedMsg ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 'var(--text-xl)',
-        fontWeight: 'var(--fw-bold)',
-        color: 'var(--text-strong)',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: 12,
         marginBottom: 10
       }
-    }, selectedMsg.subject), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-xl)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)'
+      }
+    }, selectedMsg.subject), mailbox !== 'sent' && /*#__PURE__*/React.createElement("button", {
+      onClick: () => openReply(selectedMsg),
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        height: 32,
+        padding: '0 12px',
+        flexShrink: 0,
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "reply",
+      size: 14
+    }), " Reply")), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
@@ -883,7 +942,9 @@
       open: composeOpen,
       onClose: () => setComposeOpen(false),
       onSent: loadList,
-      accountId: activeAccountId
+      accountId: activeAccountId,
+      initial: composeInitial,
+      title: composeTitle
     }), /*#__PURE__*/React.createElement(AddAccountModal, {
       open: addAccountOpen,
       onClose: () => setAddAccountOpen(false),
