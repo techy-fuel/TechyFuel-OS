@@ -181,11 +181,70 @@
       monthly_value: '',
       status: 'active'
     });
+    const [addError, setAddError] = React.useState('');
+    const [editOpen, setEditOpen] = React.useState(false);
+    const [editForm, setEditForm] = React.useState({});
+    const [editSaving, setEditSaving] = React.useState(false);
+    const [editError, setEditError] = React.useState('');
     function set(k, v) {
       setForm(f => ({
         ...f,
         [k]: v
       }));
+    }
+    function setEF(k, v) {
+      setEditForm(f => ({
+        ...f,
+        [k]: v
+      }));
+    }
+    function openEdit(c) {
+      setEditError('');
+      setEditForm({
+        name: c.name || '',
+        company: c.company || '',
+        email: c.email || '',
+        website: c.website || '',
+        industry: c.industry || '',
+        monthly_value: c.monthly_value ? String(c.monthly_value) : '',
+        status: c.status || 'active'
+      });
+      setEditOpen(true);
+    }
+    async function handleUpdateClient() {
+      if (!sel || !editForm.name?.trim()) return;
+      setEditSaving(true);
+      setEditError('');
+      try {
+        const payload = {
+          name: editForm.name.trim(),
+          status: editForm.status
+        };
+        payload.company = editForm.company || null;
+        payload.email = editForm.email || null;
+        payload.website = editForm.website || null;
+        payload.industry = editForm.industry || null;
+        payload.monthly_value = editForm.monthly_value ? Number(editForm.monthly_value) : null;
+        if (!window.API) {
+          setEditOpen(false);
+          return;
+        }
+        const {
+          data,
+          error
+        } = await window.API.updateClient(sel.id, payload);
+        if (error) {
+          setEditError(error.message || 'Could not save changes. Please try again.');
+          return;
+        }
+        setClients(prev => prev.map(c => c.id === sel.id ? {
+          ...c,
+          ...(data || payload)
+        } : c));
+        setEditOpen(false);
+      } finally {
+        setEditSaving(false);
+      }
     }
     React.useEffect(() => {
       if (!window.API) {
@@ -221,6 +280,7 @@
     async function handleAddClient() {
       if (!form.name.trim()) return;
       setSaving(true);
+      setAddError('');
       try {
         const payload = {
           name: form.name,
@@ -236,7 +296,11 @@
             data,
             error
           } = await window.API.createClient(payload);
-          if (!error && data) {
+          if (error) {
+            setAddError(error.message || 'Could not add the client. Please try again.');
+            return;
+          }
+          if (data) {
             setClients(prev => [...prev, data]);
             setSelId(data.id);
           }
@@ -496,7 +560,31 @@
         cursor: 'pointer',
         color: 'var(--text-body)'
       }
-    }, "Cancel")) : /*#__PURE__*/React.createElement("button", {
+    }, "Cancel")) : /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 5,
+        flex: 'none'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => openEdit(sel),
+      title: "Edit client",
+      style: {
+        width: 30,
+        height: 30,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--slate-0)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        cursor: 'pointer',
+        color: 'var(--text-body)'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "pencil",
+      size: 15
+    })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setConfirmDelete(true),
       title: "Delete client",
       style: {
@@ -509,13 +597,12 @@
         border: '1px solid var(--red-200)',
         borderRadius: 'var(--radius-md)',
         cursor: 'pointer',
-        color: 'var(--red-600)',
-        flex: 'none'
+        color: 'var(--red-600)'
       }
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "trash-2",
       size: 15
-    }))), /*#__PURE__*/React.createElement("div", {
+    })))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         gap: 8,
@@ -626,12 +713,25 @@
       }
     }, "Client can log in at the portal link using ", /*#__PURE__*/React.createElement("strong", null, sel.email || 'their email'), ". They will receive a magic link to sign in securely."))))), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
-      onClose: () => setModalOpen(false),
+      onClose: () => {
+        setModalOpen(false);
+        setAddError('');
+      },
       title: "Add client",
       onSubmit: handleAddClient,
       loading: saving,
       submitLabel: "Add client"
-    }, /*#__PURE__*/React.createElement("div", {
+    }, addError && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 14,
+        padding: '8px 12px',
+        borderRadius: 'var(--radius-md)',
+        background: '#fff1f2',
+        border: '1px solid #fecdd3',
+        color: '#be123c',
+        fontSize: 'var(--text-sm)'
+      }
+    }, addError), /*#__PURE__*/React.createElement("div", {
       style: FF.row2
     }, /*#__PURE__*/React.createElement(FormRow, {
       label: "Contact name",
@@ -688,6 +788,86 @@
       style: FF.select,
       value: form.status,
       onChange: e => set('status', e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "lead"
+    }, "Lead"), /*#__PURE__*/React.createElement("option", {
+      value: "active"
+    }, "Active client"), /*#__PURE__*/React.createElement("option", {
+      value: "inactive"
+    }, "Inactive")))), /*#__PURE__*/React.createElement(Modal, {
+      open: editOpen,
+      onClose: () => setEditOpen(false),
+      title: "Edit client",
+      onSubmit: handleUpdateClient,
+      loading: editSaving,
+      submitLabel: "Save changes"
+    }, editError && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 14,
+        padding: '8px 12px',
+        borderRadius: 'var(--radius-md)',
+        background: '#fff1f2',
+        border: '1px solid #fecdd3',
+        color: '#be123c',
+        fontSize: 'var(--text-sm)'
+      }
+    }, editError), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Contact name",
+      required: true
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Full name…",
+      value: editForm.name || '',
+      onChange: e => setEF('name', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Company"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Company name…",
+      value: editForm.company || '',
+      onChange: e => setEF('company', e.target.value)
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Email"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "email",
+      placeholder: "email@company.com",
+      value: editForm.email || '',
+      onChange: e => setEF('email', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Website"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "company.com",
+      value: editForm.website || '',
+      onChange: e => setEF('website', e.target.value)
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: FF.row2
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: "Industry"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "SaaS, F&B…",
+      value: editForm.industry || '',
+      onChange: e => setEF('industry', e.target.value)
+    })), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Monthly value ($)"
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "number",
+      placeholder: "0",
+      value: editForm.monthly_value || '',
+      onChange: e => setEF('monthly_value', e.target.value)
+    }))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Status"
+    }, /*#__PURE__*/React.createElement("select", {
+      style: FF.select,
+      value: editForm.status || 'active',
+      onChange: e => setEF('status', e.target.value)
     }, /*#__PURE__*/React.createElement("option", {
       value: "lead"
     }, "Lead"), /*#__PURE__*/React.createElement("option", {
