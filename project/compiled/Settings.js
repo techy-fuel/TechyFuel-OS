@@ -591,7 +591,7 @@
     const INTEG_LIST = [{
       key: 'meta',
       name: 'Meta Business',
-      icon: 'facebook',
+      icon: 'megaphone',
       color: 'var(--blue-600)',
       fields: [{
         id: 'accessToken',
@@ -621,7 +621,7 @@
     }, {
       key: 'slack',
       name: 'Slack',
-      icon: 'slack',
+      icon: 'message-square',
       color: 'var(--violet-500)',
       fields: [{
         id: 'webhookUrl',

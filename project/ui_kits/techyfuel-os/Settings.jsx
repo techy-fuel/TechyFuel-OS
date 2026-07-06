@@ -293,9 +293,9 @@ function Settings() {
   };
 
   const INTEG_LIST = [
-    { key: 'meta',   name: 'Meta Business',  icon: 'facebook',          color: 'var(--blue-600)',   fields: [{ id: 'accessToken', label: 'Access Token', placeholder: 'EAAxxxxxxx...', type: 'password' }, { id: 'accountId', label: 'Ad Account ID', placeholder: 'act_123456789' }] },
+    { key: 'meta',   name: 'Meta Business',  icon: 'megaphone',         color: 'var(--blue-600)',   fields: [{ id: 'accessToken', label: 'Access Token', placeholder: 'EAAxxxxxxx...', type: 'password' }, { id: 'accountId', label: 'Ad Account ID', placeholder: 'act_123456789' }] },
     { key: 'google', name: 'Google Ads',     icon: 'badge-dollar-sign', color: 'var(--green-600)',  fields: [{ id: 'customerId', label: 'Customer ID', placeholder: '123-456-7890' }, { id: 'developerToken', label: 'Developer Token', placeholder: 'ABcDef...', type: 'password' }] },
-    { key: 'slack',  name: 'Slack',          icon: 'slack',             color: 'var(--violet-500)', fields: [{ id: 'webhookUrl', label: 'Webhook URL', placeholder: 'https://hooks.slack.com/services/...' }] },
+    { key: 'slack',  name: 'Slack',          icon: 'message-square',   color: 'var(--violet-500)', fields: [{ id: 'webhookUrl', label: 'Webhook URL', placeholder: 'https://hooks.slack.com/services/...' }] },
     { key: 'stripe', name: 'Stripe',         icon: 'credit-card',       color: 'var(--blue-500)',   fields: [{ id: 'publishableKey', label: 'Publishable Key', placeholder: 'pk_live_...' }, { id: 'secretKey', label: 'Secret Key', placeholder: 'sk_live_...', type: 'password' }] },
   ];
 
