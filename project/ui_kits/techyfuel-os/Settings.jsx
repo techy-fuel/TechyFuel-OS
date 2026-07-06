@@ -210,6 +210,15 @@ function Settings() {
   const [agencyName, setAgencyName] = React.useState(saved.agencyName || '');
   const [agencyEmail,setAgencyEmail]= React.useState(saved.agencyEmail || '');
   const [logoUrl,    setLogoUrl]    = React.useState(saved.logoUrl || '');
+  const [tagline,      setTagline]      = React.useState(saved.tagline || '');
+  const [agencyPhone,  setAgencyPhone]  = React.useState(saved.agencyPhone || '');
+  const [agencyWebsite,setAgencyWebsite]= React.useState(saved.agencyWebsite || '');
+  const [agencyAddress,setAgencyAddress]= React.useState(saved.agencyAddress || '');
+  const [paymentAccount, setPaymentAccount] = React.useState(saved.paymentAccount || '');
+  const [paymentSwift,   setPaymentSwift]   = React.useState(saved.paymentSwift || '');
+  const [paymentPayoneer,setPaymentPayoneer]= React.useState(saved.paymentPayoneer || '');
+  const [signatureName,  setSignatureName]  = React.useState(saved.signatureName || '');
+  const [signatureTitle, setSignatureTitle] = React.useState(saved.signatureTitle || '');
   const [saved2,     setSaved2]     = React.useState(false);
   const [toast,      setToast]      = React.useState('');
   const logoInputRef = React.useRef(null);
@@ -242,7 +251,10 @@ function Settings() {
 
   function handleSaveBranding() {
     const sk = loadSaved();
-    saveSettings({ ...sk, agencyName, agencyEmail, logoUrl });
+    saveSettings({
+      ...sk, agencyName, agencyEmail, logoUrl, tagline, agencyPhone, agencyWebsite, agencyAddress,
+      paymentAccount, paymentSwift, paymentPayoneer, signatureName, signatureTitle,
+    });
     setSaved2(true);
     showToast('Branding saved!');
     setTimeout(() => setSaved2(false), 2500);
@@ -352,14 +364,61 @@ function Settings() {
                   </button>}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Agency name</label>
                   <input style={inputStyle} value={agencyName} onChange={e => setAgencyName(e.target.value)} placeholder="Your agency name" />
                 </div>
                 <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Tagline</label>
+                  <input style={inputStyle} value={tagline} onChange={e => setTagline(e.target.value)} placeholder="Digital Solutions & Growth Partner" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
                   <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Support email</label>
                   <input style={inputStyle} value={agencyEmail} onChange={e => setAgencyEmail(e.target.value)} placeholder="support@agency.com" type="email" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Phone</label>
+                  <input style={inputStyle} value={agencyPhone} onChange={e => setAgencyPhone(e.target.value)} placeholder="+92 300 1234567" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Website</label>
+                  <input style={inputStyle} value={agencyWebsite} onChange={e => setAgencyWebsite(e.target.value)} placeholder="www.techyfuel.com" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Address</label>
+                  <input style={inputStyle} value={agencyAddress} onChange={e => setAgencyAddress(e.target.value)} placeholder="Office address" />
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-bold)', marginBottom: 4, marginTop: 8 }}>Invoice details</h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>Shown on every exported invoice PDF — payment method and the signature block.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Account #</label>
+                  <input style={inputStyle} value={paymentAccount} onChange={e => setPaymentAccount(e.target.value)} placeholder="PK00 XXXX 0000 1111 2222" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Swift code</label>
+                  <input style={inputStyle} value={paymentSwift} onChange={e => setPaymentSwift(e.target.value)} placeholder="ABCDPKKA" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Payoneer</label>
+                  <input style={inputStyle} value={paymentPayoneer} onChange={e => setPaymentPayoneer(e.target.value)} placeholder="payoneer@agency.com" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Signature name</label>
+                  <input style={inputStyle} value={signatureName} onChange={e => setSignatureName(e.target.value)} placeholder="Zain Ahmed" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}>Signature title</label>
+                  <input style={inputStyle} value={signatureTitle} onChange={e => setSignatureTitle(e.target.value)} placeholder="CEO" />
                 </div>
               </div>
               <button onClick={handleSaveBranding} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 18px', background: saved2 ? 'var(--green-600)' : 'var(--blue-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer', transition: 'background 0.2s' }}>

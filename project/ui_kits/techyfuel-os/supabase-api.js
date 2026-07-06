@@ -208,9 +208,24 @@
 
     // ── FINANCE ──────────────────────────────────────────
     getInvoices: () =>
-      client.from('invoices').select('*, clients(name), projects(name)').order('created_at', { ascending: false }),
+      client.from('invoices').select('*, clients(name), projects(name), invoice_items(*)').order('created_at', { ascending: false }),
     createInvoice: (d) => client.from('invoices').insert(d).select().single(),
     updateInvoice: (id, d) => client.from('invoices').update(d).eq('id', id).select().single(),
+    getInvoiceItems: (invoiceId) =>
+      client.from('invoice_items').select('*').eq('invoice_id', invoiceId).order('sort_order'),
+    // Replaces all line items for an invoice with the given list — simplest
+    // way to keep the "add/remove/reorder rows in a form, save once" UI in
+    // sync without diffing individual row edits.
+    saveInvoiceItems: async (invoiceId, items) => {
+      const { error: delErr } = await client.from('invoice_items').delete().eq('invoice_id', invoiceId);
+      if (delErr) return { data: null, error: delErr };
+      if (!items.length) return { data: [], error: null };
+      const rows = items.map((it, i) => ({
+        invoice_id: invoiceId, description: it.description, qty: Number(it.qty) || 0,
+        unit_price: Number(it.unit_price) || 0, sort_order: i,
+      }));
+      return client.from('invoice_items').insert(rows).select();
+    },
     getExpenses: () =>
       client.from('expenses').select('*, projects(name), clients(name)').order('date', { ascending: false }),
     createExpense: async (d) => {

@@ -154,9 +154,7 @@
     }
     return months.map(m => m.val);
   }
-
-  // ── PDF invoice print ─────────────────────────────────────────────
-  function printInvoicePDF(inv, clients) {
+  function readAgencyBranding() {
     const saved = (() => {
       try {
         return JSON.parse(localStorage.getItem('tf_settings') || '{}');
@@ -164,121 +162,419 @@
         return {};
       }
     })();
-    const agencyName = saved.agencyName || 'TechyFuel OS';
-    const agencyEmail = saved.agencyEmail || '';
-    const clientName = inv.clients?.name || '—';
+    return {
+      agencyName: saved.agencyName || 'TechyFuel OS',
+      tagline: saved.tagline || '',
+      agencyEmail: saved.agencyEmail || '',
+      agencyPhone: saved.agencyPhone || '',
+      agencyWebsite: saved.agencyWebsite || '',
+      agencyAddress: saved.agencyAddress || '',
+      logoUrl: saved.logoUrl || '',
+      paymentAccount: saved.paymentAccount || '',
+      paymentSwift: saved.paymentSwift || '',
+      paymentPayoneer: saved.paymentPayoneer || '',
+      signatureName: saved.signatureName || '',
+      signatureTitle: saved.signatureTitle || ''
+    };
+  }
+  function invoiceItemsOf(inv) {
+    const items = (inv.invoice_items || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    if (items.length) return items;
+    // Legacy single-amount invoices have no line items — render one row so
+    // the itemized template still looks right instead of an empty table.
+    return [{
+      description: `Services — ${inv.invoice_no}`,
+      qty: 1,
+      unit_price: inv.amount || 0
+    }];
+  }
+
+  // ── Branded invoice document (used for both PDF export and email share) ──
+  function buildInvoiceHtml(inv, clients) {
+    const b = readAgencyBranding();
+    const clientObj = clients.find(c => c.id === inv.client_id) || {};
+    const clientName = inv.clients?.name || clientObj.company || clientObj.name || '—';
+    const clientEmail = clientObj.email || '';
+    const clientPhone = clientObj.phone || '';
     const currency = inv.currency || 'PKR';
-    const sym = getCurrencySymbol(currency);
-    const amount = fmtAmt(inv.amount, currency);
-    const status = IS[inv.status] || {
-      label: inv.status
-    };
-    const statusColors = {
-      paid: '#16a34a',
-      sent: '#2563eb',
-      overdue: '#dc2626',
-      draft: '#64748b',
-      cancelled: '#94a3b8'
-    };
-    const statusColor = statusColors[inv.status] || '#64748b';
-    const html = `<!DOCTYPE html>
+    const items = invoiceItemsOf(inv);
+    const total = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.unit_price) || 0), 0);
+    const rowsHtml = items.map((it, i) => `
+    <tr style="background:${i % 2 ? '#f8fafc' : '#fff'}">
+      <td style="padding:12px 16px;font-size:13px;color:#334155">${it.description}</td>
+      <td style="padding:12px 16px;font-size:13px;color:#334155;text-align:center">${Number(it.qty) || 0}</td>
+      <td style="padding:12px 16px;font-size:13px;color:#334155;text-align:right">${fmtAmt(it.unit_price, currency)}</td>
+      <td style="padding:12px 16px;font-size:13px;font-weight:700;color:#0f172a;text-align:right">${fmtAmt((Number(it.qty) || 0) * (Number(it.unit_price) || 0), currency)}</td>
+    </tr>`).join('');
+    const stripe = top => `
+    <div style="position:absolute;${top ? 'top:0' : 'bottom:0'};right:0;width:260px;height:90px;overflow:hidden;${top ? '' : 'transform:scaleY(-1)'}">
+      <div style="position:absolute;top:-30px;right:-60px;width:340px;height:130px;background:#0f172a;transform:rotate(-8deg)"></div>
+      <div style="position:absolute;top:-10px;right:-90px;width:340px;height:70px;background:#2563eb;transform:rotate(-8deg)"></div>
+    </div>`;
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <title>Invoice ${inv.invoice_no}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; background: #fff; padding: 48px; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px; }
-  .brand { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #1e40af; }
-  .brand-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
-  .invoice-label { text-align: right; }
-  .invoice-label h1 { font-size: 32px; font-weight: 900; letter-spacing: -0.03em; color: #0f172a; }
-  .invoice-label .inv-no { font-size: 13px; color: #64748b; font-family: monospace; margin-top: 4px; }
-  .meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; margin-bottom: 40px; padding: 24px; background: #f8fafc; border-radius: 10px; }
-  .meta-item label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; display: block; margin-bottom: 6px; }
-  .meta-item span { font-size: 14px; font-weight: 600; color: #0f172a; }
-  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; background: ${statusColor}18; color: ${statusColor}; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-  th { text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; border-bottom: 2px solid #e2e8f0; }
-  td { padding: 14px 16px; font-size: 14px; color: #334155; border-bottom: 1px solid #f1f5f9; }
-  .amount-col { text-align: right; font-weight: 700; font-size: 15px; color: #0f172a; }
-  .totals { margin-left: auto; width: 280px; }
-  .totals-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; color: #64748b; }
-  .totals-row.total { border-top: 2px solid #0f172a; padding-top: 14px; margin-top: 6px; font-size: 20px; font-weight: 800; color: #0f172a; }
-  .footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; }
-  @media print {
-    body { padding: 24px; }
-    @page { margin: 12mm; }
-  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; background: #fff; }
+  .sheet { position: relative; max-width: 820px; margin: 0 auto; padding: 40px 48px; overflow: hidden; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 28px; position: relative; z-index: 2; }
+  .brand-row { display: flex; align-items: center; gap: 12px; }
+  .brand-row img { height: 44px; }
+  .brand { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; color: #0f172a; }
+  .brand-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .invoice-box { text-align: right; }
+  .invoice-box h1 { font-size: 26px; font-weight: 900; letter-spacing: 0.05em; color: #0f172a; margin-bottom: 8px; }
+  .invoice-no { display: inline-block; background: #1e40af; color: #fff; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 4px; letter-spacing: 0.03em; }
+  .billto { margin: 28px 0 22px; position: relative; z-index: 2; }
+  .billto label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; display: block; margin-bottom: 6px; }
+  .billto .name { font-size: 15px; font-weight: 700; color: #0f172a; }
+  .billto .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .meta-right { text-align: right; font-size: 12px; color: #64748b; }
+  .meta-right b { color: #0f172a; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; position: relative; z-index: 2; }
+  thead th { text-align: left; padding: 11px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #fff; background: #0f172a; }
+  thead th:nth-child(2) { text-align: center; }
+  thead th:nth-child(3), thead th:nth-child(4) { text-align: right; }
+  .totals { margin-left: auto; width: 260px; position: relative; z-index: 2; margin-bottom: 28px; }
+  .totals-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; color: #64748b; }
+  .totals-row.total { border-top: 2px solid #0f172a; padding-top: 12px; margin-top: 4px; font-size: 18px; font-weight: 800; color: #0f172a; }
+  .lower { display: flex; justify-content: space-between; gap: 32px; margin-bottom: 32px; position: relative; z-index: 2; }
+  .payment label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; display: block; margin-bottom: 8px; }
+  .payment .row { font-size: 12px; color: #334155; margin-bottom: 4px; }
+  .payment .row b { color: #0f172a; display: inline-block; width: 76px; }
+  .thanks { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+  .notes { font-size: 12px; color: #64748b; max-width: 260px; }
+  .signature { text-align: right; margin-top: 24px; }
+  .signature .name { font-size: 14px; font-weight: 700; font-style: italic; color: #0f172a; }
+  .signature .title { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .footer { position: relative; background: #0f172a; color: #fff; padding: 18px 48px; display: flex; justify-content: space-around; font-size: 11px; overflow: hidden; }
+  .footer-item { display: flex; align-items: center; gap: 6px; position: relative; z-index: 2; }
+  .footer-item b { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #93c5fd; }
+  @media print { @page { margin: 0; } }
 </style>
 </head>
 <body>
-<div class="header">
-  <div>
-    <div class="brand">${agencyName}</div>
-    ${agencyEmail ? `<div class="brand-sub">${agencyEmail}</div>` : ''}
+<div class="sheet">
+  ${stripe(true)}
+  <div class="header">
+    <div class="brand-row">
+      ${b.logoUrl ? `<img src="${b.logoUrl}" alt=""/>` : ''}
+      <div>
+        <div class="brand">${b.agencyName}</div>
+        ${b.tagline ? `<div class="brand-sub">${b.tagline}</div>` : ''}
+      </div>
+    </div>
+    <div class="invoice-box">
+      <h1>INVOICE</h1>
+      <div class="invoice-no">NO:#${inv.invoice_no}</div>
+    </div>
   </div>
-  <div class="invoice-label">
-    <h1>INVOICE</h1>
-    <div class="inv-no">${inv.invoice_no}</div>
-  </div>
-</div>
 
-<div class="meta">
-  <div class="meta-item">
-    <label>Billed to</label>
-    <span>${clientName}</span>
+  <div class="billto" style="display:flex;justify-content:space-between">
+    <div>
+      <label>Invoice To</label>
+      <div class="name">${clientName}</div>
+      ${clientEmail ? `<div class="sub">${clientEmail}</div>` : ''}
+      ${clientPhone ? `<div class="sub">${clientPhone}</div>` : ''}
+    </div>
+    <div class="meta-right">
+      <div>Date: <b>${fmtDate(inv.created_at || new Date().toISOString())}</b></div>
+      <div>Due date: <b>${fmtDate(inv.due_date)}</b></div>
+      <div>Status: <b>${(IS[inv.status] || {
+      label: inv.status
+    }).label}</b></div>
+    </div>
   </div>
-  <div class="meta-item">
-    <label>Due date</label>
-    <span>${fmtDate(inv.due_date)}</span>
-  </div>
-  <div class="meta-item">
-    <label>Status</label>
-    <span class="status-badge">${status.label}</span>
-  </div>
-</div>
 
-<table>
-  <thead>
-    <tr>
-      <th>Description</th>
-      <th>Currency</th>
-      <th style="text-align:right">Amount</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Services — ${inv.invoice_no}</td>
-      <td>${currency}</td>
-      <td class="amount-col">${amount}</td>
-    </tr>
-  </tbody>
-</table>
+  <table>
+    <thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
 
-<div class="totals">
-  <div class="totals-row"><span>Subtotal</span><span>${amount}</span></div>
-  <div class="totals-row total"><span>Total</span><span>${amount}</span></div>
+  <div class="totals">
+    <div class="totals-row"><span>Subtotal</span><span>${fmtAmt(total, currency)}</span></div>
+    <div class="totals-row total"><span>Total</span><span>${fmtAmt(total, currency)}</span></div>
+  </div>
+
+  <div class="lower">
+    <div class="payment">
+      <label>Payment Method</label>
+      ${b.paymentAccount ? `<div class="row"><b>Account</b>${b.paymentAccount}</div>` : ''}
+      ${b.paymentSwift ? `<div class="row"><b>Swift</b>${b.paymentSwift}</div>` : ''}
+      ${b.paymentPayoneer ? `<div class="row"><b>Payoneer</b>${b.paymentPayoneer}</div>` : ''}
+    </div>
+    <div>
+      <div class="thanks">Thanks for your business!</div>
+      <div class="notes">${inv.notes || 'Please make payment by the due date above. Contact us with any questions about this invoice.'}</div>
+      ${b.signatureName ? `<div class="signature"><div class="name">${b.signatureName}</div><div class="title">${b.signatureTitle || ''}</div></div>` : ''}
+    </div>
+  </div>
 </div>
 
 <div class="footer">
-  <span>Generated by ${agencyName}</span>
-  <span>${new Date().toLocaleDateString('en', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    })}</span>
+  ${stripe(false)}
+  ${b.agencyPhone ? `<div class="footer-item"><div><b>Phone</b>${b.agencyPhone}</div></div>` : ''}
+  ${b.agencyWebsite ? `<div class="footer-item"><div><b>Website</b>${b.agencyWebsite}</div></div>` : ''}
+  ${b.agencyAddress ? `<div class="footer-item"><div><b>Address</b>${b.agencyAddress}</div></div>` : ''}
+  ${b.agencyEmail ? `<div class="footer-item"><div><b>Email</b>${b.agencyEmail}</div></div>` : ''}
 </div>
-
-<script>window.onload = function() { window.print(); };<\/script>
 </body>
 </html>`;
+  }
+
+  // ── PDF invoice print ─────────────────────────────────────────────
+  function printInvoicePDF(inv, clients) {
+    const printScript = '<script>window.onload = function() { window.print(); };<\/script>';
+    const html = buildInvoiceHtml(inv, clients).replace('</body>', printScript + '</body>');
     const win = window.open('', '_blank', 'width=900,height=700');
     if (win) {
       win.document.write(html);
       win.document.close();
     }
+  }
+  async function financeAuthHeader() {
+    try {
+      const {
+        data
+      } = await window.db.auth.getSession();
+      const token = data?.session?.access_token;
+      return token ? {
+        Authorization: `Bearer ${token}`
+      } : {};
+    } catch {
+      return {};
+    }
+  }
+
+  // ── Share invoice via Email / WhatsApp ─────────────────────────────
+  function ShareInvoiceModal({
+    inv,
+    clients,
+    onClose
+  }) {
+    const clientObj = clients.find(c => c.id === inv.client_id) || {};
+    const [to, setTo] = React.useState(clientObj.email || '');
+    const [phone, setPhone] = React.useState(clientObj.phone || '');
+    const [sending, setSending] = React.useState(false);
+    const [result, setResult] = React.useState(null); // { ok, error }
+    const b = readAgencyBranding();
+    const items = invoiceItemsOf(inv);
+    const total = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.unit_price) || 0), 0);
+    async function sendEmail() {
+      if (!to.trim()) {
+        setResult({
+          ok: false,
+          error: 'Enter a recipient email address.'
+        });
+        return;
+      }
+      setSending(true);
+      setResult(null);
+      try {
+        const headers = {
+          'Content-Type': 'application/json',
+          ...(await financeAuthHeader())
+        };
+        const res = await fetch('/api/email-send', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            to: to.trim(),
+            subject: `Invoice ${inv.invoice_no} from ${b.agencyName}`,
+            body: `Please find invoice ${inv.invoice_no} for ${fmtAmt(total, inv.currency)} below. Due ${fmtDate(inv.due_date)}.`,
+            html: buildInvoiceHtml(inv, clients)
+          })
+        });
+        const json = await res.json();
+        setResult(json.ok ? {
+          ok: true
+        } : {
+          ok: false,
+          error: json.error || 'Could not send the email.'
+        });
+      } catch (err) {
+        setResult({
+          ok: false,
+          error: err.message || 'Could not send the email.'
+        });
+      } finally {
+        setSending(false);
+      }
+    }
+    function shareWhatsApp() {
+      const digits = phone.replace(/\D/g, '');
+      const text = `Hi${clientObj.name ? ' ' + clientObj.name : ''}, here's invoice ${inv.invoice_no} from ${b.agencyName} for ${fmtAmt(total, inv.currency)}, due ${fmtDate(inv.due_date)}. Please reach out if you'd like the PDF copy sent by email too.`;
+      window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, '_blank');
+    }
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9000,
+        background: 'rgba(15,23,42,0.5)',
+        backdropFilter: 'blur(3px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24
+      },
+      onClick: e => e.target === e.currentTarget && onClose()
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: 'var(--slate-0)',
+        borderRadius: 'var(--radius-2xl)',
+        boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
+        width: '100%',
+        maxWidth: 440,
+        overflow: 'hidden'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '18px 22px',
+        borderBottom: '1px solid var(--border-subtle)'
+      }
+    }, /*#__PURE__*/React.createElement("h2", {
+      style: {
+        fontSize: 'var(--text-xl)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        margin: 0
+      }
+    }, "Share invoice ", inv.invoice_no), /*#__PURE__*/React.createElement("button", {
+      onClick: onClose,
+      style: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'var(--text-muted)',
+        padding: 4,
+        borderRadius: 'var(--radius-sm)',
+        display: 'flex'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "x",
+      size: 18
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '20px 22px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        marginBottom: 8,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "mail",
+      size: 15
+    }), " Send by email"), /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      type: "email",
+      placeholder: "client@example.com",
+      value: to,
+      onChange: e => setTo(e.target.value)
+    }), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        marginTop: 6
+      }
+    }, "Sends the branded invoice as a formatted email from your connected mailbox."), result && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 8,
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: result.ok ? 'var(--green-600)' : 'var(--red-600)'
+      }
+    }, result.ok ? 'Email sent!' : result.error), /*#__PURE__*/React.createElement("button", {
+      onClick: sendEmail,
+      disabled: sending,
+      style: {
+        marginTop: 10,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 36,
+        padding: '0 16px',
+        background: 'var(--blue-600)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        cursor: sending ? 'wait' : 'pointer',
+        opacity: sending ? 0.75 : 1
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "send",
+      size: 14
+    }), " ", sending ? 'Sending…' : 'Send email')), /*#__PURE__*/React.createElement("div", {
+      style: {
+        borderTop: '1px solid var(--border-subtle)',
+        paddingTop: 16
+      }
+    }, /*#__PURE__*/React.createElement("h3", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-bold)',
+        color: 'var(--text-strong)',
+        marginBottom: 8,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "message-circle",
+      size: 15
+    }), " Share on WhatsApp"), /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "+92 300 1234567",
+      value: phone,
+      onChange: e => setPhone(e.target.value)
+    }), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        marginTop: 6
+      }
+    }, "Opens WhatsApp with a prefilled message summarizing the invoice (WhatsApp links can't attach a PDF directly — send the PDF by email or attach it manually in the chat)."), /*#__PURE__*/React.createElement("button", {
+      onClick: shareWhatsApp,
+      disabled: !phone.trim(),
+      style: {
+        marginTop: 10,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 36,
+        padding: '0 16px',
+        background: 'var(--green-600)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        cursor: phone.trim() ? 'pointer' : 'not-allowed',
+        opacity: phone.trim() ? 1 : 0.6
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "message-circle",
+      size: 14
+    }), " Open WhatsApp")))));
   }
 
   // ── Main component ────────────────────────────────────────────────
@@ -301,8 +597,10 @@
       status: 'draft',
       currency: 'PKR'
     });
+    const [items, setItems] = React.useState([]); // [{ description, qty, unit_price }]
     const [fxRates, setFxRates] = React.useState(null); // { base: 'USD', rates: { PKR: 278.5, ... }, fetchedAt }
     const [previewCurrency, setPreviewCurrency] = React.useState('PKR');
+    const [shareInv, setShareInv] = React.useState(null); // invoice currently open in the Share modal
 
     // ── Expenses state ──────────────────────────────────────────────
     const [expenses, setExpenses] = React.useState([]);
@@ -479,6 +777,7 @@
         is_recurring: false,
         recurrence_interval: 'monthly'
       });
+      setItems([]);
       setModalOpen(true);
     }
     function openEdit(inv) {
@@ -493,19 +792,43 @@
         is_recurring: !!inv.is_recurring,
         recurrence_interval: inv.recurrence_interval || 'monthly'
       });
+      const existing = (inv.invoice_items || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      setItems(existing.map(it => ({
+        description: it.description,
+        qty: String(it.qty),
+        unit_price: String(it.unit_price)
+      })));
       setModalOpen(true);
     }
+    function addItemRow() {
+      setItems(prev => [...prev, {
+        description: '',
+        qty: '1',
+        unit_price: ''
+      }]);
+    }
+    function removeItemRow(i) {
+      setItems(prev => prev.filter((_, idx) => idx !== i));
+    }
+    function setItemField(i, field, val) {
+      setItems(prev => prev.map((it, idx) => idx === i ? {
+        ...it,
+        [field]: val
+      } : it));
+    }
+    const itemsTotal = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.unit_price) || 0), 0);
     async function handleSave() {
       if (!form.invoice_no.trim()) return;
       setSaving(true);
       try {
+        const validItems = items.filter(it => it.description.trim());
         const payload = {
           invoice_no: form.invoice_no,
           status: form.status,
           currency: form.currency
         };
         if (form.client_id) payload.client_id = form.client_id;
-        if (form.amount) payload.amount = Number(form.amount);
+        payload.amount = validItems.length ? itemsTotal : form.amount ? Number(form.amount) : 0;
         if (form.due_date) payload.due_date = form.due_date;
         payload.is_recurring = !!form.is_recurring;
         payload.recurrence_interval = form.is_recurring ? form.recurrence_interval : null;
@@ -517,22 +840,38 @@
         const clientsData = clientObj ? {
           name: clientObj.company || clientObj.name
         } : null;
+        let invId = editInv?.id;
+        let savedInv = null;
         if (editInv && window.API) {
           const {
             data
           } = await window.API.updateInvoice(editInv.id, payload);
+          savedInv = data;
           if (data) setInvoices(prev => prev.map(i => i.id === editInv.id ? {
             ...data,
-            clients: clientsData || i.clients
+            clients: clientsData || i.clients,
+            invoice_items: i.invoice_items
           } : i));
         } else if (window.API) {
           const {
             data
           } = await window.API.createInvoice(payload);
+          savedInv = data;
+          invId = data?.id;
           if (data) setInvoices(prev => [{
             ...data,
-            clients: clientsData
+            clients: clientsData,
+            invoice_items: []
           }, ...prev]);
+        }
+        if (invId && window.API) {
+          const {
+            data: savedItems
+          } = await window.API.saveInvoiceItems(invId, validItems);
+          setInvoices(prev => prev.map(i => i.id === invId ? {
+            ...i,
+            invoice_items: savedItems || []
+          } : i));
         }
         setModalOpen(false);
       } catch {} finally {
@@ -978,7 +1317,27 @@
       }, /*#__PURE__*/React.createElement(Icon, {
         name: "file-down",
         size: 11
-      }), " PDF"))));
+      }), " PDF"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setShareInv(inv),
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          height: 27,
+          padding: '0 9px',
+          background: 'transparent',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-sm)',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-xs)',
+          fontWeight: 'var(--fw-semibold)',
+          color: 'var(--green-600)',
+          cursor: 'pointer'
+        }
+      }, /*#__PURE__*/React.createElement(Icon, {
+        name: "share-2",
+        size: 11
+      }), " Share"))));
     })))))), activeTab === 'expenses' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
@@ -1258,15 +1617,97 @@
     }, "No client"), clients.map(c => /*#__PURE__*/React.createElement("option", {
       key: c.id,
       value: c.id
-    }, c.company || c.name)))), /*#__PURE__*/React.createElement("div", {
+    }, c.company || c.name)))), /*#__PURE__*/React.createElement(FormRow, {
+      label: "Line items (optional — leave empty to just enter a total amount)"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8
+      }
+    }, items.map((it, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 60px 90px 24px',
+        gap: 6,
+        alignItems: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      placeholder: "Description (e.g. Website Design)",
+      value: it.description,
+      onChange: e => setItemField(i, 'description', e.target.value)
+    }), /*#__PURE__*/React.createElement("input", {
+      style: {
+        ...FF.input,
+        padding: '0 6px',
+        textAlign: 'center'
+      },
+      type: "number",
+      min: "0",
+      placeholder: "Qty",
+      value: it.qty,
+      onChange: e => setItemField(i, 'qty', e.target.value)
+    }), /*#__PURE__*/React.createElement("input", {
+      style: {
+        ...FF.input,
+        padding: '0 6px'
+      },
+      type: "number",
+      min: "0",
+      placeholder: "Unit price",
+      value: it.unit_price,
+      onChange: e => setItemField(i, 'unit_price', e.target.value)
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: () => removeItemRow(i),
+      type: "button",
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 24,
+        height: 24,
+        background: 'transparent',
+        border: 'none',
+        color: 'var(--red-500)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "x",
+      size: 14
+    })))), /*#__PURE__*/React.createElement("button", {
+      onClick: addItemRow,
+      type: "button",
+      style: {
+        alignSelf: 'flex-start',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        height: 28,
+        padding: '0 10px',
+        background: 'transparent',
+        border: '1px dashed var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-body)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 12
+    }), " Add item"))), /*#__PURE__*/React.createElement("div", {
       style: FF.row2
     }, /*#__PURE__*/React.createElement(FormRow, {
-      label: "Amount"
+      label: items.filter(it => it.description.trim()).length ? 'Amount (total of line items)' : 'Amount'
     }, /*#__PURE__*/React.createElement("input", {
       style: FF.input,
       type: "number",
       placeholder: "0",
-      value: form.amount,
+      disabled: !!items.filter(it => it.description.trim()).length,
+      value: items.filter(it => it.description.trim()).length ? itemsTotal : form.amount,
       onChange: e => set('amount', e.target.value)
     })), /*#__PURE__*/React.createElement(FormRow, {
       label: "Currency"
@@ -1303,7 +1744,7 @@
         color: 'var(--text-strong)',
         fontVariantNumeric: 'tabular-nums'
       }
-    }, form.amount ? rates ? fmtAmt(convertCurrency(form.amount, form.currency, previewCurrency, rates), previewCurrency) : 'Rates loading…' : '—'))), /*#__PURE__*/React.createElement(FormRow, {
+    }, (items.filter(it => it.description.trim()).length ? itemsTotal : form.amount) ? rates ? fmtAmt(convertCurrency(items.filter(it => it.description.trim()).length ? itemsTotal : form.amount, form.currency, previewCurrency, rates), previewCurrency) : 'Rates loading…' : '—'))), /*#__PURE__*/React.createElement(FormRow, {
       label: "Due date"
     }, /*#__PURE__*/React.createElement("input", {
       style: FF.input,
@@ -1351,7 +1792,11 @@
         color: 'var(--text-muted)',
         marginTop: 6
       }
-    }, "A new draft invoice for the same client/amount will be created automatically ", form.recurrence_interval, " after the due date above."))), /*#__PURE__*/React.createElement(Modal, {
+    }, "A new draft invoice for the same client/amount will be created automatically ", form.recurrence_interval, " after the due date above."))), shareInv && /*#__PURE__*/React.createElement(ShareInvoiceModal, {
+      inv: shareInv,
+      clients: clients,
+      onClose: () => setShareInv(null)
+    }), /*#__PURE__*/React.createElement(Modal, {
       open: expModalOpen,
       onClose: () => setExpModalOpen(false),
       title: editExp ? 'Edit expense' : 'Add expense',

@@ -9,8 +9,8 @@ import { resolveEmailCredentials } from '../lib/resolve-email-account.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { to, subject, body, accountId } = req.body || {};
-  if (!to || !subject || !body) return res.status(400).json({ ok: false, error: 'to, subject and body are required' });
+  const { to, subject, body, html, accountId } = req.body || {};
+  if (!to || !subject || !(body || html)) return res.status(400).json({ ok: false, error: 'to, subject and body (or html) are required' });
 
   const creds = await resolveEmailCredentials(req, accountId);
   if (!creds) return res.status(200).json({ ok: false, error: 'Email not configured. Set EMAIL_SMTP_HOST, EMAIL_USER and EMAIL_PASSWORD in Vercel, or connect your own account.' });
@@ -23,7 +23,13 @@ export default async function handler(req, res) {
   });
 
   const fromHeader = creds.fromName ? `${creds.fromName} <${creds.user}>` : creds.user;
-  const mail = { from: fromHeader, to, subject, text: body, html: body.replace(/\n/g, '<br/>') };
+  // Callers with a pre-built branded HTML document (e.g. the invoice PDF
+  // template) pass `html` directly; plain-text composes only send `body`.
+  const mail = {
+    from: fromHeader, to, subject,
+    text: body || subject,
+    html: html || body.replace(/\n/g, '<br/>'),
+  };
 
   try {
     const info = await transporter.sendMail(mail);
