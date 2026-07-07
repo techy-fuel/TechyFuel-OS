@@ -180,25 +180,24 @@
     };
   }
 
-  // Two overlapping diagonal ribbon bands (dark + blue), drawn as thick
-  // rounded polylines with a bend — the chevron/wave graphic from the
-  // reference template. One fixed SVG markup, mirrored via CSS transform
-  // for the footer, so header and footer are guaranteed to be the exact
-  // same graphic (not two hand-derived, slightly-different path sets).
+  // Three interlocking diagonal slats (dark/blue/dark, the middle one
+  // taller and poking past the accent rule line) — traced from the
+  // client's actual reference graphic, not a hand-guessed curve. One
+  // fixed SVG markup, mirrored via CSS transform for the footer, so
+  // header and footer are guaranteed to be the exact same graphic.
   function invoiceRibbonSvg(mirrored, compact) {
     const svg = `
-    <svg viewBox="0 0 620 180" preserveAspectRatio="none" style="display:block;width:280px;height:70px;overflow:visible">
-      <path d="M60,170 L300,170 L520,10" fill="none" stroke="#1f2937" stroke-width="46" stroke-linejoin="round" stroke-linecap="butt"/>
-      <path d="M110,140 L340,140 L560,-10" fill="none" stroke="#2563eb" stroke-width="54" stroke-linejoin="round" stroke-linecap="butt"/>
+    <svg viewBox="0 -30 460 230" style="display:block;width:220px;height:110px;overflow:visible">
+      <polygon points="40,175 120,175 148,55 68,55" fill="#1f2937" stroke="#fff" stroke-width="2"/>
+      <polygon points="105,115 195,115 227,-15 137,-15" fill="#2563eb" stroke="#fff" stroke-width="3"/>
+      <polygon points="170,170 250,170 278,50 198,50" fill="#1f2937" stroke="#fff" stroke-width="2"/>
     </svg>`;
-    // Header ribbon sits well below the top edge so it stays clear of the
-    // tagline text above it — only ever crossing the big "INVOICE" heading,
-    // never the (variable-length) tagline line. When there's no tagline
-    // (`compact`), it can sit higher since there's nothing above it to
-    // collide with. The footer copy is mirrored vertically, so it always
-    // matches the header exactly.
-    const posStyle = mirrored ? 'bottom:0' : compact ? 'top:18px' : 'top:52px';
-    return `<div style="position:absolute;${posStyle};right:0;${mirrored ? 'transform:scaleY(-1);' : ''}">${svg}</div>`;
+    // Header: the blue slat pokes up past the top accent line, same as the
+    // reference. When there's no tagline (`compact`), the whole header is
+    // shorter so the ribbon sits a bit higher to match. The footer copy is
+    // mirrored vertically, so it always matches the header exactly.
+    const posStyle = mirrored ? 'bottom:-16px' : compact ? 'top:-16px' : 'top:14px';
+    return `<div style="position:absolute;${posStyle};right:190px;${mirrored ? 'transform:scaleY(-1);' : ''}">${svg}</div>`;
   }
   function invoiceItemsOf(inv) {
     const items = (inv.invoice_items || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
@@ -241,7 +240,7 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; background: #fff; }
   .sheet { position: relative; max-width: 860px; margin: 0 auto; }
   .topbar { height: 5px; background: #2563eb; }
-  .header { position: relative; display: flex; justify-content: space-between; padding: 26px 48px 20px; overflow: hidden; }
+  .header { position: relative; display: flex; justify-content: space-between; padding: 26px 48px 20px; overflow: visible; }
   .header.with-tagline { align-items: flex-start; min-height: 130px; }
   .header.compact { align-items: center; min-height: 90px; }
   .brand-row { display: flex; align-items: center; gap: 12px; position: relative; z-index: 2; }
@@ -287,7 +286,7 @@
   .contact-section h4 { font-size: 15px; font-weight: 800; color: #2563eb; margin-bottom: 8px; }
   .contact-section .row { font-size: 12px; color: #1e293b; margin-bottom: 3px; }
   .contact-section .row b { display: inline-block; width: 76px; font-weight: 700; }
-  .footer { position: relative; overflow: hidden; min-height: 70px; }
+  .footer { position: relative; overflow: visible; min-height: 70px; }
   .footer .rule-dark { position: relative; z-index: 2; }
   @media print {
     @page { margin: 0; }
