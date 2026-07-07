@@ -185,18 +185,19 @@
   // client's actual reference graphic, not a hand-guessed curve. One
   // fixed SVG markup, mirrored via CSS transform for the footer, so
   // header and footer are guaranteed to be the exact same graphic.
-  function invoiceRibbonSvg(mirrored, compact) {
+  function invoiceRibbonSvg(mirrored) {
     const svg = `
-    <svg viewBox="0 -30 460 230" style="display:block;width:220px;height:110px;overflow:visible">
+    <svg viewBox="0 -20 460 200" style="display:block;width:220px;height:96px;overflow:visible">
       <polygon points="40,175 120,175 148,55 68,55" fill="#1f2937" stroke="#fff" stroke-width="2"/>
       <polygon points="105,115 195,115 227,-15 137,-15" fill="#2563eb" stroke="#fff" stroke-width="3"/>
       <polygon points="170,170 250,170 278,50 198,50" fill="#1f2937" stroke="#fff" stroke-width="2"/>
     </svg>`;
-    // Header: the blue slat pokes up past the top accent line, same as the
-    // reference. When there's no tagline (`compact`), the whole header is
-    // shorter so the ribbon sits a bit higher to match. The footer copy is
-    // mirrored vertically, so it always matches the header exactly.
-    const posStyle = mirrored ? 'bottom:-16px' : compact ? 'top:-16px' : 'top:14px';
+    // Anchored to the header's own BOTTOM edge (right where the dark rule
+    // sits) so the slats bridge from just above the top accent line down to
+    // the dark rule, same as the reference — not floating with a gap above
+    // it. The footer copy anchors to its own TOP edge (where its rule sits)
+    // and is mirrored vertically, so it always matches the header exactly.
+    const posStyle = mirrored ? 'top:0' : 'bottom:0';
     return `<div style="position:absolute;${posStyle};right:190px;${mirrored ? 'transform:scaleY(-1);' : ''}">${svg}</div>`;
   }
   function invoiceItemsOf(inv) {
@@ -298,7 +299,7 @@
 <div class="sheet">
   <div class="topbar"></div>
   <div class="header ${b.tagline ? 'with-tagline' : 'compact'}">
-    ${invoiceRibbonSvg(false, !b.tagline)}
+    ${invoiceRibbonSvg(false)}
     <div class="brand-row">
       ${b.logoUrl ? `<img src="${b.logoUrl}" alt=""/>` : `<div class="brand">${b.agencyName}</div>`}
     </div>
