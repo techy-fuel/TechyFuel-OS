@@ -260,7 +260,7 @@
   function buildInvoiceHtml(inv, clients) {
     const b = readAgencyBranding();
     const clientObj = clients.find(c => c.id === inv.client_id) || {};
-    const clientName = inv.clients?.name || clientObj.company || clientObj.name || '—';
+    const clientName = inv.clients?.name || clientObj.name || clientObj.company || '—';
     const clientEmail = clientObj.email || '';
     const clientPhone = clientObj.phone || '';
     const currency = inv.currency || 'PKR';
@@ -931,7 +931,7 @@
         if (form.status === 'paid' && editInv?.status !== 'paid') payload.paid_at = new Date().toISOString();else if (form.status !== 'paid' && editInv?.status === 'paid') payload.paid_at = null;
         const clientObj = clients.find(c => c.id === form.client_id);
         const clientsData = clientObj ? {
-          name: clientObj.company || clientObj.name
+          name: clientObj.name || clientObj.company
         } : null;
         let invId = editInv?.id;
         let savedInv = null;
