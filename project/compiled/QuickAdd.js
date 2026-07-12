@@ -119,7 +119,14 @@
             created_by: window.TFMyMemberId || null
           });
         } else if (type === 'invoice') {
+          // invoice_no is NOT NULL in the DB, and Quick add has no field for it,
+          // so auto-generate a unique one (INV-YYYYMMDD-HHMMSS). Users can rename
+          // it later from the Finance screen's edit form.
+          const now = new Date();
+          const pad = n => String(n).padStart(2, '0');
+          const autoNo = `INV-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
           result = await window.API.createInvoice({
+            invoice_no: autoNo,
             client_id: form.client_id,
             amount: Number(form.amount),
             currency: form.currency,

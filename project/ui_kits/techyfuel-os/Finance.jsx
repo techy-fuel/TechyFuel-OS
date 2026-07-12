@@ -90,21 +90,24 @@ function buildMonthlyBars(invoices, rates) {
 
 function readAgencyBranding() {
   const saved = (() => { try { return JSON.parse(localStorage.getItem('tf_settings') || '{}'); } catch { return {}; } })();
+  // Defaults mirror the reference TechyFuel invoice so the PDF looks complete
+  // out of the box even before the workspace fills in Settings. Any value the
+  // user saves in Settings overrides its default here.
   return {
-    agencyName:    saved.agencyName    || 'TechyFuel OS',
-    tagline:       saved.tagline       || '',
-    agencyEmail:   saved.agencyEmail   || '',
-    agencyPhone:   saved.agencyPhone   || '',
-    agencyWebsite: saved.agencyWebsite || '',
-    agencyAddress: saved.agencyAddress || '',
+    agencyName:    saved.agencyName    || 'TechyFuel',
+    tagline:       saved.tagline       || "Fueling Your Brand's Digital Journey",
+    agencyEmail:   saved.agencyEmail   || 'hello@techyfuel.com',
+    agencyPhone:   saved.agencyPhone   || '+1 (509) 616-0866',
+    agencyWebsite: saved.agencyWebsite || 'www.techyfuel.com',
+    agencyAddress: saved.agencyAddress || 'America street 20th 201, house no lane 5',
     logoUrl:       saved.logoUrl       || '',
-    paymentAccount: saved.paymentAccount || '',
-    paymentSwift:   saved.paymentSwift   || '',
-    paymentPayoneer:saved.paymentPayoneer|| '',
-    signatureName:  saved.signatureName  || '',
-    signatureTitle: saved.signatureTitle || '',
+    paymentAccount: saved.paymentAccount || '0123456789012090',
+    paymentSwift:   saved.paymentSwift   || '01234560',
+    paymentPayoneer:saved.paymentPayoneer|| 'payoneer@gmail.com',
+    signatureName:  saved.signatureName  || 'ZAIN AHMED',
+    signatureTitle: saved.signatureTitle || 'Founder & CEO',
     signatureImageUrl: saved.signatureImageUrl || '',
-    servicesLine:  saved.servicesLine  || '',
+    servicesLine:  saved.servicesLine  || 'Digital Marketing • Web Development • UI/UX Design • Graphic Design • Branding • SEO • Performance Marketing • Video Editing',
   };
 }
 
@@ -165,12 +168,11 @@ function invoiceRibbonSvg(isFooter) {
         c-14.2,17-28.5,33.9-42.7,50.9c-42.3,50.4-84.6,100.7-126.8,151.1c-11.8,14.2-23.9,27.9-40.3,37.1c-14.5,8.2-29.9,13.3-46.5,14.6
         c-1.1,0.1-2.2,0.5-3.3,0.7C951.3,464.6,928,464.6,904.7,464.6z"/>
     </svg>`;
-  // Anchored to the header's own BOTTOM edge (right where the dark rule
-  // sits) / the footer's own TOP edge (where its rule sits) so the
-  // graphic bridges from just above one rule line down to the other,
-  // same as the reference — not floating with a gap.
-  const posStyle = isFooter ? 'top:-2px' : 'bottom:-2px';
-  return `<div style="position:absolute;${posStyle};right:360px;">${svg}</div>`;
+  // Header ribbon floats over the white header band (absolute). The footer
+  // ribbon sits inside the dark contact band, anchored to its bottom-right
+  // corner by the .footer-ribbon wrapper — so here it's just the raw svg.
+  if (isFooter) return svg;
+  return `<div style="position:absolute;bottom:-2px;right:360px;">${svg}</div>`;
 }
 
 function invoiceItemsOf(inv) {
@@ -184,6 +186,9 @@ function invoiceItemsOf(inv) {
 // ── Branded invoice document (used for both PDF export and email share) ──
 function buildInvoiceHtml(inv, clients) {
   const b = readAgencyBranding();
+  // Default to the real TechyFuel logo (embedded base64, print-safe) when the
+  // workspace hasn't uploaded its own, so the invoice matches the reference.
+  const logoSrc = b.logoUrl || (typeof window !== 'undefined' && window.TF_INVOICE_LOGO) || '';
   const clientObj   = clients.find(c => c.id === inv.client_id) || {};
   const clientName  = inv.clients?.name || clientObj.name || clientObj.company || '—';
   const clientEmail = clientObj.email || '';
@@ -191,13 +196,22 @@ function buildInvoiceHtml(inv, clients) {
   const currency    = inv.currency || 'PKR';
   const items       = invoiceItemsOf(inv);
   const total       = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.unit_price) || 0), 0);
-  const rowsHtml = items.map((it, i) => `
-    <tr style="background:${i % 2 ? '#f0f1f3' : '#fafafa'}">
-      <td style="padding:14px 18px;font-size:14px;font-weight:600;color:#1e293b">${it.description}</td>
-      <td style="padding:14px 18px;font-size:14px;color:#334155;text-align:center">${String(Number(it.qty) || 0).padStart(2, '0')}</td>
-      <td style="padding:14px 18px;font-size:14px;color:#334155;text-align:center">${fmtAmt(it.unit_price, currency)}</td>
-      <td style="padding:14px 18px;font-size:14px;font-weight:700;color:#0f172a;text-align:center;background:rgba(15,23,42,0.05)">${fmtAmt((Number(it.qty) || 0) * (Number(it.unit_price) || 0), currency)}</td>
-    </tr>`).join('');
+  // Item title on line 1; anything after a newline becomes greyed detail text
+  // under it (reference template's two-line item cells).
+  const rowsHtml = items.map((it, i) => {
+    const [title, ...rest] = String(it.description || '').split('\n');
+    const detail = rest.join(' ').trim();
+    return `
+    <tr style="background:${i % 2 ? '#e8eaed' : '#ffffff'}">
+      <td style="padding:17px 20px">
+        <div style="font-size:14px;font-weight:700;color:#1e293b">${title || '—'}</div>
+        ${detail ? `<div style="font-size:10.5px;color:#94a3b8;margin-top:3px;line-height:1.35;max-width:320px">${detail}</div>` : ''}
+      </td>
+      <td style="padding:17px 20px;font-size:14px;color:#334155;text-align:center">${String(Number(it.qty) || 0).padStart(2, '0')}</td>
+      <td style="padding:17px 20px;font-size:14px;color:#334155;text-align:center">${fmtAmt(it.unit_price, currency)}</td>
+      <td style="padding:17px 20px;font-size:14px;font-weight:700;color:#0f172a;text-align:center;background:#d9dce0">${fmtAmt((Number(it.qty) || 0) * (Number(it.unit_price) || 0), currency)}</td>
+    </tr>`;
+  }).join('');
 
   const noteLines = (inv.notes || '').split('\n').map(l => l.trim()).filter(Boolean);
   const notesHtml = (noteLines.length ? noteLines : [
@@ -213,44 +227,44 @@ function buildInvoiceHtml(inv, clients) {
 <title>Invoice ${inv.invoice_no}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; background: #fff; }
-  .sheet { position: relative; max-width: 860px; margin: 0 auto; }
-  .topbar { height: 5px; background: #2563eb; }
+  body { font-family: 'Poppins', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; color: #0f172a; background: #fff; }
+  .sheet { position: relative; max-width: 860px; margin: 0 auto; border: 1px solid #c7ccd1; background: #fff; }
+  .topbar { height: 4px; background: #2348c4; }
   .header { position: relative; display: flex; justify-content: space-between; padding: 26px 48px 20px; overflow: visible; }
   .header.with-tagline { align-items: flex-start; min-height: 130px; }
-  .header.compact { align-items: center; min-height: 90px; }
+  .header.compact { align-items: center; min-height: 110px; }
   .brand-row { display: flex; align-items: center; gap: 12px; position: relative; z-index: 2; }
-  .brand-row img { height: 52px; object-fit: contain; }
+  .brand-row img { height: 64px; object-fit: contain; }
   .brand { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #0f172a; }
   .invoice-box { text-align: right; position: relative; z-index: 2; }
   .invoice-box .tagline { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 2px; }
-  .invoice-box h1 { font-size: 34px; font-weight: 800; letter-spacing: 0.02em; color: #1e293b; }
-  .rule-dark { height: 3px; background: #1f2937; }
-  .services-line { padding: 10px 48px; font-size: 11px; color: #475569; }
-  .billto-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 26px 48px 22px; }
+  .invoice-box h1 { font-size: 46px; font-weight: 400; letter-spacing: 0.06em; color: #3a3a3a; }
+  .rule-dark { height: 2px; background: #2f3033; }
+  .services-line { padding: 9px 48px 4px; font-size: 9.5px; font-weight: 600; color: #3a3a3a; letter-spacing: 0.01em; max-width: 560px; line-height: 1.5; }
+  .billto-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 30px 48px 26px; }
   .billto label { font-size: 13px; color: #334155; display: block; margin-bottom: 4px; }
-  .billto .name { font-size: 17px; font-weight: 800; color: #2563eb; text-transform: uppercase; }
-  .billto .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .billto .name { font-size: 17px; font-weight: 800; color: #2348c4; text-transform: uppercase; }
+  .billto .sub { font-size: 12px; color: #2348c4; margin-top: 2px; }
   .billto .contact-line { font-size: 12px; color: #334155; margin-top: 6px; }
-  .invoice-no-box { display: inline-block; background: #2563eb; color: #fff; font-size: 15px; font-weight: 700; padding: 8px 18px; border-radius: 3px; letter-spacing: 0.02em; margin-bottom: 8px; }
+  .invoice-no-box { display: inline-block; background: #2348c4; color: #fff; font-size: 15px; font-weight: 700; padding: 8px 18px; border-radius: 3px; letter-spacing: 0.02em; margin-bottom: 8px; }
   .meta-right { text-align: right; font-size: 12px; color: #334155; }
   .meta-right .row { display: flex; justify-content: flex-end; gap: 14px; }
   .meta-right .row span:first-child { color: #64748b; }
   .meta-right .row span:last-child { font-weight: 700; color: #0f172a; min-width: 90px; text-align: left; }
-  table { width: calc(100% - 96px); margin: 0 48px 24px; border-collapse: collapse; }
-  thead th { text-align: left; padding: 13px 18px; font-size: 14px; font-weight: 700; color: #fff; background: #1f2937; }
-  thead th:first-child { background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
+  table { width: calc(100% - 96px); margin: 6px 48px 30px; border-collapse: collapse; }
+  thead th { text-align: left; padding: 16px 20px; font-size: 14px; font-weight: 700; color: #fff; background: #2f3033; }
+  thead th:first-child { background: linear-gradient(90deg, #1a3fbf, #2f6be0); }
   thead th:nth-child(2), thead th:nth-child(3), thead th:nth-child(4) { text-align: center; }
-  .lower-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 0 48px 24px; }
-  .payment h3 { font-size: 14px; font-weight: 700; color: #2563eb; margin-bottom: 10px; }
+  .lower-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 8px 48px 30px; }
+  .payment h3 { font-size: 14px; font-weight: 700; color: #2348c4; margin-bottom: 10px; }
   .payment .row { font-size: 12px; color: #334155; margin-bottom: 5px; }
   .payment .row b { color: #0f172a; display: inline-block; width: 80px; }
-  .total-box { background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 22px; border-radius: 3px; min-width: 260px; }
+  .total-box { background: #2348c4; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 22px; border-radius: 3px; min-width: 260px; }
   .total-box .label { font-size: 15px; font-weight: 700; }
   .total-box .value { font-size: 20px; font-weight: 800; }
-  .thanks-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 0 48px 28px; }
+  .thanks-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 6px 48px 34px; }
   .thanks { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
-  .notes h4 { font-size: 13px; font-weight: 700; color: #2563eb; margin-bottom: 6px; }
+  .notes h4 { font-size: 13px; font-weight: 700; color: #2348c4; margin-bottom: 6px; }
   .notes ul { list-style: none; font-size: 11px; color: #475569; max-width: 320px; }
   .notes li { margin-bottom: 3px; }
   .notes li::before { content: '- '; }
@@ -258,12 +272,15 @@ function buildInvoiceHtml(inv, clients) {
   .signature img { height: 46px; object-fit: contain; margin-bottom: 2px; }
   .signature .name { font-size: 14px; font-weight: 800; letter-spacing: 0.02em; color: #0f172a; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 4px; min-width: 160px; }
   .signature .title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-top: 2px; }
-  .contact-section { padding: 4px 48px 24px; }
-  .contact-section h4 { font-size: 15px; font-weight: 800; color: #2563eb; margin-bottom: 8px; }
-  .contact-section .row { font-size: 12px; color: #1e293b; margin-bottom: 3px; }
-  .contact-section .row b { display: inline-block; width: 76px; font-weight: 700; }
-  .footer { position: relative; overflow: visible; min-height: 70px; }
-  .footer .rule-dark { position: relative; z-index: 2; }
+  /* CONTACT heading sits ABOVE the dark footer band (blue), like the PDF */
+  .contact-heading { padding: 10px 48px 8px; font-size: 15px; font-weight: 800; letter-spacing: 0.04em; color: #2348c4; }
+  /* White footer — contact details on white (dark text) + ribbon, no black band */
+  .footer { position: relative; overflow: visible; background: #fff; color: #1e293b; padding: 4px 48px 24px; min-height: 100px; }
+  .footer .contact-section .row { font-size: 12px; color: #1e293b; margin-bottom: 6px; }
+  .footer .contact-section .row b { display: inline-block; width: 78px; font-weight: 700; color: #0f172a; }
+  /* ribbon anchored to the footer's bottom-right corner */
+  .footer .footer-ribbon { position: absolute; right: 20px; bottom: 6px; z-index: 2; }
+  .footer .footer-ribbon svg { display: block; height: 88px; width: auto; }
   @media print {
     @page { margin: 0; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
@@ -273,13 +290,12 @@ function buildInvoiceHtml(inv, clients) {
 <body>
 <div class="sheet">
   <div class="topbar"></div>
-  <div class="header ${b.tagline ? 'with-tagline' : 'compact'}">
+  <div class="header compact">
     ${invoiceRibbonSvg(false)}
     <div class="brand-row">
-      ${b.logoUrl ? `<img src="${b.logoUrl}" alt=""/>` : `<div class="brand">${b.agencyName}</div>`}
+      ${logoSrc ? `<img src="${logoSrc}" alt="${b.agencyName}"/>` : `<div class="brand">${b.agencyName}</div>`}
     </div>
     <div class="invoice-box">
-      ${b.tagline ? `<div class="tagline">${b.tagline}</div>` : ''}
       <h1>INVOICE</h1>
     </div>
   </div>
@@ -332,17 +348,15 @@ function buildInvoiceHtml(inv, clients) {
     </div>` : ''}
   </div>
 
-  <div class="contact-section">
-    <h4>Contact</h4>
-    ${b.agencyPhone ? `<div class="row"><b>Phone</b>: ${b.agencyPhone}</div>` : ''}
-    ${b.agencyWebsite ? `<div class="row"><b>Web Site</b>: ${b.agencyWebsite}</div>` : ''}
-    ${b.agencyAddress ? `<div class="row"><b>Address</b>: ${b.agencyAddress}</div>` : ''}
-    ${b.agencyEmail ? `<div class="row"><b>Email</b>: ${b.agencyEmail}</div>` : ''}
-  </div>
-
+  <div class="contact-heading">CONTACT</div>
   <div class="footer">
-    <div class="rule-dark"></div>
-    ${invoiceRibbonSvg(true)}
+    <div class="contact-section">
+      ${b.agencyPhone ? `<div class="row"><b>Phone</b>: ${b.agencyPhone}</div>` : ''}
+      ${b.agencyWebsite ? `<div class="row"><b>Web Site</b>: ${b.agencyWebsite}</div>` : ''}
+      ${b.agencyAddress ? `<div class="row"><b>Address</b>: ${b.agencyAddress}</div>` : ''}
+      ${b.agencyEmail ? `<div class="row"><b>Email</b>: ${b.agencyEmail}</div>` : ''}
+    </div>
+    <div class="footer-ribbon">${invoiceRibbonSvg(true)}</div>
   </div>
 </div>
 </body>
