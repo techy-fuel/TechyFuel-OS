@@ -343,6 +343,7 @@ function TasksBoard() {
   const [editForm, setEditForm]       = React.useState({});
   const [editSaving, setEditSaving]   = React.useState(false);
   const [editAttachments, setEditAttachments] = React.useState([]);
+  const [reviewFeedback, setReviewFeedback] = React.useState(null); // latest approval_requests row, once resolved
 
   // Time tracking — the one entry (if any) currently running for me, and
   // this task's logged total, both refreshed whenever the edit modal opens.
@@ -362,12 +363,31 @@ function TasksBoard() {
   const [draggedId, setDraggedId] = React.useState(null);
   const [dragOverCol, setDragOverCol] = React.useState(null);
 
+  // Approve/Send back feedback prompt: { task, approved } while open, else null
+  const [reviewPrompt, setReviewPrompt] = React.useState(null);
+  const [reviewComment, setReviewComment] = React.useState('');
+  const [reviewSaving, setReviewSaving] = React.useState(false);
+
+  async function confirmReviewDecision() {
+    if (!reviewPrompt) return;
+    setReviewSaving(true);
+    try {
+      await resolveTaskApproval(reviewPrompt.task, reviewPrompt.approved, reviewComment.trim());
+      setReviewPrompt(null);
+      setReviewComment('');
+    } finally { setReviewSaving(false); }
+  }
+
   function openEdit(task) {
     setEditTask(task);
     setEditForm({ title: task.title, priority: task.priority || 'medium', status: task.status || 'todo', due_date: task.due_date || '', assigned_to: task.assigned_to || '', client_id: task.client_id || '' });
     setEditAttachments([]);
     setTimerError('');
+    setReviewFeedback(null);
     refreshTimeTracking(task.id);
+    if (task.approval_status === 'approved' || task.approval_status === 'rejected') {
+      window.API?.getLatestApprovalForTask?.(task.id).then(({ data }) => { if (data) setReviewFeedback(data); }).catch(() => {});
+    }
   }
   function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
 
@@ -496,13 +516,13 @@ function TasksBoard() {
     } catch {}
   }
 
-  async function resolveTaskApproval(task, approved) {
+  async function resolveTaskApproval(task, approved, comment) {
     if (!window.API) return;
     try {
       const { data: pending } = await window.API.getPendingApprovalForTask(task.id);
       if (!pending) return;
       const newStatus = approved ? 'done' : 'in_progress';
-      await window.API.resolveApproval(pending.id, approved ? 'approved' : 'rejected', '', task.id, newStatus);
+      await window.API.resolveApproval(pending.id, approved ? 'approved' : 'rejected', comment || '', task.id, newStatus);
       if (approved) await stopTimerIfRunningOnTask(task.id);
       patchTaskLocal(task.id, { status: newStatus, done: approved, approval_status: approved ? 'approved' : 'rejected' });
       setTaskMap(prev => {
@@ -511,6 +531,16 @@ function TasksBoard() {
         next[newStatus] = [...(next[newStatus] || []), { ...task, status: newStatus, done: approved, approval_status: approved ? 'approved' : 'rejected' }];
         return next;
       });
+      if (pending.requested_by && window.API.createNotification) {
+        const me = team.find(m => m.id === window.TFMyMemberId);
+        const verb = approved ? 'approved' : 'sent back';
+        await window.API.createNotification({
+          recipient_id: pending.requested_by, type: 'approval',
+          title: `${me?.name || 'A reviewer'} ${verb} "${task.title}"`,
+          body: comment || (approved ? 'No additional feedback.' : 'Take another look and resubmit when ready.'),
+          link_screen: 'tasks', link_id: task.id,
+        });
+      }
     } catch {}
   }
 
@@ -682,8 +712,8 @@ function TasksBoard() {
                       dragging={draggedId === t.id}
                       onDragStart={() => setDraggedId(t.id)}
                       onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
-                      onApprove={t2 => resolveTaskApproval(t2, true)}
-                      onReject={t2 => resolveTaskApproval(t2, false)} />
+                      onApprove={t2 => setReviewPrompt({ task: t2, approved: true })}
+                      onReject={t2 => setReviewPrompt({ task: t2, approved: false })} />
                   ))}
                   <button onClick={() => { set('status', col.id === 'backlog' ? 'todo' : col.id); setModalOpen(true); }}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0', background: 'transparent', border: '1px dashed var(--border-strong)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
@@ -705,6 +735,18 @@ function TasksBoard() {
       )}
 
       <Modal open={!!editTask} onClose={() => setEditTask(null)} title="Edit task" onSubmit={handleUpdateTask} loading={editSaving} submitLabel="Save changes">
+        {reviewFeedback && (
+          <div style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 'var(--radius-md)',
+            background: reviewFeedback.status === 'approved' ? 'var(--green-50)' : 'var(--amber-50)',
+            border: `1px solid ${reviewFeedback.status === 'approved' ? 'var(--green-200)' : 'var(--amber-200)'}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)',
+              color: reviewFeedback.status === 'approved' ? 'var(--green-700)' : 'var(--amber-800)', marginBottom: reviewFeedback.comment ? 4 : 0 }}>
+              <Icon name={reviewFeedback.status === 'approved' ? 'check-circle' : 'corner-up-left'} size={13} />
+              {reviewFeedback.team_members?.name || 'Reviewer'} {reviewFeedback.status === 'approved' ? 'approved this' : 'sent this back'}
+            </div>
+            {reviewFeedback.comment && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>{reviewFeedback.comment}</div>}
+          </div>
+        )}
         <FormRow label="Title" required>
           <input style={FF.input} placeholder="Task title…" value={editForm.title || ''} onChange={e => setEF('title', e.target.value)} />
         </FormRow>
@@ -786,6 +828,17 @@ function TasksBoard() {
         </FormRow>
         <FormRow label="Attachments">
           <AttachArea files={editAttachments} onChange={setEditAttachments} />
+        </FormRow>
+      </Modal>
+
+      <Modal open={!!reviewPrompt} onClose={() => { setReviewPrompt(null); setReviewComment(''); }}
+        title={reviewPrompt?.approved ? 'Approve task' : 'Send task back'}
+        onSubmit={confirmReviewDecision} loading={reviewSaving}
+        submitLabel={reviewSaving ? 'Saving…' : (reviewPrompt?.approved ? 'Approve' : 'Send back')}>
+        <FormRow label={`Feedback for ${reviewPrompt?.task?.assigned_to_name || 'the assignee'} (optional)`}>
+          <textarea style={{ ...FF.input, height: 90, padding: '8px 10px', resize: 'vertical', fontFamily: 'var(--font-sans)' }}
+            placeholder={reviewPrompt?.approved ? 'Looks great — thanks!' : 'What needs to change before this is ready?'}
+            value={reviewComment} onChange={e => setReviewComment(e.target.value)} />
         </FormRow>
       </Modal>
 

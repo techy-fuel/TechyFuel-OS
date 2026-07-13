@@ -414,7 +414,11 @@
     },
     createApproval: (d) => client.from('approval_requests').insert(d).select().single(),
     getPendingApprovalForTask: (taskId) =>
-      client.from('approval_requests').select('id').eq('task_id', taskId).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      client.from('approval_requests').select('id, requested_by').eq('task_id', taskId).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    // Most recent approval for a task regardless of status — used to show
+    // the reviewer's feedback comment back to whoever submitted it.
+    getLatestApprovalForTask: (taskId) =>
+      client.from('approval_requests').select('*, team_members!approver_id(name)').eq('task_id', taskId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     resolveApproval: async (id, status, comment, taskId, newTaskStatus) => {
       const now = new Date().toISOString();
       await client.from('approval_requests').update({ status, comment, resolved_at: now }).eq('id', id);

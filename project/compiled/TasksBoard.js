@@ -947,6 +947,7 @@
     const [editForm, setEditForm] = React.useState({});
     const [editSaving, setEditSaving] = React.useState(false);
     const [editAttachments, setEditAttachments] = React.useState([]);
+    const [reviewFeedback, setReviewFeedback] = React.useState(null); // latest approval_requests row, once resolved
 
     // Time tracking — the one entry (if any) currently running for me, and
     // this task's logged total, both refreshed whenever the edit modal opens.
@@ -964,6 +965,22 @@
     // Kanban drag-and-drop
     const [draggedId, setDraggedId] = React.useState(null);
     const [dragOverCol, setDragOverCol] = React.useState(null);
+
+    // Approve/Send back feedback prompt: { task, approved } while open, else null
+    const [reviewPrompt, setReviewPrompt] = React.useState(null);
+    const [reviewComment, setReviewComment] = React.useState('');
+    const [reviewSaving, setReviewSaving] = React.useState(false);
+    async function confirmReviewDecision() {
+      if (!reviewPrompt) return;
+      setReviewSaving(true);
+      try {
+        await resolveTaskApproval(reviewPrompt.task, reviewPrompt.approved, reviewComment.trim());
+        setReviewPrompt(null);
+        setReviewComment('');
+      } finally {
+        setReviewSaving(false);
+      }
+    }
     function openEdit(task) {
       setEditTask(task);
       setEditForm({
@@ -976,7 +993,15 @@
       });
       setEditAttachments([]);
       setTimerError('');
+      setReviewFeedback(null);
       refreshTimeTracking(task.id);
+      if (task.approval_status === 'approved' || task.approval_status === 'rejected') {
+        window.API?.getLatestApprovalForTask?.(task.id).then(({
+          data
+        }) => {
+          if (data) setReviewFeedback(data);
+        }).catch(() => {});
+      }
     }
     function setEF(k, v) {
       setEditForm(f => ({
@@ -1157,7 +1182,7 @@
         }
       } catch {}
     }
-    async function resolveTaskApproval(task, approved) {
+    async function resolveTaskApproval(task, approved, comment) {
       if (!window.API) return;
       try {
         const {
@@ -1165,7 +1190,7 @@
         } = await window.API.getPendingApprovalForTask(task.id);
         if (!pending) return;
         const newStatus = approved ? 'done' : 'in_progress';
-        await window.API.resolveApproval(pending.id, approved ? 'approved' : 'rejected', '', task.id, newStatus);
+        await window.API.resolveApproval(pending.id, approved ? 'approved' : 'rejected', comment || '', task.id, newStatus);
         if (approved) await stopTimerIfRunningOnTask(task.id);
         patchTaskLocal(task.id, {
           status: newStatus,
@@ -1185,6 +1210,18 @@
           }];
           return next;
         });
+        if (pending.requested_by && window.API.createNotification) {
+          const me = team.find(m => m.id === window.TFMyMemberId);
+          const verb = approved ? 'approved' : 'sent back';
+          await window.API.createNotification({
+            recipient_id: pending.requested_by,
+            type: 'approval',
+            title: `${me?.name || 'A reviewer'} ${verb} "${task.title}"`,
+            body: comment || (approved ? 'No additional feedback.' : 'Take another look and resubmit when ready.'),
+            link_screen: 'tasks',
+            link_id: task.id
+          });
+        }
       } catch {}
     }
     async function handleUpdateTask() {
@@ -1592,8 +1629,14 @@
           setDraggedId(null);
           setDragOverCol(null);
         },
-        onApprove: t2 => resolveTaskApproval(t2, true),
-        onReject: t2 => resolveTaskApproval(t2, false)
+        onApprove: t2 => setReviewPrompt({
+          task: t2,
+          approved: true
+        }),
+        onReject: t2 => setReviewPrompt({
+          task: t2,
+          approved: false
+        })
       })), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           set('status', col.id === 'backlog' ? 'todo' : col.id);
@@ -1634,7 +1677,33 @@
       onSubmit: handleUpdateTask,
       loading: editSaving,
       submitLabel: "Save changes"
-    }, /*#__PURE__*/React.createElement(FormRow, {
+    }, reviewFeedback && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 14,
+        padding: '10px 12px',
+        borderRadius: 'var(--radius-md)',
+        background: reviewFeedback.status === 'approved' ? 'var(--green-50)' : 'var(--amber-50)',
+        border: `1px solid ${reviewFeedback.status === 'approved' ? 'var(--green-200)' : 'var(--amber-200)'}`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-bold)',
+        color: reviewFeedback.status === 'approved' ? 'var(--green-700)' : 'var(--amber-800)',
+        marginBottom: reviewFeedback.comment ? 4 : 0
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: reviewFeedback.status === 'approved' ? 'check-circle' : 'corner-up-left',
+      size: 13
+    }), reviewFeedback.team_members?.name || 'Reviewer', " ", reviewFeedback.status === 'approved' ? 'approved this' : 'sent this back'), reviewFeedback.comment && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-body)'
+      }
+    }, reviewFeedback.comment)), /*#__PURE__*/React.createElement(FormRow, {
       label: "Title",
       required: true
     }, /*#__PURE__*/React.createElement("input", {
@@ -1815,6 +1884,29 @@
     }, /*#__PURE__*/React.createElement(AttachArea, {
       files: editAttachments,
       onChange: setEditAttachments
+    }))), /*#__PURE__*/React.createElement(Modal, {
+      open: !!reviewPrompt,
+      onClose: () => {
+        setReviewPrompt(null);
+        setReviewComment('');
+      },
+      title: reviewPrompt?.approved ? 'Approve task' : 'Send task back',
+      onSubmit: confirmReviewDecision,
+      loading: reviewSaving,
+      submitLabel: reviewSaving ? 'Saving…' : reviewPrompt?.approved ? 'Approve' : 'Send back'
+    }, /*#__PURE__*/React.createElement(FormRow, {
+      label: `Feedback for ${reviewPrompt?.task?.assigned_to_name || 'the assignee'} (optional)`
+    }, /*#__PURE__*/React.createElement("textarea", {
+      style: {
+        ...FF.input,
+        height: 90,
+        padding: '8px 10px',
+        resize: 'vertical',
+        fontFamily: 'var(--font-sans)'
+      },
+      placeholder: reviewPrompt?.approved ? 'Looks great — thanks!' : 'What needs to change before this is ready?',
+      value: reviewComment,
+      onChange: e => setReviewComment(e.target.value)
     }))), /*#__PURE__*/React.createElement(Modal, {
       open: modalOpen,
       onClose: () => {
