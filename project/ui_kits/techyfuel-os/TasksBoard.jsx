@@ -41,11 +41,12 @@ function fmtDateFull(ds) {
   return new Date(ds).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function TaskCard({ task, onEdit, onDragStart, onDragEnd, dragging, isTimerRunning }) {
+function TaskCard({ task, onEdit, onDragStart, onDragEnd, dragging, isTimerRunning, onApprove, onReject }) {
   const [hover, setHover] = React.useState(false);
   const p = TF_PRIORITY[task.priority] || TF_PRIORITY.medium;
   const dueStr = fmtDue(task.due_date);
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
+  const canReview = task.approval_status === 'pending' && task.created_by === window.TFMyMemberId;
   return (
     <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       onClick={() => onEdit && onEdit(task)}
@@ -64,6 +65,7 @@ function TaskCard({ task, onEdit, onDragStart, onDragEnd, dragging, isTimerRunni
         {task.client_id && <span title="Visible in client portal" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: 'var(--violet-600)', background: 'var(--violet-50)', borderRadius: 'var(--radius-full)', padding: '2px 7px' }}><Icon name="user" size={10} /> Client</span>}
         {task.is_recurring && <span title="Recurring task"><Icon name="repeat" size={12} style={{ color: 'var(--blue-500)' }} /></span>}
         {isTimerRunning && <span title="Timer running" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: 'var(--green-700)', background: 'var(--green-50)', borderRadius: 'var(--radius-full)', padding: '2px 7px' }}><Icon name="timer" size={11} /> Live</span>}
+        {task.approval_status === 'pending' && <span title="Waiting for approval" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--text-2xs)', fontWeight: 'var(--fw-bold)', color: 'var(--amber-700)', background: 'var(--amber-50)', borderRadius: 'var(--radius-full)', padding: '2px 7px' }}><Icon name="clock" size={11} /> Pending review</span>}
         {hover && <span style={{ marginLeft: 'auto', color: 'var(--text-subtle)' }}><Icon name="pencil" size={12} /></span>}
       </div>
       <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-strong)', lineHeight: 1.4, marginBottom: 10, textDecoration: task.done ? 'line-through' : 'none', opacity: task.done ? 0.6 : 1 }}>{task.title}</div>
@@ -75,6 +77,18 @@ function TaskCard({ task, onEdit, onDragStart, onDragEnd, dragging, isTimerRunni
           <Avatar name={task.assigned_to_name || '?'} size="xs" />
         </div>
       </div>
+      {canReview && (
+        <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
+          <button onClick={e => { e.stopPropagation(); onApprove && onApprove(task); }}
+            style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, height: 28, background: 'var(--green-600)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+            <Icon name="check" size={13} /> Approve
+          </button>
+          <button onClick={e => { e.stopPropagation(); onReject && onReject(task); }}
+            style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, height: 28, background: 'transparent', color: 'var(--red-600)', border: '1px solid var(--red-200)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>
+            <Icon name="x" size={13} /> Send back
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -444,10 +458,60 @@ function TasksBoard() {
     if (window.API && task.id && !String(task.id).startsWith('f')) {
       try { await window.API.updateTask(task.id, { status: newStatus }); } catch {}
     }
+    if (newStatus === 'review') await submitForReview(task);
   }
 
   function toggleTaskDone(task) {
     return moveTask(task, task.status === 'done' ? 'todo' : 'done');
+  }
+
+  function patchTaskLocal(taskId, changes) {
+    setAllTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...changes } : t));
+    setTaskMap(prev => {
+      const next = {};
+      COLUMN_CONFIG.forEach(c => { next[c.id] = (prev[c.id] || []).map(t => t.id === taskId ? { ...t, ...changes } : t); });
+      return next;
+    });
+  }
+
+  // Marks a task as awaiting sign-off from whoever created/assigned it —
+  // this is the actual "submission" a team member does: moving a task to
+  // Review creates a real approval_requests row + notifies the creator,
+  // instead of the status change silently going nowhere.
+  async function submitForReview(task) {
+    if (!window.API || !task.created_by || task.created_by === window.TFMyMemberId) return;
+    try {
+      await window.API.createApproval({ task_id: task.id, requested_by: window.TFMyMemberId, approver_id: task.created_by, status: 'pending' });
+      await window.API.updateTask(task.id, { requires_approval: true, approval_status: 'pending' });
+      patchTaskLocal(task.id, { approval_status: 'pending' });
+      const me = team.find(m => m.id === window.TFMyMemberId);
+      if (window.API.createNotification) {
+        await window.API.createNotification({
+          recipient_id: task.created_by, type: 'approval',
+          title: `${me?.name || 'A team member'} submitted "${task.title}" for review`,
+          body: 'Tap to review and approve, or send it back.',
+          link_screen: 'tasks', link_id: task.id,
+        });
+      }
+    } catch {}
+  }
+
+  async function resolveTaskApproval(task, approved) {
+    if (!window.API) return;
+    try {
+      const { data: pending } = await window.API.getPendingApprovalForTask(task.id);
+      if (!pending) return;
+      const newStatus = approved ? 'done' : 'in_progress';
+      await window.API.resolveApproval(pending.id, approved ? 'approved' : 'rejected', '', task.id, newStatus);
+      if (approved) await stopTimerIfRunningOnTask(task.id);
+      patchTaskLocal(task.id, { status: newStatus, done: approved, approval_status: approved ? 'approved' : 'rejected' });
+      setTaskMap(prev => {
+        const next = {};
+        COLUMN_CONFIG.forEach(c => { next[c.id] = (prev[c.id] || []).filter(t => t.id !== task.id); });
+        next[newStatus] = [...(next[newStatus] || []), { ...task, status: newStatus, done: approved, approval_status: approved ? 'approved' : 'rejected' }];
+        return next;
+      });
+    } catch {}
   }
 
   async function handleUpdateTask() {
@@ -482,6 +546,7 @@ function TasksBoard() {
       await uploadTaskFiles(editTask.id, editAttachments);
       setEditAttachments([]);
       setEditTask(null);
+      if (changes.status === 'review' && editTask.status !== 'review') await submitForReview(updated);
     } finally { setEditSaving(false); }
   }
 
@@ -502,7 +567,8 @@ function TasksBoard() {
               status: t.status || 'todo', done: t.status === 'done', assigned_to: t.assigned_to,
               client_id: t.client_id || null, is_recurring: t.is_recurring || false,
               assigned_to_name: t.team_members ? t.team_members.name : null,
-              project_name: t.projects ? t.projects.name : null };
+              project_name: t.projects ? t.projects.name : null,
+              created_by: t.created_by || null, approval_status: t.approval_status || null };
             map[key].push(task);
             flat.push(task);
           });
@@ -614,7 +680,9 @@ function TasksBoard() {
                       isTimerRunning={!!(runningEntry && runningEntry.task_id === t.id)}
                       dragging={draggedId === t.id}
                       onDragStart={() => setDraggedId(t.id)}
-                      onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }} />
+                      onDragEnd={() => { setDraggedId(null); setDragOverCol(null); }}
+                      onApprove={t2 => resolveTaskApproval(t2, true)}
+                      onReject={t2 => resolveTaskApproval(t2, false)} />
                   ))}
                   <button onClick={() => { set('status', col.id === 'backlog' ? 'todo' : col.id); setModalOpen(true); }}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0', background: 'transparent', border: '1px dashed var(--border-strong)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>

@@ -408,6 +408,8 @@
       return q.order('created_at', { ascending: false });
     },
     createApproval: (d) => client.from('approval_requests').insert(d).select().single(),
+    getPendingApprovalForTask: (taskId) =>
+      client.from('approval_requests').select('id').eq('task_id', taskId).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     resolveApproval: async (id, status, comment, taskId, newTaskStatus) => {
       const now = new Date().toISOString();
       await client.from('approval_requests').update({ status, comment, resolved_at: now }).eq('id', id);
