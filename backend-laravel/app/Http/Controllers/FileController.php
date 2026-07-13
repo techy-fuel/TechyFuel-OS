@@ -17,7 +17,7 @@ class FileController extends Controller
     public function index()
     {
         $this->authorize('staff');
-        return response()->json(['data' => FileModel::orderBy('created_at', 'desc')->get()]);
+        return response()->json(['data' => FileModel::with('project', 'client', 'uploader')->orderBy('created_at', 'desc')->get()]);
     }
 
     public function store(Request $request)

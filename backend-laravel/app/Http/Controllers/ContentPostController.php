@@ -10,7 +10,7 @@ class ContentPostController extends Controller
     public function index()
     {
         $this->authorize('staff');
-        return response()->json(['data' => ContentPost::with('client')->orderBy('created_at', 'desc')->get()]);
+        return response()->json(['data' => ContentPost::with('client', 'assignee')->orderBy('created_at', 'desc')->get()]);
     }
 
     public function store(Request $request)

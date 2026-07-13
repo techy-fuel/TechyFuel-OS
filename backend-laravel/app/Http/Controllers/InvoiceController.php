@@ -12,7 +12,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('finance');
 
-        return response()->json(['data' => Invoice::with('client', 'items')->orderBy('created_at', 'desc')->get()]);
+        return response()->json(['data' => Invoice::with('client', 'project', 'items')->orderBy('created_at', 'desc')->get()]);
     }
 
     public function store(Request $request)

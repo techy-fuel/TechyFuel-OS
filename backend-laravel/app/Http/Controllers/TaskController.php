@@ -14,7 +14,7 @@ class TaskController extends Controller
     {
         $this->authorize('staff');
 
-        return response()->json(['data' => Task::with('assignee', 'creator')->orderBy('created_at', 'desc')->get()]);
+        return response()->json(['data' => Task::with('assignee', 'creator', 'project', 'client')->orderBy('created_at', 'desc')->get()]);
     }
 
     public function store(Request $request)

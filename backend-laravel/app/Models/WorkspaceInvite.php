@@ -23,7 +23,10 @@ class WorkspaceInvite extends Model
         });
     }
 
-    public function invitedBy(): BelongsTo
+    // Named inviter(), not invitedBy() — the latter's snake_case JSON key
+    // ("invited_by") would silently overwrite the raw invited_by FK
+    // column of the same name when the relation is eager loaded.
+    public function inviter(): BelongsTo
     {
         return $this->belongsTo(TeamMember::class, 'invited_by');
     }

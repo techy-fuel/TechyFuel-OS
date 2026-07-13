@@ -14,7 +14,7 @@ class WorkspaceInviteController extends Controller
         $workspaceId = app(WorkspaceContext::class)->requireWorkspace();
 
         return response()->json([
-            'data' => WorkspaceInvite::with('invitedBy')->where('workspace_id', $workspaceId)
+            'data' => WorkspaceInvite::with('inviter')->where('workspace_id', $workspaceId)
                 ->orderBy('created_at', 'desc')->get(),
         ]);
     }

@@ -22,4 +22,9 @@ class ContentPost extends Model
     {
         return $this->belongsTo(Client::class);
     }
+
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(TeamMember::class, 'assigned_to');
+    }
 }
