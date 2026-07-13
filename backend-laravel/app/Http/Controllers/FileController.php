@@ -32,7 +32,7 @@ class FileController extends Controller
         ]);
 
         $uploaded = $request->file('file');
-        $path = $uploaded->store('workspace-files', 'public');
+        $path = $uploaded->store('workspace-files', config('filesystems.default'));
 
         $file = FileModel::create([
             'project_id' => $request->input('project_id'),
@@ -54,7 +54,7 @@ class FileController extends Controller
         $this->authorize('staff');
 
         $data = $file->toArray();
-        $data['url'] = Storage::disk('public')->url($file->file_path);
+        $data['url'] = Storage::disk(config('filesystems.default'))->url($file->file_path);
 
         return response()->json(['data' => $data]);
     }
@@ -62,7 +62,7 @@ class FileController extends Controller
     public function destroy(FileModel $file)
     {
         $this->authorize('staff');
-        Storage::disk('public')->delete($file->file_path);
+        Storage::disk(config('filesystems.default'))->delete($file->file_path);
         $file->delete();
         return response()->json(['message' => 'Deleted']);
     }

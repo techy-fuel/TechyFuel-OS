@@ -39,7 +39,7 @@ class ApprovalRequestController extends Controller
 
         $approvalRequest->task->update(['status' => $newTaskStatus, 'approval_status' => $status]);
 
-        Notification::create([
+        Notification::notify([
             'recipient_id' => $approvalRequest->requested_by,
             'type' => $data['approved'] ? 'task_done' : 'task_assigned',
             'title' => $data['approved'] ? 'Task approved' : 'Task sent back',

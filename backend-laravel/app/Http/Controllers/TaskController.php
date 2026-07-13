@@ -101,7 +101,7 @@ class TaskController extends Controller
 
         $task->update(['requires_approval' => true, 'approval_status' => 'pending']);
 
-        Notification::create([
+        Notification::notify([
             'recipient_id' => $task->created_by,
             'type' => 'approval',
             'title' => 'Task submitted for review',

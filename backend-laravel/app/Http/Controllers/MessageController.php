@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessagePosted;
 use App\Models\Channel;
 use App\Models\Message;
 use App\Services\WorkspaceContext;
@@ -35,8 +36,11 @@ class MessageController extends Controller
         $data['sender_id'] = app(WorkspaceContext::class)->memberId();
 
         $message = $channel->messages()->create($data);
+        $message->load('sender');
 
-        return response()->json(['data' => $message->load('sender')], 201);
+        event(new MessagePosted($message));
+
+        return response()->json(['data' => $message], 201);
     }
 
     public function destroy(Message $message)
