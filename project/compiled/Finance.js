@@ -183,68 +183,50 @@
     };
   }
 
-  // The real ribbon graphic, traced straight from the client's own vector
-  // design file (real <path> data, not a raster approximation) — inlined
-  // directly as SVG markup rather than an <img src>. An earlier version
-  // used a base64 PNG via <img>, but testing showed the invoice's
-  // window.open()+document.write()+window.print() popup can fire print
-  // before an external/decoded image finishes, silently dropping it from
-  // the exported PDF; inline SVG has no decode step so it's always ready.
-  // Header and footer use different paths (not a plain mirror) because
-  // the original art recolors which slat continues into the rule line —
-  // blue into the blue top line, dark into the dark bottom line.
-  function invoiceRibbonSvg(isFooter) {
-    const svg = isFooter ? `<svg viewBox="1650 3085 710 324" style="display:block;height:96px;width:auto;overflow:visible">
-      <defs>
-        <linearGradient id="invRibbonFooterBlue1" gradientUnits="userSpaceOnUse" x1="1658.7872" y1="3258.478" x2="1949.4452" y2="3258.478">
-          <stop offset="0" stop-color="#0A45C6"/><stop offset="1" stop-color="#1371E0"/>
-        </linearGradient>
-        <linearGradient id="invRibbonFooterBlue2" gradientUnits="userSpaceOnUse" x1="2059.9717" y1="3225.9062" x2="2351.1702" y2="3225.9062">
-          <stop offset="0" stop-color="#0A45C6"/><stop offset="1" stop-color="#1371E0"/>
-        </linearGradient>
-      </defs>
-      <path fill="#3B3B3B" d="M2540.1,3101c-2.5,0.1-5,0.3-7.4,0.3c-78.1,0-156.1,0-234.2,0.1c-12.6,0-25.1,1.1-37.3,4.7
+  // Ribbon graphic straight from the client's updated vector files
+  // (SVG Header (2).svg / SVG Footer (1).svg). These carry the full-width
+  // rule line built in (a <rect> spanning x=0..2539), so the line runs
+  // edge-to-edge with the ribbon riding over it — no separate CSS rule needed.
+  // Inlined as raw SVG (no <img> decode step) so it never drops from the
+  // print/PDF popup. New palette: blue #0f5ed4, dark grey #585a5a.
+  function invoiceRibbonBand(isFooter) {
+    // Full page-width band cropped to the ribbon strip. viewBox spans the whole
+    // 2539-wide page so the rule line reaches both edges.
+    if (isFooter) {
+      // SVG Footer (2).svg — ribbon slats only, no full-width rule line.
+      return `<svg viewBox="0 3085 2539 330" preserveAspectRatio="none" style="display:block;width:100%;height:104px;overflow:visible">
+      <path fill="#585a5a" d="M2540.1,3101c-2.5,0.1-5,0.3-7.4,0.3c-78.1,0-156.1,0-234.2,0.1c-12.6,0-25.1,1.1-37.3,4.7
         c-23.8,7.1-42.8,21-58.6,40c-46.5,55.8-93.3,111.2-139.9,166.8c-16.1,19.2-32,38.5-48.4,57.4c-18.1,20.9-41.3,32.8-68.4,37.3
         c-1.1,0.2-2.2,0.5-3.4,0.8c-644.9,0-1289.8,0-1934.7,0.1c-3.7,0-4.9-0.8-4.6-4.6c0.4-3.8,0.1-7.6,0.1-11.4c2.8-0.1,5.6-0.3,8.4-0.3
         c562.7,0,1125.5,0,1688.2,0c32,0,60.3-9.6,83.6-32c11.5-11,20.9-23.9,31.2-36.1c46.1-54.8,92-109.6,138.1-164.4
         c8.9-10.7,18-21.2,26.8-32c19-23.1,43.3-37.1,72.8-41.8c0.8-0.1,1.6-0.5,2.4-0.7c160.3,0,320.5,0,480.8-0.1c3.7,0,4.9,0.8,4.6,4.6
         C2539.8,3093.4,2540.1,3097.2,2540.1,3101z"/>
-      <path fill="url(#invRibbonFooterBlue1)" d="M1658.8,3372.6
-        c3.4-7.4,9.5-12.7,14.5-18.8c31.8-38.2,63.8-76.2,95.7-114.2c17.4-20.7,34.4-41.7,52.3-62c16-18.1,36.6-28.8,60.6-31.8
-        c21.4-2.6,43-0.7,64.5-1.1c1.1,0,2.5-0.2,3,1.1c0.4,1.2-0.7,2.1-1.4,2.9c-9.4,11.3-18.8,22.5-28.2,33.7
+      <path fill="#0f5ed4" d="M1658.8,3372.6c3.4-7.4,9.5-12.7,14.5-18.8c31.8-38.2,63.8-76.2,95.7-114.2c17.4-20.7,34.4-41.7,52.3-62
+        c16-18.1,36.6-28.8,60.6-31.8c21.4-2.6,43-0.7,64.5-1.1c1.1,0,2.5-0.2,3,1.1c0.4,1.2-0.7,2.1-1.4,2.9c-9.4,11.3-18.8,22.5-28.2,33.7
         c-21.4,25.4-42.7,50.9-64.1,76.3c-22.9,27.3-45.4,55.1-69,81.8c-16.5,18.6-38.1,28.6-62.9,31.1c-1.8,0.2-3.6,0-5.2,0.9
         C1698.6,3372.6,1678.7,3372.6,1658.8,3372.6z"/>
-      <path fill="url(#invRibbonFooterBlue2)" d="M2351.2,3113.4c-8.8,9-16.3,19-24.4,28.5
-        c-28.4,33.6-56.6,67.3-84.9,101c-17.6,20.9-35.1,42-52.9,62.8c-15.8,18.4-36.2,29-60,32.8c-13.1,2.1-26.3,0.7-39.5,1
-        c-8.3,0.2-16.6,0.1-24.9,0c-1.5,0-3.6,0.8-4.4-1c-0.6-1.4,1.1-2.6,2-3.6c10.6-12.8,21.3-25.5,32-38.2
-        c21.5-25.6,42.9-51.1,64.4-76.7c21-25.1,41.7-50.4,63.3-75.1c15.3-17.5,35.2-27.6,58.2-31.5c1.3-0.2,2.5-0.6,3.8-0.9
-        c21.2,0,42.4,0,63.6,0.1C2348.5,3112.5,2350.3,3111.4,2351.2,3113.4z"/>
-    </svg>` : `<svg viewBox="900 131 700 366" style="display:block;height:96px;width:auto;overflow:visible">
-      <defs>
-        <linearGradient id="invRibbonHeaderBlue" gradientUnits="userSpaceOnUse" x1="1470.498" y1="795.4946" x2="1004.796" y2="-331.9948">
-          <stop offset="0" stop-color="#0A45C6"/><stop offset="1" stop-color="#1371E0"/>
-        </linearGradient>
-      </defs>
-      <path fill="url(#invRibbonHeaderBlue)" d="M2541,149.5c-2.8,0.1-5.6,0.2-8.4,0.2c-298.5,0-597.1,0-895.6,0c-31.2,0-59.5,8.9-84,28.6
+      <path fill="#0f5ed4" d="M2351.2,3113.4c-8.8,9-16.3,19-24.4,28.5c-28.4,33.6-56.6,67.3-84.9,101c-17.6,20.9-35.1,42-52.9,62.8
+        c-15.8,18.4-36.2,29-60,32.8c-13.1,2.1-26.3,0.7-39.5,1c-8.3,0.2-16.6,0.1-24.9,0c-1.5,0-3.6,0.8-4.4-1c-0.6-1.4,1.1-2.6,2-3.6
+        c10.6-12.8,21.3-25.5,32-38.2c21.5-25.6,42.9-51.1,64.4-76.7c21-25.1,41.7-50.4,63.3-75.1c15.3-17.5,35.2-27.6,58.2-31.5
+        c1.3-0.2,2.5-0.6,3.8-0.9c21.2,0,42.4,0,63.6,0.1C2348.5,3112.5,2350.3,3111.4,2351.2,3113.4z"/>
+    </svg>`;
+    }
+    return `<svg viewBox="0 131 2539 366" preserveAspectRatio="none" style="display:block;width:100%;height:104px;overflow:visible">
+      <path fill="#0f5ed4" d="M2541,149.5c-2.8,0.1-5.6,0.2-8.4,0.2c-298.5,0-597.1,0-895.6,0c-31.2,0-59.5,8.9-84,28.6
         c-11.3,9.1-20.3,20.4-29.6,31.5c-30.9,36.8-61.9,73.6-92.8,110.4c-29.9,35.7-59.7,71.5-89.8,107c-12.5,14.8-23.8,30.7-39.4,42.6
         c-18.5,14.1-39.1,23-62.1,26.1c-1,0.1-1.9,0.5-2.8,0.8c-409.8,0-819.7,0-1229.5,0.1c-3.7,0-4.9-0.8-4.6-4.6
         c0.4-4.4,0.1-8.9,0.1-13.4c2.8-0.1,5.6-0.3,8.4-0.3c317.4,0,634.8,0,952.3,0c32.1,0,61.2-8.5,86.4-28.8
         c13.6-10.9,23.8-24.9,34.9-38c34.3-40.7,68.5-81.5,102.7-122.2c30.5-36.3,61.1-72.5,91.4-109c22.2-26.7,49.9-43.1,84.3-48.2
         c1-0.1,1.9-0.5,2.8-0.8c390.3,0,780.5,0,1170.8-0.1c3.7,0,4.9,0.8,4.6,4.6C2540.7,140.5,2541,145,2541,149.5z"/>
-      <path fill="#3B3B3B" d="M1692.1,168.4c-1.7,5.4-6.1,8.8-9.5,12.9c-42.6,50.9-85.3,101.7-128,152.5c-15.6,18.6-30.9,37.4-47,55.6
+      <path fill="#585a5a" d="M1692.1,168.4c-1.7,5.4-6.1,8.8-9.5,12.9c-42.6,50.9-85.3,101.7-128,152.5c-15.6,18.6-30.9,37.4-47,55.6
         c-19,21.4-43.1,34.1-71.7,37c-24,2.4-48.2,0.5-72.2,1c-1.1,0-2.6,0.4-3-1c-0.4-1.4,0.9-2.4,1.7-3.3c10.9-13.1,21.9-26.1,32.8-39.2
         c33.6-40,67.3-80.1,100.9-120.1c16.1-19.2,31.9-38.8,48.5-57.5c19.8-22.3,45-34.5,74.7-37.2c1.3-0.1,2.6-0.5,3.8-0.7
         C1646.2,168.4,1669.1,168.4,1692.1,168.4z"/>
-      <path fill="#3B3B3B" d="M904.7,464.6c2.2-5.7,6.8-9.5,10.6-14c44.2-52.8,88.5-105.5,132.8-158.3c13.9-16.6,27.5-33.5,42-49.6
+      <path fill="#585a5a" d="M904.7,464.6c2.2-5.7,6.8-9.5,10.6-14c44.2-52.8,88.5-105.5,132.8-158.3c13.9-16.6,27.5-33.5,42-49.6
         c18.8-20.9,42.7-33.2,70.7-36.1c24-2.6,48.2-0.6,72.3-1c1.1,0,2.6-0.4,3.1,0.9c0.6,1.7-0.9,2.7-1.8,3.7
         c-14.2,17-28.5,33.9-42.7,50.9c-42.3,50.4-84.6,100.7-126.8,151.1c-11.8,14.2-23.9,27.9-40.3,37.1c-14.5,8.2-29.9,13.3-46.5,14.6
         c-1.1,0.1-2.2,0.5-3.3,0.7C951.3,464.6,928,464.6,904.7,464.6z"/>
     </svg>`;
-    // Header ribbon floats over the white header band (absolute). The footer
-    // ribbon sits inside the dark contact band, anchored to its bottom-right
-    // corner by the .footer-ribbon wrapper — so here it's just the raw svg.
-    if (isFooter) return svg;
-    return `<div style="position:absolute;bottom:-2px;right:360px;">${svg}</div>`;
   }
   function invoiceItemsOf(inv) {
     const items = (inv.invoice_items || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
@@ -298,18 +280,18 @@
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   body { font-family: 'Poppins', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; color: #0f172a; background: #fff; }
   .sheet { position: relative; max-width: 860px; margin: 0 auto; border: 1px solid #c7ccd1; background: #fff; }
-  .topbar { height: 4px; background: #2348c4; }
   .header { position: relative; display: flex; justify-content: space-between; padding: 26px 48px 20px; overflow: visible; }
   .header.with-tagline { align-items: flex-start; min-height: 130px; }
-  .header.compact { align-items: center; min-height: 110px; }
+  .header.compact { align-items: center; min-height: 140px; }
+  /* full page-width ribbon band, pushed down a little from the top edge */
+  .header-band { position: absolute; left: 0; right: 0; top: 22px; z-index: 1; }
   .brand-row { display: flex; align-items: center; gap: 12px; position: relative; z-index: 2; }
   .brand-row img { height: 64px; object-fit: contain; }
   .brand { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #0f172a; }
   .invoice-box { text-align: right; position: relative; z-index: 2; }
   .invoice-box .tagline { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 2px; }
   .invoice-box h1 { font-size: 46px; font-weight: 400; letter-spacing: 0.06em; color: #3a3a3a; }
-  .rule-dark { height: 2px; background: #2f3033; }
-  .services-line { padding: 9px 48px 4px; font-size: 9.5px; font-weight: 600; color: #3a3a3a; letter-spacing: 0.01em; max-width: 560px; line-height: 1.5; }
+  .services-line { padding: 22px 48px 4px; font-size: 9.5px; font-weight: 600; color: #3a3a3a; letter-spacing: 0.01em; max-width: 560px; line-height: 1.5; }
   .billto-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 30px 48px 26px; }
   .billto label { font-size: 13px; color: #334155; display: block; margin-bottom: 4px; }
   .billto .name { font-size: 17px; font-weight: 800; color: #2348c4; text-transform: uppercase; }
@@ -324,14 +306,14 @@
   thead th { text-align: left; padding: 16px 20px; font-size: 14px; font-weight: 700; color: #fff; background: #2f3033; }
   thead th:first-child { background: linear-gradient(90deg, #1a3fbf, #2f6be0); }
   thead th:nth-child(2), thead th:nth-child(3), thead th:nth-child(4) { text-align: center; }
-  .lower-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 8px 48px 30px; }
+  .lower-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 18px 48px 36px; }
   .payment h3 { font-size: 14px; font-weight: 700; color: #2348c4; margin-bottom: 10px; }
   .payment .row { font-size: 12px; color: #334155; margin-bottom: 5px; }
   .payment .row b { color: #0f172a; display: inline-block; width: 80px; }
   .total-box { background: #2348c4; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 22px; border-radius: 3px; min-width: 260px; }
   .total-box .label { font-size: 15px; font-weight: 700; }
   .total-box .value { font-size: 20px; font-weight: 800; }
-  .thanks-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 6px 48px 34px; }
+  .thanks-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 10px 48px 40px; }
   .thanks { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
   .notes h4 { font-size: 13px; font-weight: 700; color: #2348c4; margin-bottom: 6px; }
   .notes ul { list-style: none; font-size: 11px; color: #475569; max-width: 320px; }
@@ -341,26 +323,26 @@
   .signature img { height: 46px; object-fit: contain; margin-bottom: 2px; }
   .signature .name { font-size: 14px; font-weight: 800; letter-spacing: 0.02em; color: #0f172a; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 4px; min-width: 160px; }
   .signature .title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-top: 2px; }
-  /* CONTACT heading sits ABOVE the dark footer band (blue), like the PDF */
-  .contact-heading { padding: 10px 48px 8px; font-size: 15px; font-weight: 800; letter-spacing: 0.04em; color: #2348c4; }
-  /* White footer — contact details on white (dark text) + ribbon, no black band */
-  .footer { position: relative; overflow: visible; background: #fff; color: #1e293b; padding: 4px 48px 24px; min-height: 100px; }
-  .footer .contact-section .row { font-size: 12px; color: #1e293b; margin-bottom: 6px; }
+  /* CONTACT heading sits above the footer (blue), like the PDF */
+  .contact-heading { padding: 26px 48px 10px; font-size: 15px; font-weight: 800; letter-spacing: 0.04em; color: #2348c4; }
+  /* White footer — contact details on white + full page-width ribbon band */
+  .footer { position: relative; overflow: hidden; background: #fff; color: #1e293b; padding: 10px 48px 0; min-height: 120px; }
+  .footer .contact-section .row { font-size: 12px; color: #1e293b; margin-bottom: 7px; }
   .footer .contact-section .row b { display: inline-block; width: 78px; font-weight: 700; color: #0f172a; }
-  /* ribbon anchored to the footer's bottom-right corner */
-  .footer .footer-ribbon { position: absolute; right: 20px; bottom: 6px; z-index: 2; }
-  .footer .footer-ribbon svg { display: block; height: 88px; width: auto; }
+  /* full page-width ribbon band connected flush to the footer bottom edge */
+  .footer .footer-band { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; line-height: 0; }
+  .footer .footer-band svg { display: block; }
   @media print {
     @page { margin: 0; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    .sheet { border: none; max-width: none; }
   }
 </style>
 </head>
 <body>
 <div class="sheet">
-  <div class="topbar"></div>
   <div class="header compact">
-    ${invoiceRibbonSvg(false)}
+    <div class="header-band">${invoiceRibbonBand(false)}</div>
     <div class="brand-row">
       ${logoSrc ? `<img src="${logoSrc}" alt="${b.agencyName}"/>` : `<div class="brand">${b.agencyName}</div>`}
     </div>
@@ -368,7 +350,6 @@
       <h1>INVOICE</h1>
     </div>
   </div>
-  <div class="rule-dark"></div>
   ${b.servicesLine ? `<div class="services-line">${b.servicesLine}</div>` : ''}
 
   <div class="billto-row">
@@ -425,7 +406,7 @@
       ${b.agencyAddress ? `<div class="row"><b>Address</b>: ${b.agencyAddress}</div>` : ''}
       ${b.agencyEmail ? `<div class="row"><b>Email</b>: ${b.agencyEmail}</div>` : ''}
     </div>
-    <div class="footer-ribbon">${invoiceRibbonSvg(true)}</div>
+    <div class="footer-band">${invoiceRibbonBand(true)}</div>
   </div>
 </div>
 </body>
@@ -457,6 +438,168 @@
   }
 
   // ── Share invoice via Email / WhatsApp ─────────────────────────────
+  // Edit the agency branding / payment / contact details that appear on every
+  // invoice — same fields as Settings › Agency branding, surfaced right here on
+  // the Finance screen so users don't have to hunt for them. Persists to the
+  // same `tf_settings` localStorage key readAgencyBranding() reads from.
+  function BrandingModal({
+    onClose
+  }) {
+    const saved = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('tf_settings') || '{}');
+      } catch {
+        return {};
+      }
+    })();
+    const b = readAgencyBranding();
+    // Seed inputs with the saved value, falling back to the invoice default so
+    // the user edits real values rather than blanks.
+    const [f, setF] = React.useState({
+      agencyName: saved.agencyName ?? b.agencyName,
+      tagline: saved.tagline ?? b.tagline,
+      servicesLine: saved.servicesLine ?? b.servicesLine,
+      agencyPhone: saved.agencyPhone ?? b.agencyPhone,
+      agencyWebsite: saved.agencyWebsite ?? b.agencyWebsite,
+      agencyAddress: saved.agencyAddress ?? b.agencyAddress,
+      agencyEmail: saved.agencyEmail ?? b.agencyEmail,
+      paymentAccount: saved.paymentAccount ?? b.paymentAccount,
+      paymentSwift: saved.paymentSwift ?? b.paymentSwift,
+      paymentPayoneer: saved.paymentPayoneer ?? b.paymentPayoneer,
+      signatureName: saved.signatureName ?? b.signatureName,
+      signatureTitle: saved.signatureTitle ?? b.signatureTitle
+    });
+    const set = (k, v) => setF(p => ({
+      ...p,
+      [k]: v
+    }));
+    function save() {
+      const merged = {
+        ...saved,
+        ...f
+      };
+      localStorage.setItem('tf_settings', JSON.stringify(merged));
+      try {
+        window.dispatchEvent(new Event('tf-settings-changed'));
+      } catch {}
+      onClose();
+    }
+    const Field = ({
+      label,
+      k,
+      ph,
+      wide
+    }) => /*#__PURE__*/React.createElement("label", {
+      style: {
+        display: 'block',
+        gridColumn: wide ? '1 / -1' : 'auto'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'block',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--fw-semibold)',
+        color: 'var(--text-muted)',
+        marginBottom: 4
+      }
+    }, label), /*#__PURE__*/React.createElement("input", {
+      style: FF.input,
+      value: f[k] || '',
+      placeholder: ph,
+      onChange: e => set(k, e.target.value)
+    }));
+    const sectionTitle = {
+      fontSize: 'var(--text-sm)',
+      fontWeight: 'var(--fw-bold)',
+      color: 'var(--text-strong)',
+      margin: '14px 0 8px'
+    };
+    const grid = {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 12
+    };
+    return /*#__PURE__*/React.createElement(Modal, {
+      open: true,
+      onClose: onClose,
+      title: "Branding & Payment",
+      onSubmit: save,
+      submitLabel: "Save changes"
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        marginTop: -4,
+        marginBottom: 4
+      }
+    }, "These details appear on every invoice PDF. Leave a field blank to use the default."), /*#__PURE__*/React.createElement("div", {
+      style: sectionTitle
+    }, "Agency"), /*#__PURE__*/React.createElement("div", {
+      style: grid
+    }, /*#__PURE__*/React.createElement(Field, {
+      label: "Agency name",
+      k: "agencyName",
+      ph: "TechyFuel"
+    }), /*#__PURE__*/React.createElement(Field, {
+      label: "Tagline",
+      k: "tagline",
+      ph: "Fueling Your Brand's Digital Journey"
+    }), /*#__PURE__*/React.createElement(Field, {
+      label: "Services line",
+      k: "servicesLine",
+      ph: "Digital Marketing • Web Development • …",
+      wide: true
+    })), /*#__PURE__*/React.createElement("div", {
+      style: sectionTitle
+    }, "Payment method"), /*#__PURE__*/React.createElement("div", {
+      style: grid
+    }, /*#__PURE__*/React.createElement(Field, {
+      label: "Account #",
+      k: "paymentAccount",
+      ph: "0123456789012090"
+    }), /*#__PURE__*/React.createElement(Field, {
+      label: "Swift code",
+      k: "paymentSwift",
+      ph: "01234560"
+    }), /*#__PURE__*/React.createElement(Field, {
+      label: "Payoneer",
+      k: "paymentPayoneer",
+      ph: "payoneer@gmail.com",
+      wide: true
+    })), /*#__PURE__*/React.createElement("div", {
+      style: sectionTitle
+    }, "Contact"), /*#__PURE__*/React.createElement("div", {
+      style: grid
+    }, /*#__PURE__*/React.createElement(Field, {
+      label: "Phone",
+      k: "agencyPhone",
+      ph: "+1 (509) 616-0866"
+    }), /*#__PURE__*/React.createElement(Field, {
+      label: "Web Site",
+      k: "agencyWebsite",
+      ph: "www.techyfuel.com"
+    }), /*#__PURE__*/React.createElement(Field, {
+      label: "Email",
+      k: "agencyEmail",
+      ph: "hello@techyfuel.com"
+    }), /*#__PURE__*/React.createElement(Field, {
+      label: "Address",
+      k: "agencyAddress",
+      ph: "America street 20th 201, house no lane 5"
+    })), /*#__PURE__*/React.createElement("div", {
+      style: sectionTitle
+    }, "Signature"), /*#__PURE__*/React.createElement("div", {
+      style: grid
+    }, /*#__PURE__*/React.createElement(Field, {
+      label: "Name",
+      k: "signatureName",
+      ph: "ZAIN AHMED"
+    }), /*#__PURE__*/React.createElement(Field, {
+      label: "Title",
+      k: "signatureTitle",
+      ph: "Founder & CEO"
+    })));
+  }
   function ShareInvoiceModal({
     inv,
     clients,
@@ -694,6 +837,7 @@
     const [loading, setLoading] = React.useState(true);
     const [search, setSearch] = React.useState('');
     const [modalOpen, setModalOpen] = React.useState(false);
+    const [brandingOpen, setBrandingOpen] = React.useState(false);
     const [editInv, setEditInv] = React.useState(null);
     const [saving, setSaving] = React.useState(false);
     const [form, setForm] = React.useState({
@@ -1079,7 +1223,32 @@
       style: {
         marginLeft: 6
       }
-    }, "· live FX rates loaded"))), /*#__PURE__*/React.createElement("button", {
+    }, "· live FX rates loaded"))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 8
+      }
+    }, activeTab === 'invoices' && /*#__PURE__*/React.createElement("button", {
+      onClick: () => setBrandingOpen(true),
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        height: 36,
+        padding: '0 14px',
+        background: '#fff',
+        color: 'var(--blue-600)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-md)',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--fw-semibold)',
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "palette",
+      size: 16
+    }), " Branding & Payment"), /*#__PURE__*/React.createElement("button", {
       onClick: activeTab === 'invoices' ? openNew : openNewExpense,
       style: {
         display: 'inline-flex',
@@ -1100,7 +1269,7 @@
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "plus",
       size: 16
-    }), " ", activeTab === 'invoices' ? 'New invoice' : 'Add expense')), /*#__PURE__*/React.createElement("div", {
+    }), " ", activeTab === 'invoices' ? 'New invoice' : 'Add expense'))), /*#__PURE__*/React.createElement("div", {
       style: {
         marginBottom: 16
       }
@@ -1903,6 +2072,8 @@
       inv: shareInv,
       clients: clients,
       onClose: () => setShareInv(null)
+    }), brandingOpen && /*#__PURE__*/React.createElement(BrandingModal, {
+      onClose: () => setBrandingOpen(false)
     }), /*#__PURE__*/React.createElement(Modal, {
       open: expModalOpen,
       onClose: () => setExpModalOpen(false),
