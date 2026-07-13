@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AdCampaignController;
 use App\Http\Controllers\ApprovalRequestController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\AutomationRuleController;
 use App\Http\Controllers\CallSessionController;
 use App\Http\Controllers\ChannelController;
@@ -38,6 +39,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']);
+Route::post('/reset-password', [PasswordResetController::class, 'reset']);
 Route::get('/fx-rates', [FxRatesController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
