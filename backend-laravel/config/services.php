@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    // Encrypts email_accounts.encrypted_password at rest. Deliberately its
+    // own key, separate from the production Node app's EMAIL_ENCRYPTION_KEY
+    // (which must never be touched) — falls back to APP_KEY for local dev.
+    'email_encryption_key' => env('EMAIL_ENCRYPTION_KEY'),
+
 ];
