@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class WorkspaceInvite extends Model
@@ -20,5 +21,10 @@ class WorkspaceInvite extends Model
             $invite->token ??= Str::random(40);
             $invite->expires_at ??= now()->addDays(7);
         });
+    }
+
+    public function invitedBy(): BelongsTo
+    {
+        return $this->belongsTo(TeamMember::class, 'invited_by');
     }
 }

@@ -68,6 +68,23 @@ class WorkspaceController extends Controller
         return response()->json(['data' => $workspace], 201);
     }
 
+    public function update(Request $request)
+    {
+        $this->authorize('admin');
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'logo_url' => ['nullable', 'string'],
+            'description' => ['nullable', 'string'],
+            'plan' => ['nullable', 'string'],
+        ]);
+
+        $workspaceId = app(WorkspaceContext::class)->requireWorkspace();
+        $workspace = Workspace::findOrFail($workspaceId);
+        $workspace->update($data);
+
+        return response()->json(['data' => $workspace]);
+    }
+
     /**
      * Replaces the switch_workspace() RPC: validates the caller actually
      * belongs to the target workspace before switching their active one.

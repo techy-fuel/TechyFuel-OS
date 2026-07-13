@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityLog extends Model
 {
@@ -19,4 +20,9 @@ class ActivityLog extends Model
     ];
 
     protected $casts = ['meta' => 'array'];
+
+    public function actor(): BelongsTo
+    {
+        return $this->belongsTo(TeamMember::class, 'actor_id');
+    }
 }

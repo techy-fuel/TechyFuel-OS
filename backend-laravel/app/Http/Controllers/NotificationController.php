@@ -25,6 +25,35 @@ class NotificationController extends Controller
         return response()->json(['data' => $query->orderBy('created_at', 'desc')->get()]);
     }
 
+    public function store(Request $request)
+    {
+        $this->authorize('staff');
+        $data = $request->validate([
+            'recipient_id' => ['required', 'uuid', 'exists:team_members,id'],
+            'type' => ['required', 'string'],
+            'title' => ['required', 'string'],
+            'body' => ['nullable', 'string'],
+            'link_screen' => ['nullable', 'string'],
+            'link_id' => ['nullable', 'uuid'],
+        ]);
+
+        return response()->json(['data' => Notification::notify($data)], 201);
+    }
+
+    public function markAllRead(Request $request)
+    {
+        $this->authorize('staff');
+        $context = app(WorkspaceContext::class);
+
+        $query = Notification::where('read', false);
+        if (! $context->isOwnerOrAdmin()) {
+            $query->where('recipient_id', $context->memberId());
+        }
+        $query->update(['read' => true]);
+
+        return response()->json(['message' => 'Marked all read']);
+    }
+
     public function unreadCount(Request $request)
     {
         $this->authorize('staff');

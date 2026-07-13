@@ -8,6 +8,14 @@ use Illuminate\Http\Request;
 
 class ClientInviteController extends Controller
 {
+    public function show(Client $client)
+    {
+        $this->authorize('admin');
+        $invite = ClientInvite::where('client_id', $client->id)->orderBy('created_at', 'desc')->first();
+
+        return response()->json(['data' => $invite]);
+    }
+
     public function store(Request $request, Client $client)
     {
         $this->authorize('admin');

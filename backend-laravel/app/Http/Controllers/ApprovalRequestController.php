@@ -15,6 +15,37 @@ class ApprovalRequestController extends Controller
         return response()->json(['data' => ApprovalRequest::with('task', 'requester', 'approver')->orderBy('created_at', 'desc')->get()]);
     }
 
+    public function store(Request $request)
+    {
+        $this->authorize('staff');
+        $data = $request->validate([
+            'task_id' => ['required', 'uuid', 'exists:tasks,id'],
+            'approver_id' => ['nullable', 'uuid', 'exists:team_members,id'],
+        ]);
+        $data['requested_by'] = app(WorkspaceContext::class)->memberId();
+        $data['status'] = 'pending';
+
+        return response()->json(['data' => ApprovalRequest::create($data)], 201);
+    }
+
+    public function pendingForTask(string $taskId)
+    {
+        $this->authorize('staff');
+        $pending = ApprovalRequest::where('task_id', $taskId)->where('status', 'pending')
+            ->orderBy('created_at', 'desc')->first(['id', 'requested_by']);
+
+        return response()->json(['data' => $pending]);
+    }
+
+    public function latestForTask(string $taskId)
+    {
+        $this->authorize('staff');
+        $latest = ApprovalRequest::with('approver:id,name')->where('task_id', $taskId)
+            ->orderBy('created_at', 'desc')->first();
+
+        return response()->json(['data' => $latest]);
+    }
+
     /**
      * Mirrors TaskCard's Approve/Send back buttons: approved -> task goes
      * to 'done', rejected -> back to 'in_progress'; the submitter gets a
