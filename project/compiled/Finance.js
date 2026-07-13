@@ -2178,6 +2178,7 @@
     }, c.company || c.name))))));
   }
   Object.assign(window, {
-    Finance
+    Finance,
+    buildInvoiceHtml
   });
 })();

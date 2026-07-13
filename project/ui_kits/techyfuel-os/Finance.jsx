@@ -1125,5 +1125,5 @@ function Finance() {
   );
 }
 
-Object.assign(window, { Finance });
+Object.assign(window, { Finance, buildInvoiceHtml });
 })();

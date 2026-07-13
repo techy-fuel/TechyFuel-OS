@@ -102,68 +102,19 @@
     if (task.status === 'in_progress') return 'active';
     return 'todo';
   }
-  function downloadInvoicePDF(inv, agencyName) {
-    const currency = inv.currency || 'USD';
-    const symbols = {
-      USD: '$',
-      EUR: '€',
-      GBP: '£',
-      AED: 'AED ',
-      SAR: 'SAR ',
-      PKR: '₨',
-      CAD: 'CA$',
-      AUD: 'A$'
-    };
-    const sym = symbols[currency] || '$';
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Invoice ${inv.invoice_no}</title>
-<style>
-  body { font-family: -apple-system, sans-serif; margin: 0; padding: 40px; color: #0f172a; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
-  .logo { font-size: 22px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
-  .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase;
-    background: ${inv.status === 'paid' ? '#dcfce7' : '#fef9c3'}; color: ${inv.status === 'paid' ? '#15803d' : '#92400e'}; }
-  table { width: 100%; border-collapse: collapse; margin: 28px 0; }
-  th { background: #f8fafc; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
-  td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-  .total-row td { border-top: 2px solid #0f172a; border-bottom: none; font-weight: 700; font-size: 16px; }
-  @media print { body { padding: 20px; } }
-</style></head><body>
-<div class="header">
-  <div>
-    <div class="logo">${agencyName || 'TechyFuel OS'}</div>
-    <div style="font-size:13px;color:#64748b;margin-top:4px;">Invoice</div>
-  </div>
-  <div style="text-align:right">
-    <div style="font-size:22px;font-weight:800;">${inv.invoice_no}</div>
-    <div class="badge">${inv.status || 'pending'}</div>
-  </div>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
-  <div>
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:6px;">Billed to</div>
-    <div style="font-weight:600;">${inv.client_name || inv.clients?.name || '—'}</div>
-  </div>
-  <div style="text-align:right">
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:4px;">Due date</div>
-    <div style="font-weight:600;">${fmtDate(inv.due_date)}</div>
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-top:10px;margin-bottom:4px;">Issued</div>
-    <div style="font-weight:600;">${fmtDate(inv.created_at || inv.issued_date)}</div>
-  </div>
-</div>
-<table>
-  <thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
-  <tbody>
-    <tr><td>Agency services — ${inv.description || inv.invoice_no}</td><td style="text-align:right">${sym}${Number(inv.amount).toLocaleString()} ${currency}</td></tr>
-    <tr class="total-row"><td>Total due</td><td style="text-align:right">${sym}${Number(inv.amount).toLocaleString()} ${currency}</td></tr>
-  </tbody>
-</table>
-<div style="margin-top:32px;padding:16px;background:#f8fafc;border-radius:8px;font-size:13px;color:#64748b;">
-  Thank you for your business. For questions about this invoice, please contact your account manager.
-</div>
-</body></html>`);
-    win.document.close();
-    setTimeout(() => win.print(), 600);
+
+  // Shares Finance.jsx's buildInvoiceHtml so the client portal's own PDF
+  // download always matches the branded template staff see in Finance —
+  // not a second, separately-maintained template that drifts out of sync.
+  function downloadInvoicePDF(inv, clients) {
+    if (!window.buildInvoiceHtml) return;
+    const printScript = '<script>window.onload = function() { window.print(); };<\/script>';
+    const html = window.buildInvoiceHtml(inv, clients).replace('</body>', printScript + '</body>');
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
   }
   function ClientPortal() {
     useLucide();
@@ -353,13 +304,6 @@
         a.click();
       }
     }
-    const agencyName = (() => {
-      try {
-        return JSON.parse(localStorage.getItem('tf_settings') || '{}').agencyName || '';
-      } catch {
-        return '';
-      }
-    })();
     const displayName = client ? client.company || client.name : '—';
     const health = getProjectHealth(tasks);
     const doneTasks = tasks.filter(t => t.status === 'done' || t.status === 'completed').length;
@@ -978,7 +922,7 @@
         marginTop: 4
       }
     }, invoice.invoice_no, " · due ", fmtDate(invoice.due_date))), /*#__PURE__*/React.createElement("button", {
-      onClick: () => downloadInvoicePDF(invoice, agencyName),
+      onClick: () => downloadInvoicePDF(invoice, clients),
       style: {
         display: 'inline-flex',
         alignItems: 'center',
