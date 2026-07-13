@@ -150,7 +150,12 @@
       return q.order('due_date', { ascending: true });
     },
     createTask: async (d) => {
-      const r = await client.from('tasks').insert(d).select().single();
+      // created_by has no DB default, so every task-creation call site
+      // (TasksBoard, QuickAdd, Calendar, Automations rules) would silently
+      // insert a null creator unless set here — which broke the Review
+      // approval flow entirely, since it can't notify a null approver.
+      const payload = { created_by: window.TFMyMemberId || null, ...d };
+      const r = await client.from('tasks').insert(payload).select().single();
       if (r.data) logActivity('created', 'task', r.data, 'title');
       return r;
     },

@@ -1372,7 +1372,9 @@
               client_name: clientName,
               assigned_to_name: assigneeName,
               project_name: projectName,
-              attachment_count: attachments.length
+              attachment_count: attachments.length,
+              created_by: data.created_by || null,
+              approval_status: null
             };
             setTaskMap(prev => ({
               ...prev,
@@ -1381,6 +1383,7 @@
             setAllTasks(prev => [...prev, newTask]);
             if (newTask.status !== 'done') setTotalOpen(prev => prev + 1);
             await uploadTaskFiles(data.id, attachments);
+            if (newTask.status === 'review') await submitForReview(newTask);
           }
         }
         setModalOpen(false);
