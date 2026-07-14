@@ -1,5 +1,11 @@
 # Drives Laravel's scheduler (routes/console.php), which runs
 # techyfuel:run-recurring daily at 04:00 — replaces the Vercel Cron job
 # that hit api/recurring-run.js. Add this one line via `crontab -e` on
-# the host (adjust the path):
+# the host (adjust the path), or Hostinger hPanel -> Advanced -> Cron Jobs:
 * * * * * cd /var/www/techyfuel/backend-laravel && php artisan schedule:run >> /dev/null 2>&1
+
+# On shared hosting (no persistent `queue:work` allowed — see
+# deploy/supervisor-queue-worker.conf, which does NOT apply here), add
+# this second cron line instead: processes whatever's queued (chat/
+# notification broadcasts to Pusher) once a minute, then exits.
+* * * * * cd /var/www/techyfuel/backend-laravel && php artisan queue:work --stop-when-empty --max-time=50 >> /dev/null 2>&1
