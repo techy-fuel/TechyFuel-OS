@@ -26,6 +26,18 @@ class TaskTemplateController extends Controller
         return response()->json(['data' => TaskTemplate::create($data)], 201);
     }
 
+    public function update(Request $request, TaskTemplate $taskTemplate)
+    {
+        $this->authorize('staff');
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'tasks' => ['nullable', 'array'],
+        ]);
+        $taskTemplate->update($data);
+        return response()->json(['data' => $taskTemplate]);
+    }
+
     public function destroy(TaskTemplate $taskTemplate)
     {
         $this->authorize('staff');

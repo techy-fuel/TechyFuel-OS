@@ -63,11 +63,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('ad-campaigns', AdCampaignController::class);
     Route::apiResource('expenses', ExpenseController::class);
     Route::apiResource('folders', FolderController::class)->only(['index', 'store', 'update', 'destroy']);
-    Route::apiResource('files', FileController::class)->only(['index', 'store', 'show', 'destroy']);
+    Route::apiResource('files', FileController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
     Route::apiResource('documents', DocumentController::class);
     Route::apiResource('channels', ChannelController::class)->only(['index', 'store', 'show', 'destroy']);
     Route::apiResource('automation-rules', AutomationRuleController::class)->only(['index', 'store', 'update', 'destroy']);
-    Route::apiResource('task-templates', TaskTemplateController::class)->only(['index', 'store', 'destroy']);
+    Route::apiResource('task-templates', TaskTemplateController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('webhooks', WebhookController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('team-members', TeamMemberController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('email-accounts', EmailAccountController::class)->only(['index', 'store', 'destroy']);
@@ -85,8 +85,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages/search', [MessageController::class, 'search']);
     Route::patch('/messages/{message}/pin', [MessageController::class, 'pin']);
     Route::delete('/messages/{message}', [MessageController::class, 'destroy']);
+    Route::patch('/channels/{channel}', [ChannelController::class, 'update']);
+    Route::patch('/messages/{message}', [MessageController::class, 'update']);
+    Route::get('/messages/{message}/reactions', [MessageReactionController::class, 'index']);
     Route::post('/messages/{message}/reactions', [MessageReactionController::class, 'store']);
-    Route::delete('/messages/{message}/reactions/{reaction}', [MessageReactionController::class, 'destroy']);
+    Route::delete('/messages/{message}/reactions/{emoji}', [MessageReactionController::class, 'destroy']);
 
     Route::get('/channels/{channel}/members', [ChannelMemberController::class, 'index']);
     Route::post('/channels/{channel}/members', [ChannelMemberController::class, 'store']);
@@ -106,6 +109,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tasks/{task}/time-entries', [TimeEntryController::class, 'index']);
     Route::post('/tasks/{task}/time-entries/start', [TimeEntryController::class, 'start']);
     Route::post('/time-entries/{timeEntry}/stop', [TimeEntryController::class, 'stop']);
+    Route::get('/time-entries/running', [TimeEntryController::class, 'running']);
+    Route::get('/time-entries', [TimeEntryController::class, 'all']);
 
     Route::get('/approval-requests', [ApprovalRequestController::class, 'index']);
     Route::post('/approval-requests', [ApprovalRequestController::class, 'store']);
@@ -115,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/clients/{client}/notes', [ClientNoteController::class, 'index']);
     Route::post('/clients/{client}/notes', [ClientNoteController::class, 'store']);
+    Route::delete('/client-notes/{clientNote}', [ClientNoteController::class, 'destroy']);
     Route::get('/clients/{client}/invite', [ClientInviteController::class, 'show']);
     Route::post('/clients/{client}/invites', [ClientInviteController::class, 'store']);
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\ClientNote;
 use Illuminate\Http\Request;
 
 class ClientNoteController extends Controller
@@ -23,5 +24,12 @@ class ClientNoteController extends Controller
         $data['created_by'] = app(\App\Services\WorkspaceContext::class)->memberId();
 
         return response()->json(['data' => $client->clientNotes()->create($data)], 201);
+    }
+
+    public function destroy(ClientNote $clientNote)
+    {
+        $this->authorize('staff');
+        $clientNote->delete();
+        return response()->json(['message' => 'Deleted']);
     }
 }

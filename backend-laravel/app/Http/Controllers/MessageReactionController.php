@@ -24,10 +24,25 @@ class MessageReactionController extends Controller
         return response()->json(['data' => $reaction], 201);
     }
 
-    public function destroy(Message $message, MessageReaction $reaction)
+    public function index(Message $message)
     {
         $this->authorize('staff');
-        $reaction->delete();
+        return response()->json(['data' => $message->reactions()->with('member:id,name')->get()]);
+    }
+
+    /**
+     * Deletes by (message, caller's own member, emoji) — not by the
+     * reaction row's own id — matching removeReaction(messageId,
+     * memberId, emoji) from supabase-api.js, which the emoji picker
+     * calls with the emoji value, not a reaction id.
+     */
+    public function destroy(Request $request, Message $message, string $emoji)
+    {
+        $this->authorize('staff');
+        $memberId = app(WorkspaceContext::class)->memberId();
+
+        $message->reactions()->where('member_id', $memberId)->where('emoji', $emoji)->delete();
+
         return response()->json(['message' => 'Deleted']);
     }
 }

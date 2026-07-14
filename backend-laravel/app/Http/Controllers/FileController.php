@@ -59,6 +59,23 @@ class FileController extends Controller
         return response()->json(['data' => $data]);
     }
 
+    /**
+     * Metadata only (rename, move between folders/tasks) — the stored
+     * bytes themselves are immutable after upload; re-upload to replace
+     * them.
+     */
+    public function update(Request $request, FileModel $file)
+    {
+        $this->authorize('staff');
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'folder_id' => ['nullable', 'uuid', 'exists:folders,id'],
+            'task_id' => ['nullable', 'uuid', 'exists:tasks,id'],
+        ]);
+        $file->update($data);
+        return response()->json(['data' => $file]);
+    }
+
     public function destroy(FileModel $file)
     {
         $this->authorize('staff');

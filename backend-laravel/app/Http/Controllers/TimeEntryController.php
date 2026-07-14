@@ -16,6 +16,42 @@ class TimeEntryController extends Controller
     }
 
     /**
+     * The one open (ended_at is null) entry for the calling member, if
+     * any — mirrors getRunningTimeEntry(memberId) from supabase-api.js,
+     * which the timer widget polls to know whether to show "stop" or
+     * "start" and which task it's currently running on.
+     */
+    public function running(Request $request)
+    {
+        $this->authorize('staff');
+        $memberId = app(WorkspaceContext::class)->memberId();
+
+        $entry = TimeEntry::with('task:id,title')
+            ->where('member_id', $memberId)
+            ->whereNull('ended_at')
+            ->first();
+
+        return response()->json(['data' => $entry]);
+    }
+
+    /**
+     * Every stopped entry across all tasks/members — mirrors
+     * getAllTimeEntries(), used by the reporting view to sum time spent
+     * per person/task without re-querying per task.
+     */
+    public function all(Request $request)
+    {
+        $this->authorize('staff');
+
+        $entries = TimeEntry::with('task:id,title,status', 'member:id,name')
+            ->whereNotNull('duration_seconds')
+            ->orderBy('started_at', 'desc')
+            ->get();
+
+        return response()->json(['data' => $entries]);
+    }
+
+    /**
      * Starts a timer for this task under the caller's own membership. The
      * frontend is responsible for stopping any other open timer first —
      * same as the original single-page timer widget (no DB-level

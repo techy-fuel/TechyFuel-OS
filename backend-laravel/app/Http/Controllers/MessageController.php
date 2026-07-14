@@ -82,6 +82,22 @@ class MessageController extends Controller
         return response()->json(['data' => $message], 201);
     }
 
+    /**
+     * Content-only edit. sender_id is deliberately not accepted here —
+     * migration 022's identity policy blocks reassigning a message to
+     * someone else even on update, only who it's *shown as coming from*
+     * (any staff member in the channel could edit the row, same as the
+     * original RLS policy, which didn't restrict updates to the
+     * original sender).
+     */
+    public function update(Request $request, Message $message)
+    {
+        $this->authorize('staff');
+        $data = $request->validate(['content' => ['required', 'string']]);
+        $message->update($data);
+        return response()->json(['data' => $message]);
+    }
+
     public function destroy(Message $message)
     {
         $this->authorize('staff');

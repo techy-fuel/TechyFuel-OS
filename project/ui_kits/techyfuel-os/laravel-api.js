@@ -235,14 +235,9 @@
     deleteTask: (id) => call(`/tasks/${id}`, { method: 'DELETE' }),
 
     // ── TIME TRACKING ────────────────────────────────────
-    getRunningTimeEntry: async (_memberId) => {
-      // No direct "my running entry" endpoint yet — approximate by
-      // scanning a task's entries is not workable here; left as a
-      // known gap (returns null) until a dedicated endpoint is added.
-      return { data: null, error: null };
-    },
+    getRunningTimeEntry: (_memberId) => call('/time-entries/running'),
     getTimeEntriesForTask: (taskId) => call(`/tasks/${taskId}/time-entries`),
-    getAllTimeEntries: async () => ({ data: [], error: null }), // known gap: no cross-task endpoint yet
+    getAllTimeEntries: () => call('/time-entries'),
     startTimeEntry: (taskId, _memberId) => call(`/tasks/${taskId}/time-entries/start`, { method: 'POST' }),
     stopTimeEntry: (id) => call(`/time-entries/${id}/stop`, { method: 'POST' }),
 
@@ -318,7 +313,9 @@
       return json.data.url || json.data.file_path;
     },
     createFile: (d) => call('/files', { method: 'POST', body: d }),
-    updateFile: (_id, _d) => ({ data: null, error: { message: 'Files are immutable metadata after upload; delete and re-upload instead.' } }),
+    // Metadata only (name/folder/task) — the stored bytes are immutable
+    // after upload; re-upload to replace them.
+    updateFile: (id, d) => call(`/files/${id}`, { method: 'PATCH', body: d }),
 
     // ── FOLDERS ──────────────────────────────────────────
     getFolders: async (projectId) => {
@@ -345,7 +342,7 @@
     // ── CHAT ─────────────────────────────────────────────
     getChannels: () => call('/channels'),
     createChannel: (d) => call('/channels', { method: 'POST', body: d }),
-    updateChannel: () => ({ data: null, error: { message: 'Not supported yet' } }),
+    updateChannel: (id, d) => call(`/channels/${id}`, { method: 'PATCH', body: d }),
     deleteChannel: (id) => call(`/channels/${id}`, { method: 'DELETE' }),
 
     getChannelMembers: async (channelId) => {
@@ -365,7 +362,7 @@
       const { data, error } = await call(`/channels/${d.channel_id}/messages`, { method: 'POST', body: d });
       return { data: mapMessage(data), error };
     },
-    updateMessage: () => ({ data: null, error: { message: 'Not supported yet' } }),
+    updateMessage: (id, d) => call(`/messages/${id}`, { method: 'PATCH', body: d }),
     deleteMessage: (id) => call(`/messages/${id}`, { method: 'DELETE' }),
     pinMessage: (id, pinned) => call(`/messages/${id}/pin`, { method: 'PATCH', body: { pinned } }),
     getPinnedMessages: async (channelId) => {
@@ -378,13 +375,14 @@
     },
 
     getReactions: async (messageId) => {
-      // Reactions come embedded on the message list; fetch via the
-      // channel's messages and pick this one out isn't ideal, so this
-      // is a known gap for a standalone lookup — most screens already
-      // have reactions from getMessages()/getPinnedMessages().
-      return { data: [], error: null };
+      const { data, error } = await call(`/messages/${messageId}/reactions`);
+      return { data: data ? data.map(r => ({ ...r, team_members: r.member ? pick(r.member, ['id', 'name']) : null })) : data, error };
     },
     addReaction: (d) => call(`/messages/${d.message_id}/reactions`, { method: 'POST', body: { emoji: d.emoji } }),
+    // Deletes by (message, caller's own membership, emoji) server-side —
+    // memberId is accepted for signature compatibility but unused; the
+    // server always deletes the caller's own reaction, never someone
+    // else's, regardless of what memberId is passed.
     removeReaction: (messageId, _memberId, emoji) =>
       call(`/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, { method: 'DELETE' }),
 
@@ -413,7 +411,7 @@
 
     getTemplates: () => call('/task-templates'),
     createTemplate: (d) => call('/task-templates', { method: 'POST', body: d }),
-    updateTemplate: () => ({ data: null, error: { message: 'Not supported yet' } }),
+    updateTemplate: (id, d) => call(`/task-templates/${id}`, { method: 'PATCH', body: d }),
     deleteTemplate: (id) => call(`/task-templates/${id}`, { method: 'DELETE' }),
     applyTemplate: (templateId, projectId, assignMap = {}) =>
       call(`/task-templates/${templateId}/apply`, { method: 'POST', body: { project_id: projectId, assign_map: assignMap } }),
@@ -486,7 +484,7 @@
       return { data: data ? data.map(mapClientNote) : data, error };
     },
     createClientNote: (d) => call(`/clients/${d.client_id}/notes`, { method: 'POST', body: d }),
-    deleteClientNote: () => ({ data: null, error: { message: 'Not supported yet' } }),
+    deleteClientNote: (id) => call(`/client-notes/${id}`, { method: 'DELETE' }),
     createClientInvite: (d) => call(`/clients/${d.client_id}/invites`, { method: 'POST', body: d }),
     getClientInvite: (clientId) => call(`/clients/${clientId}/invite`),
 

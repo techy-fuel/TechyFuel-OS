@@ -1,0 +1,5 @@
+# Drives Laravel's scheduler (routes/console.php), which runs
+# techyfuel:run-recurring daily at 04:00 — replaces the Vercel Cron job
+# that hit api/recurring-run.js. Add this one line via `crontab -e` on
+# the host (adjust the path):
+* * * * * cd /var/www/techyfuel/backend-laravel && php artisan schedule:run >> /dev/null 2>&1

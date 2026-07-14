@@ -67,6 +67,18 @@ class ChannelController extends Controller
         return response()->json(['data' => $channel->load('members')]);
     }
 
+    public function update(Request $request, Channel $channel)
+    {
+        $this->authorize('staff');
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'is_private' => ['nullable', 'boolean'],
+        ]);
+        $channel->update($data);
+        return response()->json(['data' => $channel]);
+    }
+
     public function destroy(Channel $channel)
     {
         $this->authorize('staff');
