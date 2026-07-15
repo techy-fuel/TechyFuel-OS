@@ -22,15 +22,13 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../../_ds_bundle.js"></script>
-<!-- ── Supabase (auth + database) ── -->
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<!-- ── Laravel backend (auth + database) — QA build on the
+     laravel-migration branch, points at the live Hostinger API.
+     main branch keeps the Supabase block above unchanged. ── -->
 <script>
-  // TechyFuel OS — Supabase config.
-  // Get these from Supabase Dashboard → Project Settings → API.
-  window.__SUPABASE_URL = 'https://nvgzzhqfibhtbauinmwu.supabase.co';
-  window.__SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52Z3p6aHFmaWJodGJhdWlubXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMjMyODYsImV4cCI6MjA5NzY5OTI4Nn0.eBz7eQ7JT8hewdMIqV_I-lfZH84rskIHAsyJusAa5hA';
+  window.__LARAVEL_API_URL = 'https://api.techyfuel.com/api';
 </script>
-<script src="supabase-api.js?v=5"></script>
+<script src="laravel-api.js?v=1"></script>
 <script type="text/babel" src="helpers.jsx?v=5" data-presets="react"></script>
 <script type="text/babel" src="Auth.jsx?v=5" data-presets="react"></script>
 <script type="text/babel" src="charts.jsx?v=5" data-presets="react"></script>
