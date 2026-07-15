@@ -20,9 +20,9 @@ return new class extends Migration
             $table->foreignUuid('workspace_id')->constrained('workspaces')->cascadeOnDelete();
 
             $table->index('entity_type');
+            $table->json('meta')->nullable();
         });
 
-        DB::statement('ALTER TABLE activity_log ADD COLUMN meta jsonb');
         DB::statement('CREATE INDEX activity_log_created_idx ON activity_log (created_at DESC)');
     }
 

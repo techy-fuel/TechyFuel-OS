@@ -15,4 +15,5 @@ class DocumentVersion extends Model
     protected $fillable = ['document_id', 'title', 'content', 'created_by', 'workspace_id'];
 
     protected $casts = ['content' => 'array'];
+    protected $attributes = ['content' => '[]'];
 }

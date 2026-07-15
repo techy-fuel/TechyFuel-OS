@@ -7,6 +7,7 @@ use App\Models\Channel;
 use App\Models\Message;
 use App\Services\WorkspaceContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MessageController extends Controller
 {
@@ -46,9 +47,14 @@ class MessageController extends Controller
         $this->authorize('staff');
         $q = $request->query('q', '');
 
+        // 'ilike' is Postgres-only; MySQL/MariaDB's plain 'like' is
+        // already case-insensitive with the default utf8mb4 collations
+        // this app uses, so it's the portable equivalent here.
+        $operator = DB::getDriverName() === 'pgsql' ? 'ilike' : 'like';
+
         return response()->json([
             'data' => Message::with('sender', 'channel')
-                ->where('content', 'ilike', "%{$q}%")
+                ->where('content', $operator, "%{$q}%")
                 ->orderBy('created_at', 'desc')
                 ->limit(30)
                 ->get(),

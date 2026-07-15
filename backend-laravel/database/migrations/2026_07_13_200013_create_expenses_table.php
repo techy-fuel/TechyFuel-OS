@@ -15,7 +15,10 @@ return new class extends Migration
             $table->text('category');
             $table->text('description');
             $table->decimal('amount', 10, 2);
-            $table->date('date')->default(DB::raw('CURRENT_DATE'));
+            // No DB-level CURRENT_DATE default (syntax isn't portable
+            // across Postgres/MySQL/MariaDB) — ExpenseController defaults
+            // it to today() in application code instead.
+            $table->date('date')->nullable();
             $table->text('receipt_url')->nullable();
             $table->foreignUuid('created_by')->nullable()->constrained('team_members')->nullOnDelete();
             $table->timestampTz('created_at')->useCurrent();

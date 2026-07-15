@@ -18,6 +18,10 @@ class Document extends Model
 
     protected $casts = ['content' => 'array'];
 
+    // Was a DB-level jsonb DEFAULT '[]' in Postgres — that syntax isn't
+    // portable to MySQL/MariaDB, so the default lives here instead.
+    protected $attributes = ['content' => '[]'];
+
     public function versions(): HasMany
     {
         return $this->hasMany(DocumentVersion::class);

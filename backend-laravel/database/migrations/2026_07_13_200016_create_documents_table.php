@@ -19,9 +19,11 @@ return new class extends Migration
             $table->timestampTz('created_at')->useCurrent();
             $table->timestampTz('updated_at')->useCurrent();
             $table->foreignUuid('workspace_id')->constrained('workspaces')->cascadeOnDelete();
+            // No DB-level default here (jsonb defaults aren't portable
+            // across Postgres/MySQL/MariaDB) — Document model sets '[]'
+            // via $attributes instead.
+            $table->json('content')->nullable();
         });
-
-        DB::statement("ALTER TABLE documents ADD COLUMN content jsonb DEFAULT '[]'");
     }
 
     public function down(): void

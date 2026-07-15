@@ -18,9 +18,15 @@ return new class extends Migration
             $table->integer('last_status')->nullable();
             $table->timestampTz('created_at')->useCurrent();
             $table->foreignUuid('workspace_id')->constrained('workspaces')->cascadeOnDelete();
+
+            if (DB::getDriverName() !== 'pgsql') {
+                $table->json('events')->nullable();
+            }
         });
 
-        DB::statement("ALTER TABLE webhooks ADD COLUMN events text[] DEFAULT '{}'");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE webhooks ADD COLUMN events text[] DEFAULT '{}'");
+        }
     }
 
     public function down(): void

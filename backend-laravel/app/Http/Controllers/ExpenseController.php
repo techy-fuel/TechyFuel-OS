@@ -27,6 +27,7 @@ class ExpenseController extends Controller
             'currency' => ['nullable', 'string', 'max:10'],
         ]);
         $data['created_by'] = app(\App\Services\WorkspaceContext::class)->memberId();
+        $data['date'] ??= now()->toDateString();
         return response()->json(['data' => Expense::create($data)], 201);
     }
 

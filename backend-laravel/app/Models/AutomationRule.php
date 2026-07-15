@@ -18,4 +18,5 @@ class AutomationRule extends Model
     ];
 
     protected $casts = ['trigger_config' => 'array', 'action_config' => 'array'];
+    protected $attributes = ['trigger_config' => '{}', 'action_config' => '{}'];
 }

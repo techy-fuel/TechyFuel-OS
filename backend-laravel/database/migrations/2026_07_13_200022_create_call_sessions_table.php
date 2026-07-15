@@ -21,9 +21,19 @@ return new class extends Migration
             $table->foreignUuid('workspace_id')->constrained('workspaces')->cascadeOnDelete();
 
             $table->index('channel_id');
+
+            // MySQL/MariaDB have no partial-index syntax — a plain index
+            // on ended_at still helps the "is anyone on an active call"
+            // query, just without Postgres's "only index the NULL rows"
+            // optimization.
+            if (DB::getDriverName() !== 'pgsql') {
+                $table->index('ended_at', 'call_sessions_active_idx');
+            }
         });
 
-        DB::statement('CREATE INDEX call_sessions_active_idx ON call_sessions (ended_at) WHERE ended_at IS NULL');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('CREATE INDEX call_sessions_active_idx ON call_sessions (ended_at) WHERE ended_at IS NULL');
+        }
     }
 
     public function down(): void

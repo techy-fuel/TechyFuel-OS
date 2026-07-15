@@ -21,9 +21,15 @@ return new class extends Migration
             $table->foreignUuid('workspace_id')->constrained('workspaces')->cascadeOnDelete();
 
             $table->index('recipient_id');
+
+            if (DB::getDriverName() !== 'pgsql') {
+                $table->index('read', 'notifications_read_idx');
+            }
         });
 
-        DB::statement('CREATE INDEX notifications_read_idx ON notifications ("read") WHERE NOT "read"');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('CREATE INDEX notifications_read_idx ON notifications ("read") WHERE NOT "read"');
+        }
     }
 
     public function down(): void

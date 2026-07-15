@@ -23,11 +23,24 @@ return new class extends Migration
             $table->text('access_level')->default('member')->nullable();
 
             $table->unique(['email', 'workspace_id'], 'team_members_email_workspace_idx');
+
+            // MySQL/MariaDB already treat NULL as distinct in a plain unique
+            // index (multiple NULL user_id rows are allowed), which is
+            // exactly the "WHERE user_id IS NOT NULL" behaviour Postgres
+            // needs a partial index for — so a plain unique index here is
+            // sufficient on that driver.
+            if (DB::getDriverName() !== 'pgsql') {
+                $table->unique(['user_id', 'workspace_id'], 'team_members_user_workspace_idx');
+            }
         });
 
-        // Partial unique index (user_id, workspace_id) WHERE user_id IS NOT NULL —
-        // matches Supabase migration 020, not expressible via the fluent builder.
-        DB::statement('CREATE UNIQUE INDEX team_members_user_workspace_idx ON team_members (user_id, workspace_id) WHERE user_id IS NOT NULL');
+        // Postgres has no NULL-is-distinct plain unique option across the
+        // whole column set the way MySQL does, so it needs a real partial
+        // index — matches Supabase migration 020, not expressible via the
+        // fluent builder.
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('CREATE UNIQUE INDEX team_members_user_workspace_idx ON team_members (user_id, workspace_id) WHERE user_id IS NOT NULL');
+        }
     }
 
     public function down(): void

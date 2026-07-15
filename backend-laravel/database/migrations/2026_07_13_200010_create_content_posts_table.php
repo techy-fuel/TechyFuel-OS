@@ -22,10 +22,17 @@ return new class extends Migration
             $table->timestampTz('created_at')->useCurrent();
             $table->timestampTz('updated_at')->useCurrent();
             $table->foreignUuid('workspace_id')->constrained('workspaces')->cascadeOnDelete();
+
+            if (DB::getDriverName() !== 'pgsql') {
+                $table->json('media_urls')->nullable();
+                $table->json('tags')->nullable();
+            }
         });
 
-        DB::statement('ALTER TABLE content_posts ADD COLUMN media_urls text[]');
-        DB::statement('ALTER TABLE content_posts ADD COLUMN tags text[]');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE content_posts ADD COLUMN media_urls text[]');
+            DB::statement('ALTER TABLE content_posts ADD COLUMN tags text[]');
+        }
     }
 
     public function down(): void

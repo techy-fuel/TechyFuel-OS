@@ -18,4 +18,5 @@ class Webhook extends Model
     ];
 
     protected $casts = ['events' => 'array'];
+    protected $attributes = ['events' => '[]'];
 }

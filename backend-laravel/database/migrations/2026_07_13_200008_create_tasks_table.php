@@ -29,9 +29,18 @@ return new class extends Migration
             $table->date('next_run_date')->nullable();
 
             $table->index('client_id');
+
+            // Postgres has a native array type; MySQL/MariaDB don't, so
+            // tags is stored as a JSON array there instead — the Task
+            // model's 'tags' => 'array' cast works transparently either way.
+            if (DB::getDriverName() !== 'pgsql') {
+                $table->json('tags')->nullable();
+            }
         });
 
-        DB::statement('ALTER TABLE tasks ADD COLUMN tags text[]');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE tasks ADD COLUMN tags text[]');
+        }
     }
 
     public function down(): void

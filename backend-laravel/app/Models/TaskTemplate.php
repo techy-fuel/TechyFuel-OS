@@ -15,4 +15,5 @@ class TaskTemplate extends Model
     protected $fillable = ['name', 'description', 'tasks', 'workspace_id'];
 
     protected $casts = ['tasks' => 'array'];
+    protected $attributes = ['tasks' => '[]'];
 }

@@ -15,9 +15,8 @@ return new class extends Migration
             $table->foreignUuid('created_by')->nullable()->constrained('team_members')->nullOnDelete();
             $table->timestampTz('created_at')->useCurrent();
             $table->foreignUuid('workspace_id')->constrained('workspaces')->cascadeOnDelete();
+            $table->json('content')->nullable();
         });
-
-        DB::statement("ALTER TABLE document_versions ADD COLUMN content jsonb DEFAULT '[]'");
     }
 
     public function down(): void

@@ -14,9 +14,8 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->timestampTz('created_at')->useCurrent();
             $table->foreignUuid('workspace_id')->constrained('workspaces')->cascadeOnDelete();
+            $table->json('tasks')->nullable();
         });
-
-        DB::statement("ALTER TABLE task_templates ADD COLUMN tasks jsonb DEFAULT '[]'");
     }
 
     public function down(): void

@@ -21,10 +21,9 @@ return new class extends Migration
             $table->foreignUuid('workspace_id')->constrained('workspaces')->cascadeOnDelete();
 
             $table->index('enabled');
+            $table->json('trigger_config')->nullable();
+            $table->json('action_config')->nullable();
         });
-
-        DB::statement("ALTER TABLE automation_rules ADD COLUMN trigger_config jsonb DEFAULT '{}'");
-        DB::statement("ALTER TABLE automation_rules ADD COLUMN action_config jsonb DEFAULT '{}'");
     }
 
     public function down(): void
