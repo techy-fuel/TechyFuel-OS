@@ -11,11 +11,15 @@ use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\ChannelMemberController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientInviteController;
+use App\Http\Controllers\NotificationPushController;
+use App\Http\Controllers\AiController;
+use App\Http\Controllers\InviteController;
 use App\Http\Controllers\ClientNoteController;
 use App\Http\Controllers\ContentPostController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EmailAccountController;
+use App\Http\Controllers\EmailController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\FolderController;
@@ -71,6 +75,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('webhooks', WebhookController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('team-members', TeamMemberController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('email-accounts', EmailAccountController::class)->only(['index', 'store', 'destroy']);
+    Route::get('email-list', [EmailController::class, 'list']);
+    Route::get('email-message', [EmailController::class, 'message']);
+    Route::post('email-send', [EmailController::class, 'send']);
+    Route::post('invite', [InviteController::class, 'send']);
+    Route::post('ai-chat', [AiController::class, 'chat']);
+    Route::post('notify', [NotificationPushController::class, 'push']);
     Route::apiResource('teams', TeamController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('workspace-invites', WorkspaceInviteController::class)->only(['index', 'store', 'destroy']);
 

@@ -1,3 +1,4 @@
+const API_BASE_EMAIL = window.__LARAVEL_API_URL || 'https://api.techyfuel.com/api';
 // Email screen — reads/sends through a mailbox via IMAP/SMTP (api/email-list.js,
 // api/email-message.js, api/email-send.js, api/email-accounts.js). No OAuth --
 // this is for plain cPanel/Hostinger-style mailboxes. By default it uses the
@@ -68,7 +69,7 @@ function ComposeModal({ open, onClose, onSent, accountId, initial, title }) {
     setError('');
     try {
       const headers = { 'Content-Type': 'application/json', ...(await authHeader()) };
-      const res = await fetch('/api/email-send', { method: 'POST', headers, body: JSON.stringify({ ...form, accountId }) });
+      const res = await fetch(API_BASE_EMAIL+'/email-send', { method: 'POST', headers, body: JSON.stringify({ ...form, accountId }) });
       const data = await res.json();
       if (!data.ok) { setError(data.error || 'Could not send the email.'); return; }
       setForm({ to: '', subject: '', body: '' });
@@ -115,12 +116,12 @@ function AddAccountModal({ open, onClose, onAdded }) {
     setError('');
     try {
       const headers = { 'Content-Type': 'application/json', ...(await authHeader()) };
-      const res = await fetch('/api/email-accounts', { method: 'POST', headers, body: JSON.stringify(form) });
+      const res = await fetch(API_BASE_EMAIL+'/email-accounts', { method: 'POST', headers, body: JSON.stringify(form) });
       const data = await res.json();
-      if (!data.ok) { setError(data.error || 'Could not connect this account.'); return; }
+      if (!res.ok && !data.data) { setError(data.error || (data.errors ? Object.values(data.errors)[0][0] : 'Could not connect this account.')); return; }
       setForm(EMPTY);
       onClose();
-      if (onAdded) onAdded(data.account);
+      if (onAdded) onAdded(data.account || data.data);
     } catch (err) {
       setError(err.message || 'Could not connect this account.');
     } finally { setSaving(false); }
@@ -237,9 +238,9 @@ function Email() {
   async function loadAccounts() {
     try {
       const headers = await authHeader();
-      const res = await fetch('/api/email-accounts', { headers });
+      const res = await fetch(API_BASE_EMAIL+'/email-accounts', { headers });
       const data = await res.json();
-      if (data.ok) setAccounts(data.accounts || []);
+      setAccounts(data.accounts || data.data || []);
     } catch {}
   }
 
@@ -255,7 +256,7 @@ function Email() {
       const headers = await authHeader();
       const params = new URLSearchParams({ mailbox: which });
       if (activeAccountId) params.set('accountId', activeAccountId);
-      const res = await fetch(`/api/email-list?${params}`, { headers });
+      const res = await fetch(API_BASE_EMAIL+`/email-list?${params}`, { headers });
       const data = await res.json();
       if (!data.ok) { setError(data.error || 'Could not load your mailbox.'); setMessages([]); return; }
       setMessages(data.messages || []);
@@ -274,7 +275,7 @@ function Email() {
       const headers = await authHeader();
       const params = new URLSearchParams({ uid, mailbox });
       if (activeAccountId) params.set('accountId', activeAccountId);
-      const res = await fetch(`/api/email-message?${params}`, { headers });
+      const res = await fetch(API_BASE_EMAIL+`/email-message?${params}`, { headers });
       const data = await res.json();
       if (data.ok) {
         setSelectedMsg(data.message);
@@ -314,7 +315,7 @@ function Email() {
     if (!window.confirm(`Disconnect "${acct.label}"? You'll need to reconnect it to use it again.`)) return;
     try {
       const headers = await authHeader();
-      await fetch(`/api/email-accounts?id=${acct.id}`, { method: 'DELETE', headers });
+      await fetch(API_BASE_EMAIL+`/email-accounts?id=${acct.id}`, { method: 'DELETE', headers });
       setAccounts(prev => prev.filter(a => a.id !== acct.id));
       if (activeAccountId === acct.id) setActiveAccountId(null);
     } catch {}

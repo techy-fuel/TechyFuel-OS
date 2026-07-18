@@ -12,3 +12,5 @@ Artisan::command('inspire', function () {
 // Requires the Laravel scheduler itself to be running — see
 // deploy/crontab.txt for the one line that drives it in production.
 Schedule::command('techyfuel:run-recurring')->dailyAt('04:00');
+
+Schedule::command('techyfuel:publish-scheduled')->everyMinute();

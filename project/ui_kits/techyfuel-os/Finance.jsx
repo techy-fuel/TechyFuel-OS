@@ -353,11 +353,8 @@ function printInvoicePDF(inv, clients) {
 }
 
 async function financeAuthHeader() {
-  try {
-    const { data } = await window.db.auth.getSession();
-    const token = data?.session?.access_token;
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch { return {}; }
+  const token = localStorage.getItem('tf_auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // ── Share invoice via Email / WhatsApp ─────────────────────────────
@@ -455,7 +452,7 @@ function ShareInvoiceModal({ inv, clients, onClose }) {
     setResult(null);
     try {
       const headers = { 'Content-Type': 'application/json', ...(await financeAuthHeader()) };
-      const res = await fetch('/api/email-send', {
+      const res = await fetch((window.__LARAVEL_API_URL || 'https://api.techyfuel.com/api') + '/email-send', {
         method: 'POST', headers,
         body: JSON.stringify({
           to: to.trim(),

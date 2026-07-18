@@ -1034,54 +1034,42 @@ function CallModal({ call, myId, onClose }) {
     let cancelled = false;
     let frame = null;
 
-    function join(url) {
-      if (cancelled || !containerRef.current || !window.DailyIframe) return;
-      frame = window.DailyIframe.createFrame(containerRef.current, {
-        showLeaveButton: false,
-        showFullscreenButton: true,
-        iframeStyle: { width: '100%', height: '100%', border: '0' },
+    function join() {
+      if (cancelled || !containerRef.current || !window.JitsiMeetExternalAPI) return;
+      // Free Jitsi Meet room — public, no API key. roomName is unique per channel.
+      const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
+        roomName: roomName,
+        parentNode: containerRef.current,
+        width: '100%',
+        height: '100%',
+        userInfo: { displayName: localStorage.getItem('tf_my_name') || 'Team Member' },
+        configOverwrite: {
+          startWithVideoMuted: call.type === 'audio',
+          startWithAudioMuted: false,
+          prejoinPageEnabled: false,
+        },
+        interfaceConfigOverwrite: { MOBILE_APP_PROMO: false },
       });
-      frameRef.current = frame;
-      frame.on('joined-meeting', () => setReady(true));
-      frame.on('participant-joined', () => setParticipants(p => { participantsRef.current = p + 1; return p + 1; }));
-      frame.on('participant-left', () => setParticipants(p => { const n = Math.max(1, p - 1); participantsRef.current = n; return n; }));
-      frame.on('left-meeting', onClose);
-      frame.on('error', (e) => setError((e && e.errorMsg) || 'Call connection error'));
-      frame.join({
-        url,
-        userName: localStorage.getItem('tf_my_name') || 'Team Member',
-        startVideoOff: call.type === 'audio',
-      });
+      frameRef.current = api;
+      api.addListener('videoConferenceJoined', () => setReady(true));
+      api.addListener('participantJoined', () => setParticipants(p => { participantsRef.current = p + 1; return p + 1; }));
+      api.addListener('participantLeft', () => setParticipants(p => { const n = Math.max(1, p - 1); participantsRef.current = n; return n; }));
+      api.addListener('readyToClose', onClose);
     }
 
-    function requestRoom() {
-      fetch('/api/daily-room', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomName }),
-      })
-        .then(r => r.json())
-        .then(({ url, error: err }) => {
-          if (cancelled) return;
-          if (!url) { setError(err || 'Could not start call'); return; }
-          join(url);
-        })
-        .catch(() => { if (!cancelled) setError('Could not reach call server'); });
-    }
-
-    if (window.DailyIframe) {
-      requestRoom();
+    if (window.JitsiMeetExternalAPI) {
+      join();
     } else {
-      const s = document.createElement('script');
-      s.src = 'https://unpkg.com/@daily-co/daily-js/dist/daily-iframe.js';
-      s.onload = requestRoom;
-      s.onerror = () => setError('Could not load video call library');
-      document.head.appendChild(s);
+      const sc = document.createElement('script');
+      sc.src = 'https://meet.jit.si/external_api.js';
+      sc.onload = join;
+      sc.onerror = () => setError('Could not load video call library');
+      document.head.appendChild(sc);
     }
 
     return () => {
       cancelled = true;
-      if (frameRef.current) { try { frameRef.current.destroy(); } catch {} }
+      if (frameRef.current) { try { frameRef.current.dispose(); } catch {} }
     };
   }, []);
 

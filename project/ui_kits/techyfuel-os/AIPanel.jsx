@@ -68,9 +68,9 @@ async function buildWorkspaceSnapshot() {
 async function getResponse(msg) {
   if (!window.API) return { text: 'No API connection — running in demo mode.' };
   const context = await buildWorkspaceSnapshot();
-  const res = await fetch('/api/ai-chat', {
+  const res = await fetch((window.__LARAVEL_API_URL||'https://api.techyfuel.com/api')+'/ai-chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(localStorage.getItem('tf_auth_token') ? { Authorization: `Bearer ${localStorage.getItem('tf_auth_token')}` } : {}) },
     body: JSON.stringify({ message: msg, context }),
   });
   if (!res.ok) {

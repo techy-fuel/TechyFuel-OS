@@ -81,7 +81,7 @@ function InviteModal({ workspaceId, onClose, onInvited }) {
       }
       // Try Resend email
       try {
-        await fetch('/api/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), role }) });
+        await fetch((window.__LARAVEL_API_URL||'https://api.techyfuel.com/api')+'/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), role }) });
       } catch {}
       setSent(true);
       onInvited?.();

@@ -183,18 +183,15 @@ function isDriveFile(f) {
 
 // ── Email unread count (sidebar badge + notification bell) ────────────────
 async function getEmailAuthHeader() {
-  try {
-    const { data } = await window.db.auth.getSession();
-    const token = data?.session?.access_token;
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch { return {}; }
+  const token = localStorage.getItem('tf_auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // Sums unread across the shared default inbox (if configured) and every
 // email account this member has connected -- so the sidebar/bell badge
 // reflects all of a person's mail, not just whichever one happens to be
 // active in the Email screen right now.
-async function getTotalUnreadEmailCount() {
+async function getTotalUnreadEmailCount() { return 0; /* email badge disabled on Laravel backend */
   if (!window.db) return 0;
   const headers = await getEmailAuthHeader();
   try {

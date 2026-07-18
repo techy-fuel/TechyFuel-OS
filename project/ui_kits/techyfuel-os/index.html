@@ -9,11 +9,17 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>TechyFuel OS</title>
-<link rel="stylesheet" href="../../styles.css" />
+<link rel="stylesheet" href="styles.css" />
 <style>
   html, body { height: 100%; margin: 0; }
   #root { height: 100%; }
 </style>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1a56db" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="TechyFuel" />
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js",{scope:"/os/"}).catch(function(){});});}</script>
 </head>
 <body>
 <div id="root"></div>
@@ -21,7 +27,7 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<script src="../../_ds_bundle.js"></script>
+<script src="_ds_bundle.js"></script>
 <!-- ── Laravel backend (auth + database) — QA build on the
      laravel-migration branch, points at the live Hostinger API.
      main branch keeps the Supabase block above unchanged. ── -->

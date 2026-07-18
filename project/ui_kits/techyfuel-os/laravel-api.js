@@ -391,7 +391,30 @@
     // Echo/Pusher-protocol client isn't wired up in this vanilla-script
     // (no bundler) frontend yet — this is a documented gap, not a crash:
     // returns a channel-like object whose unsubscribe is a no-op.
-    subscribeToMessages: (_channelId, _onNew) => ({ unsubscribe() {} }),
+    // Free polling-based realtime: re-fetch every 3s and emit only NEW messages.
+    subscribeToMessages: (channelId, onNew) => {
+      if (!channelId || typeof onNew !== 'function') return { unsubscribe() {} };
+      let seen = null;            // Set of message ids we've already delivered
+      let stopped = false;
+      async function poll() {
+        if (stopped) return;
+        try {
+          const res = await window.API.getMessages(channelId);
+          const rows = (res && res.data) || res || [];
+          if (seen === null) {
+            // First run: prime the set, don't fire (avoids re-showing history).
+            seen = new Set(rows.map(m => m.id));
+          } else {
+            for (const m of rows) {
+              if (!seen.has(m.id)) { seen.add(m.id); try { onNew(m); } catch {} }
+            }
+          }
+        } catch {}
+      }
+      poll();
+      const timer = setInterval(poll, 3000);
+      return { unsubscribe() { stopped = true; clearInterval(timer); } };
+    },
 
     // ── CALLS ────────────────────────────────────────────
     startCallSession: (d) => {
